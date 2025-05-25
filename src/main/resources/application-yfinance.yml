@@ -1,0 +1,22 @@
+# YFinance特定配置
+stock:
+  service:
+    implementation: yfinance
+  data:
+    source: yfinance
+
+# YFinance API配置
+yfinance:
+  api:
+    baseUrl: https://query1.finance.yahoo.com
+    timeout: 10000
+    retry: 3
+    cache:
+      enabled: true
+      ttl: 3600 # 缓存有效期，单位秒
+
+# 日志配置
+logging:
+  level:
+    com.stock.invest: DEBUG
+    com.stock.invest.service.impl.YFinanceStockServiceImpl: DEBUG 

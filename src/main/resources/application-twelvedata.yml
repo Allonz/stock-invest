@@ -1,0 +1,29 @@
+# TwelveData API配置
+stock:
+  service:
+    implementation: twelvedata
+  data:
+    source: twelvedata
+
+# TwelveData API具体配置
+twelvedata:
+  api:
+    baseUrl: https://api.twelvedata.com
+    apiKey: ${TWELVEDATA_API_KEY:your_api_key_here}  # 请替换为您的API密钥或设置环境变量
+    timeout: 10000
+    retry: 3
+    cache:
+      enabled: true
+      ttl: 3600  # 缓存有效期，单位秒
+
+# Python脚本配置
+python:
+  scripts:
+    path: src/main/resources/python
+    executorType: process  # 可选值：process, runtime
+
+# 日志配置
+logging:
+  level:
+    com.stock.invest: DEBUG
+    com.stock.invest.service.impl.TwelveDataStockServiceImpl: DEBUG 

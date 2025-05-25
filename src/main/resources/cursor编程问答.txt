@@ -1,0 +1,99 @@
+我的java版本java version "1.8.0_431"，我的maven版本是Apache Maven 3.6.3，请根据这个信息更新stock-invest项目中的各项配置信息
+
+
+TigerStockService有两个实现类TigerStockServiceImpl，SimpleStockServiceImpl，当我调用TigerStockController.scanLowPriceStocksWithVolumePattern方法时为什么实际用的时SimpleStockServiceImpl而不是TigerStockServiceImpl
+
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005"
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005"
+
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005"
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005"
+
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=9999"
+
+
+请阅读StockScannerServiceImpl.scanStocks方法，不要用预定股票返回，要真实调用到老虎证券开放平台https://quant.itigerup.com/openapi/zh/java/operation/quotation/marketScanner.html，请阅读这个网页中的选股器，用MarketScannerRequest作为筛选器来请求老虎开放平台，获得我想要的股票代码
+
+
+//构建基础指标筛选参数列表
+List<BaseFilter> baseFilterList = new ArrayList<>();
+baseFilterList.add(BaseFilter.builder()
+                   .fieldName(StockField.StockField_MarketValue.getIndex())
+                   .filterMin(1000000000D)
+                   .filterMax(2000000000D)
+                   .build());
+
+// 多标签指标
+List<String> conceptTagList = new ArrayList<>();
+// "BK1549" 连锁快餐 BK1541：汽车股  BK1545:内银股，BK1512：特斯拉概念股
+conceptTagList.add("BK1549");
+conceptTagList.add("BK1541");
+conceptTagList.add("BK1545");
+conceptTagList.add("BK1512");
+List<MultiTagsRelationFilter> multiTagsRelationFilter = new ArrayList<>();
+multiTagsRelationFilter.add(MultiTagsRelationFilter.builder()
+        .fieldName(MultiTagField.MultiTagField_Concept)
+        .tagList(conceptTagList)
+        .build());
+// 今天创历史新高 1:是， 0:否
+List<String> todayHistoryHighTagList = new ArrayList<>();
+todayHistoryHighTagList.add("0");
+multiTagsRelationFilter.add(MultiTagsRelationFilter.builder()
+        .fieldName(MultiTagField.MultiTagField_Today_HistoryHigh)
+        .tagList(todayHistoryHighTagList)
+        .build());
+
+//构建选股请求类
+MarketScannerRequest marketScannerRequest =  MarketScannerRequest.newRequest(
+  Market.HK, baseFilterList, null, null, multiTagsRelationFilter, null, 1, 200);
+//提交选股请求，并获取返回结果
+MarketScannerResponse marketScanList = client.execute(marketScannerRequest);
+System.out.println(JSONObject.toJSONString(marketScanList));
+
+
+
+请根据以上示例，构建MarketScannerRequest实例，BaseFilter中fieldName使用枚举类StockField中的StockField_CurPrice(2, "latestPrice")来筛选某一段股价区间的股票，用前述方案实现真实筛选股票的代码
+
+
+
+
+import com.tigerbrokers.stock.openapi.client.https.domain.quote.item.KlineItem
+import com.tigerbrokers.stock.openapi.client.https.domain.quote.item.KlinePoint
+
+
+
+
+
+中组部身份认证：已完成与国信平台方案梳理和确认，我方对接方案已确认，进入开发阶段。因整体节奏都依赖国信平台，无法按节奏推进进度，目前国信平台没有给出提供接口和联调时间
+
+
+https://cursor.directory/
+https://cursorlist.com
+
+https://github.com/PatrickJS/awesome-cursorrules
+
+
+
+
+the system has posted in safe mode.this may be due to the previous post attempt failing because of system instability,or if the power button was held in to force the system off. if the system failed to post afer you madechanges to UEFI settings,you may wish to revert to stable settings to prevent post failure. press F1 to run setup
+
+
+
+
+
+
+
+
+
+
+请将所有的StockScannerService中的方法与StockService合并，保留StockService，删除StockScannerService。YFinanceStockScannerServiceImpl的所有方法与YFinanceStockServiceImpl合并，删除YFinanceStockScannerServiceImpl，保留YFinanceStockServiceImpl。TwelveDataStockScannerServiceImpl的所有方法与TwelveDataStockServiceImpl合并，删除TwelveDataStockScannerServiceImpl，保留TwelveDataStockServiceImpl。StockScannerServiceImpl所有的方法与TigerStockServiceImpl合并，删除StockScannerServiceImpl，保留TigerStockServiceImpl
+
+
+
+请严格根据我在stock-invest.mdc文件中设置的rules来编写代码，现在我需要你先列出java maven项目结构，然后严格按照项目结构对当前stock-invest项目的文件夹和文件进行移动，比如配置文件或脚本要放到resources目录中，移动后要修改对应的读取配置文件的代码，比如修改读取的路径
+
+
+根据以上修改，请删除现在重复的、现在已经不需要的文件夹和文件
+
+
+application-twelvedata.yml和application.yml的区别是什么？请评估是将这两个文件合并并保留application.yml和根据tiger、yfinance、twelvedata分别生成一个yml，这两个方案哪一个更合理，告诉我一个答案。在告诉我答案前不要做任何更改

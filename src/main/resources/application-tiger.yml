@@ -1,0 +1,24 @@
+# Tiger API特定配置
+stock:
+  service:
+    implementation: tiger
+  data:
+    source: tiger
+
+# 老虎证券API配置
+tiger:
+  api:
+    url: https://openapi.tigerfintech.com/gateway
+    tiger_id: 20155300        # 请替换为您的Tiger ID
+    private_key: MIICdwIBADANBgkqhkiG9w0BAQEFAASCAmEwggJdAgEAAoGBAMeYe29fjbnb5xS5aSg9OEH+L0ceCgdO6OKfXneDBaluUVHJq7Vh8LjubRjIcNP2g6tQzdUHeWiQKhx/x5HFDMnJrfO/PmA+PZj5+WHOstCaIF3hveU27TYLZ9F/4/dJ6wGvVNX6+v4Rj8ut5xyjdv/FbCLkzFLHJ6Li51/53MpNAgMBAAECgYAVTO6PWjEzzoYArjDMvIvObyP4gPotAXzVApEATBlElaNUCSOr/cHE2p0F8g4ocLxogf0VaPDJ+eiklfZkVhUhGzBFZ5EraQar0nuj7TBNvx8kCQBbOarGf/p5y4L24uVm2NVEzQJQefb1qBtS8BgC5HEroMkEu7RDUxQ/my+1QQJBAP6RiSGK6FUbcW9bAx0FRcvn2cTNDhWjdRoIIxN+wRRchKDD+fB6yNhwB5pbdsUR3px8zwIoIaTK2nqZBoXUZ8UCQQDIt89tEk6dlQ5jxCEGS48Sj/RVAH+Ah1BAeSpJqwkL5F46juV5cI+Mc+SdIto7Z5UZ2isvQ5QCME8z+sv3rnjpAkEA4V6u7McxUMdu8Yq9gt+8Hv0vyg9PvNBtR5KUmxnIjeIqeLmHeOL7FMJ5uKnoyCc90YSdL+efgWklaww2vhyBkQJAFwvr+EUi27sytMffVt60Jdh7oIr3GOXwlAaVkXHfDwuAuk6QELqY8PKZrGVFE48YMqi3Tqz+wKWVYo2If/77iQJBAPy9qvk40brWZ5ZfIGtsOYspbyUSBXd+fHyCy+IxcO7wPJa24Rd48ckF6SB6QK0kYk/tgRPr2ZrDQyaZp4tXpDI=
+    account: 910964         # 请替换为您的交易账户（可选）
+    configFilePath: config   # Tiger API 配置文件路径，存放 tiger_openapi_config.properties 文件
+    log_path: logs/tiger     # Tiger API日志路径
+    timeout: 5000
+    connect_timeout: 3000
+
+# 日志配置
+logging:
+  level:
+    com.stock.invest: DEBUG
+    com.stock.invest.service.impl.TigerStockServiceImpl: DEBUG 
