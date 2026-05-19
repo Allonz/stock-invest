@@ -1,0 +1,21 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:stock-invest-test;DB_CLOSE_DELAY=-1;MODE=MySQL;DATABASE_TO_LOWER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+    hikari:
+      connection-init-sql: ""
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    database-platform: org.hibernate.dialect.H2Dialect
+
+scanner:
+  defaultLimit: 20
+  defaultMarket: US
+  minPrice: 0.05
+  maxPrice: 0.2
+  maxCandidates: 50
+

@@ -1,0 +1,61 @@
+spring:
+  main:
+    log-startup-info: true
+  application:
+    name: stock-invest
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+  # 设置数据库连接
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3307/${MYSQL_DATABASE:stock_invest}?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:allon23}
+    hikari:
+      connection-init-sql: SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci
+  # 设置JPA编码
+  jpa:
+    properties:
+      hibernate:
+        connection:
+          characterEncoding: utf8
+          useUnicode: true
+  # 设置Thymeleaf编码
+  thymeleaf:
+    encoding: UTF-8
+    cache: false
+
+# 股票服务默认配置
+stock:
+  service:
+    # 默认实现，将由激活的配置文件覆盖
+    implementation: ${STOCK_SERVICE_IMPLEMENTATION:yfinance}
+  data:
+    # 默认数据源，将由激活的配置文件覆盖
+    source: ${STOCK_DATA_SOURCE:twelvedata}
+
+# 选股器相关配置
+scanner:
+  defaultLimit: 20 # 默认返回结果数量
+  defaultMarket: US # 默认市场
+
+server:
+  port: 8091
+  # 设置服务器编码
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+      enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.stock.invest: INFO
+  # 设置日志编码
+  charset:
+    console: UTF-8
+    file: UTF-8
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36}:%line - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36}:%line - %msg%n"

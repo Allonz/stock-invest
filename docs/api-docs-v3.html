@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock Invest API v3 — 接口文档</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--sidebar-bg:#0f172a;--sidebar-hover:#1e293b;--accent-blue:#3b82f6;--accent-green:#22c55e;--accent-yellow:#eab308;--accent-red:#ef4444;--accent-purple:#8b5cf6;--accent-pink:#ec4899;--accent-orange:#f97316;--text-light:#e2e8f0;--text-muted:#94a3b8;--content-bg:#f8fafc;--card-bg:#fff;--border-color:#e2e8f0;--text-dark:#0f172a;--text-secondary:#475569;--code-bg:#1e293b;--table-header-bg:#0f172a}
+html{scroll-behavior:smooth;font-size:15px}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC","Microsoft YaHei",sans-serif;display:flex;min-height:100vh;color:var(--text-dark);background:var(--content-bg);line-height:1.7}
+.sidebar{width:280px;min-width:280px;height:100vh;position:sticky;top:0;background:var(--sidebar-bg);color:var(--text-light);overflow-y:auto;display:flex;flex-direction:column;z-index:100}
+.sidebar-header{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sidebar-header h1{font-size:17px;font-weight:700;color:#fff}
+.sidebar-header .version{font-size:11px;color:var(--accent-blue);margin-top:3px;font-weight:600;letter-spacing:1px}
+.sidebar-header .subtitle{font-size:11px;color:var(--text-muted);margin-top:4px}
+.sidebar-nav{padding:8px 0;flex:1;overflow-y:auto}
+.sidebar-nav::-webkit-scrollbar{width:4px}
+.sidebar-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:2px}
+.nav-section-title{display:block;padding:7px 20px 7px 16px;font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--accent-blue);border-left:3px solid transparent}
+.nav-link{display:block;padding:5px 20px 5px 24px;font-size:12.5px;color:var(--text-muted);text-decoration:none;border-left:3px solid transparent;transition:all .12s}
+.nav-link:hover{background:var(--sidebar-hover);color:var(--text-light);border-left-color:var(--accent-blue)}
+.nav-link-sub{padding-left:36px;font-size:12px}
+.content{flex:1;min-width:0;padding:40px 48px 80px;max-width:1100px}
+@media(max-width:768px){.sidebar{display:none}.content{padding:20px 16px 60px}}
+.page-title{font-size:30px;font-weight:800;color:var(--text-dark);margin-bottom:4px;letter-spacing:-.5px}
+.content h2{font-size:22px;font-weight:700;color:var(--text-dark);margin:40px 0 16px;padding-bottom:8px;border-bottom:2px solid var(--border-color);scroll-margin-top:20px}
+.content h3{font-size:17px;font-weight:600;color:var(--text-dark);margin:28px 0 10px;scroll-margin-top:20px}
+.content h4{font-size:14px;font-weight:600;color:var(--text-dark);margin:18px 0 8px}
+.content p{margin:0 0 12px;color:var(--text-secondary);line-height:1.8;font-size:14.5px}
+blockquote{margin:16px 0;padding:14px 18px;background:#eef2ff;border-left:4px solid var(--accent-blue);border-radius:0 8px 8px 0;color:var(--text-secondary);font-size:13.5px}
+pre{background:var(--code-bg);color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;font-size:12.5px;line-height:1.65;margin:12px 0 16px;font-family:"SF Mono","Cascadia Code","Fira Code","JetBrains Mono",Consolas,monospace;position:relative}
+pre::-webkit-scrollbar{height:4px}
+pre::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:2px}
+pre .copy-btn{position:absolute;top:8px;right:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:var(--text-muted);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px}
+pre .copy-btn:hover{background:rgba(255,255,255,.16);color:#fff}
+code{font-family:"SF Mono","Cascadia Code","Fira Code","JetBrains Mono",Consolas,monospace;background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:13px;color:#e11d48}
+pre code{background:transparent;padding:0;font-size:inherit;color:inherit}
+table{width:100%;border-collapse:collapse;margin:12px 0 16px;font-size:13.5px;border-radius:8px;overflow:hidden;border:1px solid var(--border-color)}
+thead{background:var(--table-header-bg)}
+th{color:#fff;font-weight:600;padding:10px 14px;text-align:left;font-size:12.5px}
+td{padding:10px 14px;border-bottom:1px solid var(--border-color);color:var(--text-secondary);vertical-align:top}
+tbody tr:hover{background:#f1f5f9}
+.badge-req{background:#fef2f2;color:#dc2626;font-size:10px;padding:1px 6px;border-radius:3px}
+.badge-opt{background:#fefce8;color:#a16207;font-size:10px;padding:1px 6px;border-radius:3px}
+.mtag{display:inline-block;padding:4px 10px;border-radius:4px;font-size:12px;font-weight:700;margin-right:8px;font-style:normal}
+.mtag-get{background:#dbeafe;color:#1d4ed8}
+.mtag-post{background:#dcfce7;color:#15803d}
+.eurl{font-family:"SF Mono",Consolas,monospace;font-size:14px;font-weight:600;color:var(--text-dark)}
+.ecard{background:var(--card-bg);border:1px solid var(--border-color);border-radius:10px;padding:20px 24px;margin:16px 0 20px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.ecard h4{margin-top:0}
+.ft td:first-child{font-family:"SF Mono",Consolas,monospace;font-size:13px;font-weight:500;color:var(--text-dark);white-space:nowrap}
+.rsec{margin-top:16px;padding-top:12px;border-top:1px dashed var(--border-color)}
+.mt{display:none}
+@media(max-width:768px){.mt{display:block;position:fixed;top:12px;left:12px;z-index:200;background:var(--sidebar-bg);color:#fff;border:none;padding:8px 12px;border-radius:6px;font-size:14px;cursor:pointer}.sidebar.open{display:flex;position:fixed;left:0;top:0;z-index:150}}
+</style>
+</head>
+<body>
+<button class="mt" onclick="document.querySelector('.sidebar').classList.toggle('open')">\u2630</button>
+<div class="sidebar">
+<div class="sidebar-header">
+<h1>Stock Invest API</h1>
+<div class="version">v3.0</div>
+<div class="subtitle">Spring Boot \u63a5\u53e3\u6587\u6863</div>
+</div>
+<nav class="sidebar-nav">
+<div class="nav-section"><span class="nav-section-title">\u6982\u89c8</span><a class="nav-link" href="#overview">API \u6982\u89c8</a></div>
+<div class="nav-section"><span class="nav-section-title">\u80a1\u7968\u6570\u636e</span>
+<a class="nav-link" href="#stock-kline-daily">GET /api/tiger/kline/daily/{symbol}</a>
+<a class="nav-link nav-link-sub" href="#stock-kline-object">GET /api/tiger/kline/daily/object/{symbol}</a>
+<a class="nav-link nav-link-sub" href="#stock-kline-query">GET /api/tiger/kline/daily/query?symbol=</a>
+</div>
+<div class="nav-section"><span class="nav-section-title">\u80a1\u7968\u626b\u63cf</span>
+<a class="nav-link" href="#scanner-custom">POST /api/scanner/custom</a>
+</div>
+<div class="nav-section"><span class="nav-section-title">\u7b5b\u9009\u67e5\u8be2</span>
+<a class="nav-link" href="#screener-run">POST /api/screener/run</a>
+<a class="nav-link nav-link-sub" href="#screener-run-snapshot">POST /api/screener/run-from-snapshot</a>
+<a class="nav-link nav-link-sub" href="#screener-results">GET /api/screener/results</a>
+<a class="nav-link nav-link-sub" href="#screener-latest">GET /api/screener/results/latest</a>
+</div>
+<div class="nav-section"><span class="nav-section-title">\u6570\u636e\u5bfc\u5165</span>
+<a class="nav-link" href="#ingest-watchlist">POST /api/ingest/tiger-watchlist</a>
+</div>
+<div class="nav-section"><span class="nav-section-title">\u9875\u9762\u7aef\u70b9</span>
+<a class="nav-link" href="#page-home">GET /</a>
+<a class="nav-link nav-link-sub" href="#page-daily">GET /screener/daily</a>
+<a class="nav-link nav-link-sub" href="#page-run">POST /screener/run</a>
+</div>
+<div class="nav-section"><span class="nav-section-title">\u6570\u636e\u6a21\u578b</span>
+<a class="nav-link" href="#model-apiresponse">ApiResponse</a>
+<a class="nav-link nav-link-sub" href="#model-customscan">CustomScanRequest</a>
+<a class="nav-link nav-link-sub" href="#model-screenerrun">ScreenerRunResponseDto</a>
+<a class="nav-link nav-link-sub" href="#model-screeningresult">ScreeningResultDto</a>
+<a class="nav-link nav-link-sub" href="#model-snapshotgrid">SnapshotGridViewDto / SnapshotGridRowDto</a>
+<a class="nav-link nav-link-sub" href="#model-ingest-request">TigerWatchlistIngestRequestDto</a>
+<a class="nav-link nav-link-sub" href="#model-ingest-response">TigerWatchlistIngestResponseDto</a>
+<a class="nav-link nav-link-sub" href="#model-watchlist-row">TigerWatchlistRowDto</a>
+<a class="nav-link nav-link-sub" href="#model-klinedata">KLineData / KLineIterator</a>
+</div>
+</nav>
+</div>
+<div class="content">
+<h1 class="page-title">Stock Invest API v3</h1>
+<p style="color:var(--text-muted);font-size:13px;margin-bottom:24px;">\u6700\u540e\u66f4\u65b0: 2026-05-16</p>
+<section id="overview">
+<h2>API 概览</h2>
+<p>Stock Invest 是一个股票数据分析系统，提供 K 线数据查询、股票筛选扫描、自定义扫描、以及老虎证券自选股数据导入等功能。</p>
+
+<h3>基本信息</h3>
+<table>
+<thead><tr><th>项目</th><th>值</th></tr></thead>
+<tbody>
+<tr><td>基础地址</td><td><code>http://localhost:8090</code></td></tr>
+<tr><td>数据格式</td><td>JSON (application/json)</td></tr>
+<tr><td>字符编码</td><td>UTF-8</td></tr>
+</tbody>
+</table>
+
+<h3>统一响应格式</h3>
+<p>所有 API 端点返回统一的 <code>ApiResponse&lt;T&gt;</code> 包装结构：</p>
+<pre><span class="copy-btn" onclick="copyCode(this)">复制</span><code>{
+  "success": true,
+  "message": null,
+  "data": { ... },
+  "errorType": null,
+  "timestamp": "2026-05-16T12:00:00Z"
+}</code></pre>
+
+<table>
+<thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>success</td><td>boolean</td><td>请求是否成功</td></tr>
+<tr><td>message</td><td>String | null</td><td>提示信息</td></tr>
+<tr><td>data</td><td>T | null</td><td>响应数据（失败时为 null）</td></tr>
+<tr><td>errorType</td><td>String | null</td><td>错误类型（仅失败时出现）</td></tr>
+<tr><td>timestamp</td><td>String (ISO-8601)</td><td>响应时间戳</td></tr>
+</tbody>
+</table>
+
+<h3>认证</h3>
+<p>部分接口（数据导入、基于快照的筛选运行）支持可选的 API 密钥认证。在 <code>application.yml</code> 中配置 <code>ingest.api-key</code>，当配置值非空时，对应接口需要请求头 <code>X-INGEST-API-KEY</code> 与配置值一致，否则返回 401 Unauthorized。</p>
+</section>
+<section id="stock-kline-daily">
+<h2>1. 股票数据 API</h2>
+<p>前缀：<code>/api/tiger</code> | 控制器：<code>StockController</code></p>
+<p>提供股票日线 K 线数据查询，数据来源由优先级路由决定（Tiger → yfinance → TwelveData → Tiingo）。</p>
+
+<div class="ecard" id="stock-kline-daily-endpoint">
+<h4><span class="mtag mtag-get">GET</span><span class="eurl">/api/tiger/kline/daily/{symbol}</span></h4>
+<p>获取指定股票的日线 K 线数据（JSON 字符串格式）。</p>
+
+<h4>路径参数</h4>
+<table class="ft">
+<thead><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>symbol</td><td>String</td><td><span class="badge-req">必填</span></td><td>股票代码，例如 AAPL</td></tr>
+</tbody>
+</table>
+
+<h4>cURL 示例</h4>
+<pre><span class="copy-btn" onclick="copyCode(this)">复制</span><code>curl -X GET "http://localhost:8090/api/tiger/kline/daily/AAPL"</code></pre>
+
+<h4>响应</h4>
+<p>返回 <code>ApiResponse&lt;String&gt;</code>，其中 data 为包含 K 线数据的 JSON 字符串。</p>
+<pre><span class="copy-btn" onclick="copyCode(this)">复制</span><code>{
+  "success": true,
+  "data": "[{\"symbol\":\"AAPL\",\"time\":1715644800000,...}]",
+  "timestamp": "2026-05-16T12:00:00Z"
+}</code></pre>
+</div>
+
+<div class="ecard" id="stock-kline-object">
+<h4><span class="mtag mtag-get">GET</span><span class="eurl">/api/tiger/kline/daily/object/{symbol}</span></h4>
+<p>获取指定股票的日线 K 线数据（对象格式）。 data 字段中的结构参见 <a href="#model-klinedata">KLineData 模型</a>。</p>
+
+<h4>路径参数</h4>
+<table class="ft">
+<thead><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>symbol</td><td>String</td><td><span class="badge-req">必填</span></td><td>股票代码，例如 AAPL</td></tr>
+</tbody>
+</table>
+
+<h4>cURL 示例</h4>
+<pre><span class="copy-btn" onclick="copyCode(this)">复制</span><code>curl -X GET "http://localhost:8090/api/tiger/kline/daily/object/AAPL"</code></pre>
+
+<h4>响应</h4>
+<p>返回 <code>ApiResponse&lt;KLineData&gt;</code>。</p>
+</div>
+
+<div class="ecard" id="stock-kline-query">
+<h4><span class="mtag mtag-get">GET</span><span class="eurl">/api/tiger/kline/daily/query?symbol=</span></h4>
+<p>使用查询参数获取日线 K 线数据（与路径参数版同等）。</p>
+
+<h4>查询参数</h4>
+<table class="ft">
+<thead><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>symbol</td><td>String</td><td><span class="badge-req">必填</span></td><td>股票代码，例如 AAPL</td></tr>
+</tbody>
+</table>
+
+<h4>cURL 示例</h4>
+<pre><span class="copy-btn" onclick="copyCode(this)">复制</span><code>curl -X GET "http://localhost:8090/api/tiger/kline/daily/query?symbol=AAPL"</code></pre>
+
+<h4>响应</h4>
+<p>返回 <code>ApiResponse&lt;String&gt;</code>，与路径参数版格式相同。</p>
+</div>
+</section>
+<section id="scanner-custom">
+<h2>2. 股票扫描 API</h2>
+<p>前缀：<code>/api/scanner</code> | 控制器：<code>StockScannerController</code></p>
+
+<div class="ecard">
+<h4><span class="mtag mtag-post">POST</span><span class="eurl">/api/scanner/custom</span></h4>
+<p>自定义股票扫描，根据市场、价格等条件筛选股票。</p>
+
+<h4>请求体 (JSON)</h4>
+<table class="ft">
+<thead><tr><th>字段</th><th>类型</th><th>必填</th><th>默认值</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>market</td><td>String</td><td>否</td><td>"US"</td><td>市场类型，可选值：US, HK, CN, SG</td></tr>
+<tr><td>category</td><td>String</td><td>否</td><td>"TOP_VOLUME"</td><td>分类（当前未在扫描逻辑中使用）</td></tr>
+<tr><td>limit</td><td>Integer</td><td>否</td><td>20</td><td>返回股票数量上限</td></tr>
+<tr><td>minPrice</td><td>Double</td><td>否</td><td>null</td><td>最低价格筛选</td></tr>
+<tr><td>maxPrice</td><td>Double</td><td>否</td><td>null</td><td>最高价格筛选</td></tr>
+<tr><td>exchange</td><td>String</td><td>否</td><td>null</td><td>交易所（当前未在扫描逻辑中使用）</td></tr>
+</tbody>
+</table>
+
+<h4>请求示例</h4>
+<pre><span class="copy-btn" onclick="copyCode(this)">复制</span><code>{
+  "market": "US",
+  "category": "TOP_VOLUME",
+  "limit": 20,
+  "minPrice": 10.0,
+  "maxPrice": 500.0,
+  "exchange": null
+}</code></pre>
+
+<h4>cURL 示例</h4>
+<pre><span class="copy-btn" onclick="copyCode(this)">复制</span><code>curl -X POST "http://localhost:8090/api/scanner/custom" \
+  -H "Content-Type: application/json" \
+  -d '{"market":"US","limit":20}'</code></pre>
+
+<h4>响应</h4>
+<p>返回 <code>ApiResponse&lt;List&lt;String&gt;&gt;</code>，其中 data 为股票代码列表。</p>
+<pre><span class="copy-btn" onclick="copyCode(this)">复制</span><code>{
+  "success": true,
+  "data": ["AAPL","MSFT","GOOGL","AMZN","NVDA"],
+  "timestamp": "2026-05-16T12:00:00Z"
+}</code></pre>
+</div>
+</section>
+<section id="screener-run">
+<h2>3. 筛选查询 API</h2>
+<p>前缀：<code>/api/screener</code> | 控制器：<code>ScreeningQueryController</code></p>
+
+<div class="ecard">
+<h4><span class="mtag mtag-post">POST</span><span class="eurl">/api/screener/run</span></h4>
+<p>执行日常筛选任务，分析指定交易日的股票数据并返回筛选结果。</p>
+
+<h4>查询参数</h4>
+<table class="ft">
+<thead><tr><th>参数</th><th>类型</th><th>必填</th><th>默认值</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>date</td><td>String</td><td>否</td><td>当前日期</td><td>交易日期，格式：yyyy-MM-dd</td></tr>
+<tr><td>limit</td><td>Integer</td><td>否</td><td>20</td><td>处理股票数量上限</td></tr>
+<tr><td>windowDays</td><td>Integer</td><td>否</td><td>7</td><td>观察窗口天数，用于趋势分析</td></tr>
+</tbody>
+</table>
+
+<h4>cURL 示例</h4>
+<pre><span class="copy-btn" onclick="copyCode(this)">复制</span><code>curl -X POST "http://localhost:8090/api/screener/run?date=2026-05-16&limit=20&windowDays=7"</code></pre>
+
+<h4>响应</h4>
+<p>返回 <code>ApiResponse&lt;ScreenerRunResponseDto&gt;</code>。</p>
+<pre><span class="copy-btn" onclick="copyCode(this)">复制</span><code>{
+  "success": true,
+  "data": {
+    "batchId": "SCR-20260516-XXXX",
+    "tradeDate": "2026-05-16",
+    "totalCandidates": 100,
+    "processedStocks": 80,
+    "matchedStocks": 5
+  },
+  "timestamp": "2026-05-16T12:00:00Z"
+}</code></pre>
+</div>
+
+<div class="ecard" id="screener-run-snapshot">
+<h4><span class="mtag mtag-post">POST</span><span class="eurl">/api/screener/run-from-snapshot</span></h4>
+<p>基于快照数据执行日常筛选任务。支持可选的 API 密钥认证（<code>X-INGEST-API-KEY</code>）。</p>
+
+<h4>请求头</h4>
+<table class="ft">
+<thead><tr><th>头</th><th>类型</th><th>必填</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>X-INGEST-API-KEY</td><td>String</td><td><span class="badge-opt">可选</span></td><td>当 ingest.api-key 配置非空时必须提供</td></tr>
+</tbody>
+</table>
+
+<h4>查询参数</h4>
+<table class="ft">
+<thead><tr><th>参数</th><th>类型</th><th>必填</th><th>默认值</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>date</td><td>String</td><td>否</td><td>当前日期</td><td>交易日期，格式：yyyy-MM-dd</td></tr>
+<tr><td>limit</td><td>Integer</td><td>否</td><td>20</td><td>处理股票数量上限</td></tr>
+<tr><td>windowDays</td><td>Integer</td><td>否</td><td>7</td><td>观察窗口天数</td></tr>
+</tbody>
+</table>
+
+<h4>cURL 示例</h4>
+<pre><span class="copy-btn" onclick="copyCode(this)">复制</span><code>curl -X POST "http://localhost:8090/api/screener/run-from-snapshot?date=2026-05-16&limit=20&windowDays=7" \
+  -H "X-INGEST-API-KEY: your-api-key"</code></pre>
+
+<h4>响应</h4>
+<p>返回 <code>ApiResponse&lt;ScreenerRunResponseDto&gt;</code>，格式与 run 接口相同。</p>
+</div>
+
+<div class="ecard" id="screener-results">
+<h4><span class="mtag mtag-get">GET</span><span class="eurl">/api/screener/results?tradeDate=&minPrice=&maxPrice=</span></h4>
+<p>根据交易日期查询筛选结果。</p>
+
+<h4>查询参数</h4>
+<table class="ft">
+<thead><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>tradeDate</td><td>String</td><td><span class="badge-req">必填</span></td><td>交易日期，格式：yyyy-MM-dd</td></tr>
+<tr><td>minPrice</td><td>Double</td><td>否</td><td>最低价格筛选</td></tr>
+<tr><td>maxPrice</td><td>Double</td><td>否</td><td>最高价格筛选</td></tr>
+</tbody>
+</table>
+
+<h4>cURL 示例</h4>
+<pre><span class="copy-btn" onclick="copyCode(this)">复制</span><code>curl "http://localhost:8090/api/screener/results?tradeDate=2026-05-16&minPrice=10&maxPrice=500"</code></pre>
+
+<h4>响应</h4>
+<p>返回 <code>ApiResponse&lt;List&lt;ScreeningResultDto&gt;&gt;</code>。</p>
+<pre><span class="copy-btn" onclick="copyCode(this)">复制</span><code>{
+  "success": true,
+  "data": [
+    {
+      "symbol": "AAPL",
+      "price": 178.5,
+      "rise": true,
+      "source": "yfinance",
+      "tradeDate": "2026-05-16"
+    }
+  ],
+  "timestamp": "2026-05-16T12:00:00Z"
+}</code></pre>
+</div>
+
+<div class="ecard" id="screener-latest">
+<h4><span class="mtag mtag-get">GET</span><span class="eurl">/api/screener/results/latest?minPrice=&maxPrice=</span></h4>
+<p>查询最新的筛选结果。</p>
+
+<h4>查询参数</h4>
+<table class="ft">
+<thead><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>minPrice</td><td>Double</td><td>否</td><td>最低价格筛选</td></tr>
+<tr><td>maxPrice</td><td>Double</td><td>否</td><td>最高价格筛选</td></tr>
+</tbody>
+</table>
+
+<h4>cURL 示例</h4>
+<pre><span class="copy-btn" onclick="copyCode(this)">复制</span><code>curl "http://localhost:8090/api/screener/results/latest?minPrice=10&maxPrice=500"</code></pre>
+
+<h4>响应</h4>
+<p>返回 <code>ApiResponse&lt;List&lt;ScreeningResultDto&gt;&gt;</code>，与 results 接口格式相同。</p>
+</div>
+</section>
+<section id="ingest-watchlist">
+<h2>4. 数据导入 API</h2>
+<p>前缀：<code>/api/ingest</code> | 控制器：<code>TigerWatchlistIngestController</code></p>
+
+<div class="ecard">
+<h4><span class="mtag mtag-post">POST</span><span class="eurl">/api/ingest/tiger-watchlist</span></h4>
+<p>导入老虎证券自选股列表数据。支持可选的 API 密钥认证（<code>X-INGEST-API-KEY</code>）。</p>
+
+<h4>请求头</h4>
+<table class="ft">
+<thead><tr><th>头</th><th>类型</th><th>必填</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>Content-Type</td><td>String</td><td><span class="badge-req">必填</span></td><td>application/json</td></tr>
+<tr><td>X-INGEST-API-KEY</td><td>String</td><td><span class="badge-opt">可选</span></td><td>当 ingest.api-key 配置非空时必须提供</td></tr>
+</tbody>
+</table>
+
+<h4>请求体 (JSON)</h4>
+<table class="ft">
+<thead><tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>tradeDate</td><td>String</td><td>否</td><td>交易日期，格式：yyyy-MM-dd</td></tr>
+<tr><td>rows</td><td>Array&lt;TigerWatchlistRowDto&gt;</td><td>否</td><td>自选股列表</td></tr>
+</tbody>
+</table>
+
+<p>其中 rows 中的每个元素（<code>TigerWatchlistRowDto</code>）：</p>
+<table class="ft">
+<thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>symbol (<code>code</code>)</td><td>String</td><td>股票代码，支持 @JsonAlias "code"</td></tr>
+<tr><td>name</td><td>String</td><td>股票名称</td></tr>
+<tr><td>lastPrice</td><td>Double</td><td>最新价格</td></tr>
+<tr><td>volume</td><td>Object</td><td>成交量</td></tr>
+</tbody>
+</table>
+
+<h4>请求示例</h4>
+<pre><span class="copy-btn" onclick="copyCode(this)">复制</span><code>{
+  "tradeDate": "2026-05-16",
+  "rows": [
+    {
+      "symbol": "AAPL",
+      "name": "Apple Inc.",
+      "lastPrice": 178.50,
+      "volume": 50000000
+    }
+  ]
+}</code></pre>
+
+<h4>cURL 示例</h4>
+<pre><span class="copy-btn" onclick="copyCode(this)">复制</span><code>curl -X POST "http://localhost:8090/api/ingest/tiger-watchlist" \
+  -H "Content-Type: application/json" \
+  -H "X-INGEST-API-KEY: your-api-key" \
+  -d '{"tradeDate":"2026-05-16","rows":[{"symbol":"AAPL","name":"Apple Inc.","lastPrice":178.50,"volume":50000000}]}'</code></pre>
+
+<h4>响应</h4>
+<p>返回 <code>ApiResponse&lt;TigerWatchlistIngestResponseDto&gt;</code>。验证失败时返回 400，带 <code>VALIDATION_ERROR</code> 错误类型。</p>
+<pre><span class="copy-btn" onclick="copyCode(this)">复制</span><code>{
+  "success": true,
+  "data": {
+    "batchId": "INGEST-20260516-XXXX",
+    "tradeDate": "2026-05-16",
+    "imported": 1,
+    "skipped": 0,
+    "skipReasons": []
+  },
+  "timestamp": "2026-05-16T12:00:00Z"
+}</code></pre>
+</div>
+</section>
+<section id="page-home">
+<h2>5. 页面端点</h2>
+<p>控制器：<code>ScreeningPageController</code> (使用 <code>@Controller</code> 而非 <code>@RestController</code>，返回 Thymeleaf 模板)</p>
+
+<div class="ecard">
+<h4><span class="mtag mtag-get">GET</span><span class="eurl">/</span></h4>
+<p>首页，重定向到 <code>/screener/daily</code>。</p>
+
+<h4>cURL 示例</h4>
+<pre><span class="copy-btn" onclick="copyCode(this)">复制</span><code>curl -v "http://localhost:8090/"</code></pre>
+
+<h4>响应</h4>
+<p>HTTP 302 重定向到 <code>/screener/daily</code>。</p>
+</div>
+
+<div class="ecard" id="page-daily">
+<h4><span class="mtag mtag-get">GET</span><span class="eurl">/screener/daily?tradeDate=&minPrice=&maxPrice=&windowDays=&notice=</span></h4>
+<p>显示日常筛选结果页面，包括筛选结果列表和快照网格。</p>
+
+<h4>查询参数</h4>
+<table class="ft">
+<thead><tr><th>参数</th><th>类型</th><th>必填</th><th>默认值</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>tradeDate</td><td>String</td><td>否</td><td>当前日期</td><td>交易日期，格式：yyyy-MM-dd</td></tr>
+<tr><td>minPrice</td><td>Double</td><td>否</td><td>null</td><td>最低价格筛选</td></tr>
+<tr><td>maxPrice</td><td>Double</td><td>否</td><td>null</td><td>最高价格筛选</td></tr>
+<tr><td>windowDays</td><td>Integer</td><td>否</td><td>7</td><td>观察窗口天数（限制 3-7）</td></tr>
+<tr><td>notice</td><td>String</td><td>否</td><td>null</td><td>页面提示信息</td></tr>
+</tbody>
+</table>
+
+<h4>Thymeleaf 模板</h4>
+<p><code>screener-daily.html</code></p>
+
+<h4>模型属性</h4>
+<table>
+<thead><tr><th>属性名</th><th>类型</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>tradeDate</td><td>String</td><td>交易日期</td></tr>
+<tr><td>minPrice</td><td>Double | null</td><td>最低价格</td></tr>
+<tr><td>maxPrice</td><td>Double | null</td><td>最高价格</td></tr>
+<tr><td>windowDays</td><td>Integer</td><td>观察窗口</td></tr>
+<tr><td>notice</td><td>String | null</td><td>提示信息</td></tr>
+<tr><td>rows</td><td>List&lt;ScreeningResultDto&gt;</td><td>筛选结果列表</td></tr>
+<tr><td>snapshotGrid</td><td>SnapshotGridViewDto</td><td>快照网格数据（48 小时窗口）</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="ecard" id="page-run">
+<h4><span class="mtag mtag-post">POST</span><span class="eurl">/screener/run</span></h4>
+<p>从页面触发筛选任务，执行完成后重定向到 <code>/screener/daily</code>。</p>
+
+<h4>表单参数</h4>
+<table class="ft">
+<thead><tr><th>参数</th><th>类型</th><th>默认值</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>tradeDate</td><td>String</td><td>当前日期</td><td>交易日期，yyyy-MM-dd</td></tr>
+<tr><td>limit</td><td>Integer</td><td>20</td><td>处理股票上限</td></tr>
+<tr><td>windowDays</td><td>Integer</td><td>7</td><td>观察窗口天数（限制 3-7）</td></tr>
+</tbody>
+</table>
+
+<h4>响应</h4>
+<p>HTTP 302 重定向到 <code>/screener/daily?tradeDate=&windowDays=&notice=</code>，其中 notice 包含执行结果。</p>
+</div>
+</section>
+<section id="model-apiresponse">
+<h2>6. 数据模型</h2>
+
+<div class="ecard">
+<h4 id="model-apiresponse-detail">ApiResponse&lt;T&gt;</h4>
+<p>统一响应包装类，所有 API 端点均返回此类型。</p>
+<table>
+<thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>success</td><td>boolean</td><td>请求是否成功</td></tr>
+<tr><td>message</td><td>String | null</td><td>提示信息</td></tr>
+<tr><td>data</td><td>T | null</td><td>响应数据</td></tr>
+<tr><td>errorType</td><td>String | null</td><td>错误类型</td></tr>
+<tr><td>timestamp</td><td>Instant</td><td>时间戳 (ISO-8601)</td></tr>
+</tbody>
+</table>
+<p><code>@JsonInclude(Include.NON_NULL)</code> — null 字段会被忽略。</p>
+</div>
+
+<div class="ecard">
+<h4 id="model-customscan">CustomScanRequest</h4>
+<p>自定义扫描请求 DTO。</p>
+<table>
+<thead><tr><th>字段</th><th>类型</th><th>默认值</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>market</td><td>String</td><td>"US"</td><td>市场 (US|HK|CN|SG)</td></tr>
+<tr><td>category</td><td>String</td><td>"TOP_VOLUME"</td><td>分类（当前未使用）</td></tr>
+<tr><td>limit</td><td>Integer</td><td>20</td><td>返回数量上限</td></tr>
+<tr><td>minPrice</td><td>Double</td><td>null</td><td>最低价格</td></tr>
+<tr><td>maxPrice</td><td>Double</td><td>null</td><td>最高价格</td></tr>
+<tr><td>exchange</td><td>String</td><td>null</td><td>交易所（当前未使用）</td></tr>
+</tbody>
+</table>
+<p>注：缺省值在构造函数中设置，当字段为 null 或空时生效。</p>
+</div>
+
+<div class="ecard">
+<h4 id="model-screenerrun">ScreenerRunResponseDto</h4>
+<p>筛选任务执行结果 DTO。</p>
+<table>
+<thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>batchId</td><td>String</td><td>批次标识，不可为空</td></tr>
+<tr><td>tradeDate</td><td>LocalDate</td><td>交易日期，不可为 null</td></tr>
+<tr><td>totalCandidates</td><td>Integer</td><td>总候选股票数</td></tr>
+<tr><td>processedStocks</td><td>Integer</td><td>已处理股票数</td></tr>
+<tr><td>matchedStocks</td><td>Integer</td><td>匹配股票数</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="ecard">
+<h4 id="model-screeningresult">ScreeningResultDto</h4>
+<p>筛选结果记录。</p>
+<table>
+<thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>symbol</td><td>String</td><td>股票代码，不可为空</td></tr>
+<tr><td>price</td><td>Double</td><td>股票价格</td></tr>
+<tr><td>rise</td><td>Boolean</td><td>是否上涨</td></tr>
+<tr><td>source</td><td>String</td><td>数据来源</td></tr>
+<tr><td>tradeDate</td><td>LocalDate</td><td>交易日期，不可为 null</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="ecard">
+<h4 id="model-snapshotgrid">SnapshotGridViewDto</h4>
+<p>股票快照网格视图。</p>
+<table>
+<thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>dateHeaders</td><td>List&lt;String&gt;</td><td>日期标题列表</td></tr>
+<tr><td>rows</td><td>List&lt;SnapshotGridRowDto&gt;</td><td>行数据列表</td></tr>
+</tbody>
+</table>
+
+<h4>SnapshotGridRowDto</h4>
+<table>
+<thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>symbol</td><td>String</td><td>股票代码，不可为空</td></tr>
+<tr><td>stockName</td><td>String</td><td>股票名称</td></tr>
+<tr><td>cells</td><td>List&lt;String&gt;</td><td>各日期对应的数据单元格</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="ecard">
+<h4 id="model-ingest-request">TigerWatchlistIngestRequestDto</h4>
+<p>老虎自选股导入请求 DTO。</p>
+<table>
+<thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>tradeDate</td><td>String</td><td>交易日期 (yyyy-MM-dd)</td></tr>
+<tr><td>rows</td><td>List&lt;TigerWatchlistRowDto&gt; | null</td><td>自选股列表</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="ecard">
+<h4 id="model-ingest-response">TigerWatchlistIngestResponseDto</h4>
+<p>老虎自选股导入响应 DTO。</p>
+<table>
+<thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>batchId</td><td>String</td><td>批次标识</td></tr>
+<tr><td>tradeDate</td><td>LocalDate</td><td>交易日期</td></tr>
+<tr><td>imported</td><td>int</td><td>导入数量</td></tr>
+<tr><td>skipped</td><td>int</td><td>跳过数量</td></tr>
+<tr><td>skipReasons</td><td>List&lt;String&gt;</td><td>跳过原因列表</td></tr>
+</tbody>
+</table>
+<p>支持链式调用：<code>withBatchId()</code>, <code>withTradeDate()</code>, <code>withImported()</code>, <code>withSkipped()</code>, <code>withSkipReasons()</code>。</p>
+</div>
+
+<div class="ecard">
+<h4 id="model-watchlist-row">TigerWatchlistRowDto</h4>
+<p>自选股单行数据。</p>
+<table>
+<thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>symbol</td><td>String</td><td>股票代码，支持别名 "code"</td></tr>
+<tr><td>name</td><td>String</td><td>股票名称</td></tr>
+<tr><td>lastPrice</td><td>Double</td><td>最新价格</td></tr>
+<tr><td>volume</td><td>Object</td><td>成交量</td></tr>
+</tbody>
+</table>
+<p><code>@JsonAlias("code")</code> — symbol 字段可接受名为 "code" 的 JSON 属性。</p>
+</div>
+
+<div class="ecard" id="model-klinedata">
+<h4>KLineData</h4>
+<p>K 线数据模型。</p>
+<table>
+<thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>symbol</td><td>String</td><td>股票代码</td></tr>
+<tr><td>time</td><td>long</td><td>时间戳</td></tr>
+<tr><td>open</td><td>double</td><td>开盘价</td></tr>
+<tr><td>high</td><td>double</td><td>最高价</td></tr>
+<tr><td>low</td><td>double</td><td>最低价</td></tr>
+<tr><td>close</td><td>double</td><td>收盘价</td></tr>
+<tr><td>volume</td><td>long</td><td>成交量</td></tr>
+<tr><td>amount</td><td>double</td><td>成交金额</td></tr>
+<tr><td>items</td><td>List&lt;KLineIterator&gt;</td><td>K 线数据列表</td></tr>
+</tbody>
+</table>
+
+<h4>KLineIterator</h4>
+<p>K 线单条数据记录。</p>
+<table>
+<thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>symbol</td><td>String</td><td>股票代码</td></tr>
+<tr><td>time</td><td>long</td><td>时间戳</td></tr>
+<tr><td>timeString</td><td>String</td><td>时间字符串格式</td></tr>
+<tr><td>open</td><td>double</td><td>开盘价</td></tr>
+<tr><td>high</td><td>double</td><td>最高价</td></tr>
+<tr><td>low</td><td>double</td><td>最低价</td></tr>
+<tr><td>close</td><td>double</td><td>收盘价</td></tr>
+<tr><td>volume</td><td>long</td><td>成交量</td></tr>
+<tr><td>amount</td><td>double</td><td>成交金额</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+</div>
+<script>
+function copyCode(btn) {
+  var pre = btn.parentElement;
+  var code = pre.querySelector("code");
+  var text = code.textContent;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(function() {
+      btn.textContent = "已复制";
+      setTimeout(function() { btn.textContent = "复制"; }, 2000);
+    })["catch"](function() {
+      fallbackCopy(text, btn);
+    });
+  } else {
+    fallbackCopy(text, btn);
+  }
+}
+function fallbackCopy(text, btn) {
+  var ta = document.createElement("textarea");
+  ta.value = text;
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand("copy");
+  document.body.removeChild(ta);
+  btn.textContent = "已复制";
+  setTimeout(function() { btn.textContent = "复制"; }, 2000);
+}
+</script>
+</body>
+</html>

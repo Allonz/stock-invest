@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock Invest API v2 — Documentation</title>
+<style>
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --sidebar-bg: #0f172a;
+    --sidebar-hover: #1e293b;
+    --sidebar-active: #334155;
+    --accent-blue: #3b82f6;
+    --accent-green: #22c55e;
+    --accent-yellow: #eab308;
+    --accent-red: #ef4444;
+    --accent-purple: #8b5cf6;
+    --accent-pink: #ec4899;
+    --text-light: #e2e8f0;
+    --text-muted: #94a3b8;
+    --content-bg: #f8fafc;
+    --card-bg: #ffffff;
+    --border-color: #e2e8f0;
+    --text-dark: #0f172a;
+    --text-secondary: #475569;
+    --code-bg: #0f172a;
+    --table-header-bg: #0f172a;
+  }
+  html { scroll-behavior: smooth; font-size: 15px; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+    display: flex; min-height: 100vh; color: var(--text-dark); background: var(--content-bg);
+    line-height: 1.7;
+  }
+  .sidebar {
+    width: 280px; min-width: 280px; height: 100vh; position: sticky; top: 0;
+    background: var(--sidebar-bg); color: var(--text-light); overflow-y: auto;
+    display: flex; flex-direction: column; z-index: 100;
+  }
+  .sidebar-header {
+    padding: 24px 20px 18px; border-bottom: 1px solid rgba(255,255,255,0.08); flex-shrink: 0;
+  }
+  .sidebar-header h1 { font-size: 17px; font-weight: 700; color: #fff; letter-spacing: -0.3px; }
+  .sidebar-header .version { font-size: 11px; color: var(--accent-blue); margin-top: 3px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+  .sidebar-header .subtitle { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+  .sidebar-nav { padding: 8px 0; flex: 1; overflow-y: auto; }
+  .sidebar-nav::-webkit-scrollbar { width: 4px; }
+  .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+  .nav-section { margin-bottom: 1px; }
+  .nav-section-title {
+    display: block; padding: 7px 20px 7px 16px; font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.8px; color: var(--accent-blue); cursor: default;
+    border-left: 3px solid transparent;
+  }
+  .nav-link {
+    display: block; padding: 5px 20px 5px 24px; font-size: 12.5px; color: var(--text-muted);
+    text-decoration: none; border-left: 3px solid transparent; transition: all 0.12s;
+    line-height: 1.4;
+  }
+  .nav-link:hover { background: var(--sidebar-hover); color: var(--text-light); border-left-color: var(--accent-blue); }
+  .nav-link-sub { padding-left: 36px; font-size: 12px; }
+  .content {
+    flex: 1; min-width: 0; padding: 40px 48px 80px; max-width: 1100px;
+  }
+  .page-title {
+    font-size: 30px; font-weight: 800; color: var(--text-dark); margin-bottom: 4px;
+    letter-spacing: -0.5px; line-height: 1.3;
+  }
+  .content h2 {
+    font-size: 22px; font-weight: 700; color: var(--text-dark); margin: 40px 0 16px;
+    padding-bottom: 8px; border-bottom: 2px solid var(--border-color);
+    scroll-margin-top: 20px;
+  }
+  .content h3 {
+    font-size: 17px; font-weight: 600; color: var(--text-dark); margin: 24px 0 10px;
+    scroll-margin-top: 20px;
+  }
+  .content h4 {
+    font-size: 14px; font-weight: 600; color: var(--text-dark); margin: 18px 0 8px;
+  }
+  .content p { margin: 0 0 12px; color: var(--text-secondary); line-height: 1.8; font-size: 14.5px; }
+  .content a { color: var(--accent-blue); text-decoration: none; }
+  .content a:hover { text-decoration: underline; }
+  .section-hr { border: none; height: 1px; background: var(--border-color); margin: 40px 0; }
+  blockquote {
+    margin: 16px 0; padding: 14px 18px; background: #eef2ff; border-left: 4px solid var(--accent-blue);
+    border-radius: 0 8px 8px 0; color: var(--text-secondary); font-size: 13.5px;
+  }
+  blockquote strong { color: var(--text-dark); }
+  pre {
+    background: var(--code-bg); color: #e2e8f0; padding: 16px 20px; border-radius: 8px;
+    overflow-x: auto; font-size: 12.5px; line-height: 1.65; margin: 12px 0 16px;
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", "JetBrains Mono", Consolas, monospace;
+  }
+  pre::-webkit-scrollbar { height: 4px; }
+  pre::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+  code {
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", "JetBrains Mono", Consolas, monospace;
+    background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 13px; color: #e11d48;
+  }
+  pre code { background: none; padding: 0; color: inherit; font-size: inherit; }
+  .table-wrap { overflow-x: auto; margin: 12px 0 16px; border-radius: 8px; border: 1px solid var(--border-color); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead { background: var(--table-header-bg); }
+  thead th {
+    color: var(--text-light); font-weight: 600; padding: 9px 12px; text-align: left;
+    white-space: nowrap; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  tbody td { padding: 9px 12px; border-bottom: 1px solid var(--border-color); color: var(--text-secondary); vertical-align: top; font-size: 13px; }
+  tbody tr:nth-child(even) { background: #f1f5f9; }
+  tbody tr:hover { background: #e2e8f0; }
+  tbody td:first-child { font-family: "SF Mono", "Cascadia Code", "Fira Code", "JetBrains Mono", Consolas, monospace; font-size: 12px; }
+  .method-badge {
+    display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.5px; color: #fff; white-space: nowrap;
+  }
+  .method-get { background: var(--accent-green); }
+  .method-post { background: var(--accent-blue); }
+  .endpoint-card {
+    background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 10px;
+    padding: 20px 24px; margin: 16px 0;
+  }
+  .endpoint-card .ep-head {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap;
+  }
+  .endpoint-card .ep-head h3 { margin: 0; font-size: 15px; }
+  .endpoint-path { font-family: "SF Mono", "Cascadia Code", "Fira Code", "JetBrains Mono", Consolas, monospace; font-size: 14px; color: var(--text-dark); }
+  .endpoint-desc { color: var(--text-secondary); font-size: 14px; margin-bottom: 12px; line-height: 1.7; }
+  .endpoint-card .ep-subhead { font-size: 12px; font-weight: 600; color: var(--text-dark); margin: 14px 0 6px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .endpoint-card .note { font-size: 13px; color: var(--text-secondary); font-style: italic; }
+  .section-intro { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px 20px; margin: 12px 0; }
+  .section-intro p:last-child { margin-bottom: 0; }
+  @media (max-width: 900px) {
+    .sidebar { width: 240px; min-width: 240px; }
+    .content { padding: 24px 20px 60px; }
+  }
+  @media (max-width: 700px) {
+    body { flex-direction: column; }
+    .sidebar { width: 100%; min-width: 0; height: auto; max-height: 280px; position: relative; }
+    .sidebar-nav { max-height: 180px; }
+    .content { padding: 20px 16px 60px; }
+  }
+  .content ul, .content ol { margin: 8px 0 12px; padding-left: 24px; color: var(--text-secondary); line-height: 1.8; }
+  .content li { margin-bottom: 4px; }
+  .fallback-list { list-style: none; padding: 0; margin: 12px 0; }
+  .fallback-list li {
+    display: flex; align-items: center; gap: 12px; padding: 10px 16px;
+    background: var(--card-bg); border: 1px solid var(--border-color);
+    border-radius: 6px; margin-bottom: 6px;
+    font-size: 14px; color: var(--text-secondary);
+  }
+  .fallback-list li:first-child { border-left: 4px solid var(--accent-green); }
+  .fallback-list li:nth-child(2) { border-left: 4px solid #60a5fa; }
+  .fallback-list li:nth-child(3) { border-left: 4px solid #f59e0b; }
+  .fallback-list li:nth-child(4) { border-left: 4px solid var(--accent-purple); }
+  .fallback-list li:nth-child(5) { border-left: 4px solid var(--accent-pink); }
+  .fallback-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 50%;
+    font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0;
+  }
+  .fallback-list li:first-child .fallback-num { background: var(--accent-green); }
+  .fallback-list li:nth-child(2) .fallback-num { background: #60a5fa; }
+  .fallback-list li:nth-child(3) .fallback-num { background: #f59e0b; }
+  .fallback-list li:nth-child(4) .fallback-num { background: var(--accent-purple); }
+  .fallback-list li:nth-child(5) .fallback-num { background: var(--accent-pink); }
+  .fallback-name { font-family: "SF Mono", "Cascadia Code", "Fira Code", "JetBrains Mono", Consolas, monospace; color: var(--text-dark); font-weight: 600; }
+  .fallback-desc { color: var(--text-muted); font-size: 12px; }
+  .base-url-badge {
+    display: inline-block; background: #f1f5f9; padding: 4px 12px; border-radius: 6px;
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", "JetBrains Mono", Consolas, monospace;
+    font-size: 14px; color: var(--accent-blue); font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <h1>Stock Invest API</h1>
+    <div class="version">v2.0</div>
+    <div class="subtitle">API Reference &amp; Documentation</div>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-section">
+      <span class="nav-section-title">Getting Started</span>
+      <a class="nav-link" href="#overview">Overview</a>
+      <a class="nav-link" href="#base-url">Base URL</a>
+      <a class="nav-link" href="#endpoints-summary">Endpoints Summary</a>
+      <a class="nav-link" href="#authentication">Authentication</a>
+    </div>
+    <div class="nav-section">
+      <span class="nav-section-title">API Endpoints</span>
+      <a class="nav-link nav-link-sub" href="#ep-kl-aapl">GET /api/tiger/kline/aapl</a>
+      <a class="nav-link nav-link-sub" href="#ep-kl-daily-sym">GET /api/tiger/kline/daily/{symbol}</a>
+      <a class="nav-link nav-link-sub" href="#ep-kl-daily-obj">GET /api/tiger/kline/daily/object/{symbol}</a>
+      <a class="nav-link nav-link-sub" href="#ep-kl-daily-q">GET /api/tiger/kline/daily/query</a>
+      <a class="nav-link nav-link-sub" href="#ep-scan-lpvp">GET /api/tiger/scan/low-price-volume-pattern</a>
+      <a class="nav-link nav-link-sub" href="#ep-scan-lpvp-fix">GET /api/tiger/scan/low-price-volume-pattern/fixstock</a>
+      <a class="nav-link nav-link-sub" href="#ep-scanner-custom">POST /api/scanner/custom</a>
+      <a class="nav-link nav-link-sub" href="#ep-screener-run">POST /api/screener/run</a>
+      <a class="nav-link nav-link-sub" href="#ep-screener-snap">POST /api/screener/run-from-snapshot</a>
+      <a class="nav-link nav-link-sub" href="#ep-screener-res">GET /api/screener/results</a>
+      <a class="nav-link nav-link-sub" href="#ep-screener-latest">GET /api/screener/results/latest</a>
+      <a class="nav-link nav-link-sub" href="#ep-ingest-wl">POST /api/ingest/tiger-watchlist</a>
+      <a class="nav-link nav-link-sub" href="#ep-page-daily">GET /screener/daily</a>
+      <a class="nav-link nav-link-sub" href="#ep-page-run">POST /screener/run</a>
+      <a class="nav-link nav-link-sub" href="#ep-root">GET /</a>
+    </div>
+    <div class="nav-section">
+      <span class="nav-section-title">Data Models</span>
+      <a class="nav-link nav-link-sub" href="#dm-klinedata">KLineData</a>
+      <a class="nav-link nav-link-sub" href="#dm-klineiter">KLineIterator</a>
+      <a class="nav-link nav-link-sub" href="#dm-apiresponse">ApiResponse&lt;T&gt;</a>
+      <a class="nav-link nav-link-sub" href="#dm-screenerrun">ScreenerRunResponseDto</a>
+      <a class="nav-link nav-link-sub" href="#dm-screeningresult">ScreeningResultDto</a>
+      <a class="nav-link nav-link-sub" href="#dm-wlreq">TigerWatchlistIngestRequestDto</a>
+      <a class="nav-link nav-link-sub" href="#dm-wlrow">TigerWatchlistRowDto</a>
+      <a class="nav-link nav-link-sub" href="#dm-wlresp">TigerWatchlistIngestResponseDto</a>
+      <a class="nav-link nav-link-sub" href="#dm-snapgrid">SnapshotGridViewDto</a>
+      <a class="nav-link nav-link-sub" href="#dm-snaprow">SnapshotGridRowDto</a>
+      <a class="nav-link nav-link-sub" href="#dm-scanmap">ScanResult Map</a>
+    </div>
+    <div class="nav-section">
+      <span class="nav-section-title">Reference</span>
+      <a class="nav-link" href="#error-codes">Error Codes</a>
+      <a class="nav-link" href="#configuration">Configuration</a>
+      <a class="nav-link" href="#data-source-profiles">Data Source Profiles</a>
+      <a class="nav-link" href="#data-source-fallback">Data Source Fallback</a>
+    </div>
+  </div>
+</nav>
+<main class="content">
+  <h1 class="page-title">Stock Invest API v2</h1>
+  <p style="margin-bottom:24px;">Complete API reference for the Stock Invest Spring Boot application.</p>
+  <section id="overview">
+    <h2>Overview</h2>
+    <div class="section-intro">
+      <p>Spring Boot application running on port <strong>8090</strong>. All REST API endpoints are prefixed with <code>/api</code>. Thymeleaf page endpoints serve HTML directly.</p>
+      <p><strong>Last Updated:</strong> 2026-05-10</p>
+    </div>
+  </section>
+
+  <section id="base-url">
+    <h2>Base URL</h2>
+    <p><span class="base-url-badge">http://localhost:8090</span></p>
+  </section>
+
+  <hr class="section-hr">
+
+  <section id="endpoints-summary">
+    <h2>Endpoints Summary</h2>
+    <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>Path</th>
+          <th>Controller</th>
+          <th>Description</th>
+          <th>Auth</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="method-badge method-get">GET</span></td><td><code>/api/tiger/kline/aapl</code></td><td>StockController</td><td>Get AAPL daily K-line (hardcoded)</td><td>—</td></tr>
+        <tr><td><span class="method-badge method-get">GET</span></td><td><code>/api/tiger/kline/daily/{symbol}</code></td><td>StockController</td><td>Get daily K-line for any symbol (string)</td><td>—</td></tr>
+        <tr><td><span class="method-badge method-get">GET</span></td><td><code>/api/tiger/kline/daily/object/{symbol}</code></td><td>StockController</td><td>Get daily K-line (object response)</td><td>—</td></tr>
+        <tr><td><span class="method-badge method-get">GET</span></td><td><code>/api/tiger/kline/daily/query</code></td><td>StockController</td><td>Query daily K-line with date range &amp; pagination</td><td>—</td></tr>
+        <tr><td><span class="method-badge method-get">GET</span></td><td><code>/api/tiger/scan/low-price-volume-pattern</code></td><td>StockController</td><td>Scan low-price stocks with volume pattern</td><td>—</td></tr>
+        <tr><td><span class="method-badge method-get">GET</span></td><td><code>/api/tiger/scan/low-price-volume-pattern/fixstock</code></td><td>StockController</td><td>Scan (fixed limit=20)</td><td>—</td></tr>
+        <tr><td><span class="method-badge method-post">POST</span></td><td><code>/api/scanner/custom</code></td><td>StockScannerController</td><td>Custom stock scanner</td><td>—</td></tr>
+        <tr><td><span class="method-badge method-post">POST</span></td><td><code>/api/screener/run</code></td><td>ScreeningQueryController</td><td>Run daily screening scan</td><td>—</td></tr>
+        <tr><td><span class="method-badge method-post">POST</span></td><td><code>/api/screener/run-from-snapshot</code></td><td>ScreeningQueryController</td><td>Run screening from snapshot K-line</td><td><code>X-INGEST-API-KEY</code></td></tr>
+        <tr><td><span class="method-badge method-get">GET</span></td><td><code>/api/screener/results</code></td><td>ScreeningQueryController</td><td>Query screening results by trade date</td><td>—</td></tr>
+        <tr><td><span class="method-badge method-get">GET</span></td><td><code>/api/screener/results/latest</code></td><td>ScreeningQueryController</td><td>Query latest screening results</td><td>—</td></tr>
+        <tr><td><span class="method-badge method-post">POST</span></td><td><code>/api/ingest/tiger-watchlist</code></td><td>TigerWatchlistIngestController</td><td>Import Tiger Brokers OCR watchlist</td><td><code>X-INGEST-API-KEY</code></td></tr>
+        <tr><td><span class="method-badge method-get">GET</span></td><td><code>/screener/daily</code></td><td>ScreeningPageController</td><td>Thymeleaf — screening dashboard</td><td>—</td></tr>
+        <tr><td><span class="method-badge method-post">POST</span></td><td><code>/screener/run</code></td><td>ScreeningPageController</td><td>Thymeleaf — trigger screening</td><td>—</td></tr>
+        <tr><td><span class="method-badge method-get">GET</span></td><td><code>/</code></td><td>ScreeningPageController</td><td>Root redirect → /screener/daily</td><td>—</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <hr class="section-hr">
+
+  <section id="authentication">
+    <h2>Authentication</h2>
+    <h3>X-INGEST-API-KEY Header</h3>
+    <p>Certain ingest and snapshot-based endpoints require an API key passed via the <code>X-INGEST-API-KEY</code> request header.</p>
+    <h4>Configuration (<code>application.yml</code>)</h4>
+    <pre><code>ingest:
+  api-key: ""          # When non-empty, key verification is required</code></pre>
+    <h4>Behavior</h4>
+    <ul>
+      <li>If <code>ingest.api-key</code> is empty (default), the header is <strong>optional</strong> — requests without it will still succeed.</li>
+      <li>If <code>ingest.api-key</code> is set to a non-empty value, the header <strong>must</strong> match that value exactly. Missing or mismatched keys return <code>401 Unauthorized</code>.</li>
+    </ul>
+    <h4>Endpoints requiring this header</h4>
+    <ul>
+      <li><code>POST /api/ingest/tiger-watchlist</code></li>
+      <li><code>POST /api/screener/run-from-snapshot</code></li>
+    </ul>
+  </section>
+
+  <hr class="section-hr">
+
+  <section id="endpoint-details">
+    <h2>Endpoint Details</h2>
+    <div class="endpoint-card" id="ep-kl-aapl">
+      <div class="ep-head">
+        <span class="method-badge method-get">GET</span>
+        <h3><span class="endpoint-path">/api/tiger/kline/aapl</span></h3>
+      </div>
+      <p class="endpoint-desc">Returns the daily K-line data for Apple Inc. (AAPL) as a JSON string. The symbol is hardcoded to AAPL.</p>
+      <div class="ep-subhead">Request Parameters</div>
+      <p style="font-size:13px;color:var(--text-secondary);">None</p>
+      <div class="ep-subhead">Request Example</div>
+      <pre><code>curl http://localhost:8090/api/tiger/kline/aapl</code></pre>
+      <div class="ep-subhead">Response Example</div>
+      <pre><code>"{\"symbol\":\"AAPL\",\"items\":[{\"time\":1746345600000,\"open\":189.50,\"high\":191.20,\"low\":188.80,\"close\":190.75,\"volume\":45231000}]}"</code></pre>
+      <blockquote><strong>Note:</strong> The response body is a <strong>JSON string</strong> (not a JSON object). It must be parsed with <code>JSON.parse()</code> on the client.</blockquote>
+      <div class="ep-subhead">Error Codes</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>HTTP Status</th><th>Condition</th></tr></thead><tbody>
+        <tr><td>200</td><td>Success</td></tr>
+        <tr><td>500</td><td>Data source unavailable or internal error</td></tr>
+      </tbody></table>
+      </div>
+    </div>
+
+    <div class="endpoint-card" id="ep-kl-daily-sym">
+      <div class="ep-head">
+        <span class="method-badge method-get">GET</span>
+        <h3><span class="endpoint-path">/api/tiger/kline/daily/{symbol}</span></h3>
+      </div>
+      <p class="endpoint-desc">Returns the daily K-line data for a specified stock symbol as a JSON string.</p>
+      <div class="ep-subhead">Request Parameters</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>Name</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr></thead><tbody>
+        <tr><td>symbol</td><td>String (path)</td><td>Yes</td><td>—</td><td>Stock symbol, e.g. <code>AAPL</code>, <code>MSFT</code></td></tr>
+      </tbody></table>
+      </div>
+      <div class="ep-subhead">Request Example</div>
+      <pre><code>curl http://localhost:8090/api/tiger/kline/daily/MSFT</code></pre>
+      <div class="ep-subhead">Response Example</div>
+      <pre><code>"{\"symbol\":\"MSFT\",\"items\":[{\"time\":1746345600000,\"open\":420.50,\"high\":425.10,\"low\":418.30,\"close\":423.80,\"volume\":18562000}]}"</code></pre>
+      <div class="ep-subhead">Error Codes</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>HTTP Status</th><th>Condition</th></tr></thead><tbody>
+        <tr><td>200</td><td>Success</td></tr>
+        <tr><td>404</td><td>Symbol not found</td></tr>
+        <tr><td>500</td><td>Data source unavailable or internal error</td></tr>
+      </tbody></table>
+      </div>
+    </div>
+
+    <div class="endpoint-card" id="ep-kl-daily-obj">
+      <div class="ep-head">
+        <span class="method-badge method-get">GET</span>
+        <h3><span class="endpoint-path">/api/tiger/kline/daily/object/{symbol}</span></h3>
+      </div>
+      <p class="endpoint-desc">Returns the daily K-line data for a specified stock symbol as a proper JSON object.</p>
+      <div class="ep-subhead">Request Parameters</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>Name</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr></thead><tbody>
+        <tr><td>symbol</td><td>String (path)</td><td>Yes</td><td>—</td><td>Stock symbol, e.g. <code>AAPL</code>, <code>MSFT</code></td></tr>
+      </tbody></table>
+      </div>
+      <div class="ep-subhead">Request Example</div>
+      <pre><code>curl http://localhost:8090/api/tiger/kline/daily/object/AAPL</code></pre>
+      <div class="ep-subhead">Response Example</div>
+      <pre><code>{
+  "symbol": "AAPL",
+  "time": 1746345600000,
+  "open": 189.50,
+  "high": 191.20,
+  "low": 188.80,
+  "close": 190.75,
+  "volume": 45231000,
+  "amount": 8600000000.00,
+  "items": [
+    {
+      "symbol": "AAPL",
+      "time": 1746345600000,
+      "open": 189.50,
+      "high": 191.20,
+      "low": 188.80,
+      "close": 190.75,
+      "volume": 45231000,
+      "amount": 8600000000.00
+    }
+  ]
+}</code></pre>
+      <div class="ep-subhead">Error Codes</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>HTTP Status</th><th>Condition</th></tr></thead><tbody>
+        <tr><td>200</td><td>Success</td></tr>
+        <tr><td>404</td><td>Symbol not found</td></tr>
+        <tr><td>500</td><td>Data source unavailable or internal error</td></tr>
+      </tbody></table>
+      </div>
+    </div>
+    <div class="endpoint-card" id="ep-kl-daily-q">
+      <div class="ep-head">
+        <span class="method-badge method-get">GET</span>
+        <h3><span class="endpoint-path">/api/tiger/kline/daily/query</span></h3>
+      </div>
+      <p class="endpoint-desc">Queries daily K-line data with optional date range and pagination parameters.</p>
+      <blockquote><strong>Note:</strong> Current implementation ignores <code>beginDate</code>, <code>endDate</code>, <code>limit</code>, and <code>pageToken</code> — it always returns the full result of <code>getDailyKLineData(symbol)</code>. These parameters are reserved for future use.</blockquote>
+      <div class="ep-subhead">Request Parameters</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>Name</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr></thead><tbody>
+        <tr><td>symbol</td><td>String</td><td>Yes</td><td>—</td><td>Stock symbol, e.g. <code>AAPL</code></td></tr>
+        <tr><td>beginDate</td><td>String</td><td>No</td><td>—</td><td>Start date (<code>yyyy-MM-dd</code> format)</td></tr>
+        <tr><td>endDate</td><td>String</td><td>No</td><td>—</td><td>End date (<code>yyyy-MM-dd</code> format)</td></tr>
+        <tr><td>limit</td><td>Integer</td><td>No</td><td><code>20</code></td><td>Maximum records to return</td></tr>
+        <tr><td>pageToken</td><td>String</td><td>No</td><td><code>""</code></td><td>Pagination cursor token (reserved)</td></tr>
+      </tbody></table>
+      </div>
+      <div class="ep-subhead">Request Example</div>
+      <pre><code>curl "http://localhost:8090/api/tiger/kline/daily/query?symbol=AAPL&amp;beginDate=2026-04-01&amp;endDate=2026-05-01&amp;limit=10"</code></pre>
+      <div class="ep-subhead">Response Example</div>
+      <p class="note">Same format as <code>GET /api/tiger/kline/daily/{symbol}</code> (JSON string).</p>
+      <div class="ep-subhead">Error Codes</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>HTTP Status</th><th>Condition</th></tr></thead><tbody>
+        <tr><td>200</td><td>Success</td></tr>
+        <tr><td>500</td><td>Data source unavailable or internal error</td></tr>
+      </tbody></table>
+      </div>
+    </div>
+
+    <div class="endpoint-card" id="ep-scan-lpvp">
+      <div class="ep-head">
+        <span class="method-badge method-get">GET</span>
+        <h3><span class="endpoint-path">/api/tiger/scan/low-price-volume-pattern</span></h3>
+      </div>
+      <p class="endpoint-desc">Scans for low-price stocks (typically $0.05–$0.20 range) that exhibit a specific increasing volume pattern. The volume pattern checks that each preceding day's average volume is progressively lower than the next day's average volume. Data sources are tried in priority order: tigeropen → tiger → yfinance → twelvedata → tiingo.</p>
+      <div class="ep-subhead">Request Parameters</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>Name</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr></thead><tbody>
+        <tr><td>limit</td><td>Integer</td><td>No</td><td><code>20</code></td><td>Maximum number of matching stocks to return</td></tr>
+      </tbody></table>
+      </div>
+      <div class="ep-subhead">Request Example</div>
+      <pre><code>curl "http://localhost:8090/api/tiger/scan/low-price-volume-pattern?limit=10"</code></pre>
+      <div class="ep-subhead">Response Example</div>
+      <pre><code>{
+  "statistics": {
+    "totalCandidates": 150,
+    "processedStocks": 120,
+    "matchingStocks": 15
+  },
+  "matchingStocks": [
+    {
+      "symbol": "SBFM",
+      "name": "Sunshine Biopharma Inc.",
+      "currentPrice": 0.12,
+      "volume": 5842000,
+      "kline": "{...KLineData JSON...}"
+    }
+  ]
+}</code></pre>
+      <div class="ep-subhead">Error Codes</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>HTTP Status</th><th>Condition</th></tr></thead><tbody>
+        <tr><td>200</td><td>Success</td></tr>
+        <tr><td>500</td><td>Data source unavailable or internal error</td></tr>
+      </tbody></table>
+      </div>
+    </div>
+
+    <div class="endpoint-card" id="ep-scan-lpvp-fix">
+      <div class="ep-head">
+        <span class="method-badge method-get">GET</span>
+        <h3><span class="endpoint-path">/api/tiger/scan/low-price-volume-pattern/fixstock</span></h3>
+      </div>
+      <p class="endpoint-desc">Same as <code>/low-price-volume-pattern</code> but with a fixed limit of 20 (no parameter accepted). Equivalent to calling the above with <code>limit=20</code>.</p>
+      <div class="ep-subhead">Request Parameters</div>
+      <p style="font-size:13px;color:var(--text-secondary);">None</p>
+      <div class="ep-subhead">Request Example</div>
+      <pre><code>curl http://localhost:8090/api/tiger/scan/low-price-volume-pattern/fixstock</code></pre>
+      <div class="ep-subhead">Response Example</div>
+      <p class="note">Same format as <code>/low-price-volume-pattern</code>.</p>
+      <div class="ep-subhead">Error Codes</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>HTTP Status</th><th>Condition</th></tr></thead><tbody>
+        <tr><td>200</td><td>Success</td></tr>
+        <tr><td>500</td><td>Data source unavailable or internal error</td></tr>
+      </tbody></table>
+      </div>
+    </div>
+    <div class="endpoint-card" id="ep-scanner-custom">
+      <div class="ep-head">
+        <span class="method-badge method-post">POST</span>
+        <h3><span class="endpoint-path">/api/scanner/custom</span></h3>
+      </div>
+      <p class="endpoint-desc">Runs a custom stock scan using Tiger Brokers' market scanner API. Supports filtering by market, category, limit, and price range.</p>
+      <div class="ep-subhead">Request Parameters (JSON body)</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>Name</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr></thead><tbody>
+        <tr><td>market</td><td>String</td><td>No</td><td><code>"US"</code></td><td>Market code: <code>US</code>, <code>HK</code>, or <code>CN</code></td></tr>
+        <tr><td>category</td><td>String</td><td>No</td><td><code>"TOP_VOLUME"</code></td><td>Scanner category (see enum below)</td></tr>
+        <tr><td>limit</td><td>Integer</td><td>No</td><td><code>20</code></td><td>Maximum results to return</td></tr>
+        <tr><td>minPrice</td><td>Double</td><td>No</td><td>—</td><td>Minimum price filter (optional)</td></tr>
+        <tr><td>maxPrice</td><td>Double</td><td>No</td><td>—</td><td>Maximum price filter (optional)</td></tr>
+      </tbody></table>
+      </div>
+      <div class="ep-subhead">MarketScannerCategory Enum Values</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>Value</th><th>Description</th></tr></thead><tbody>
+        <tr><td><code>TOP_VOLUME</code></td><td>Sort by trading volume</td></tr>
+        <tr><td><code>TOP_GAINER</code></td><td>Sort by price gain</td></tr>
+        <tr><td><code>TOP_LOSER</code></td><td>Sort by price decline</td></tr>
+        <tr><td><code>TOP_MARKETCAP</code></td><td>Sort by market capitalization</td></tr>
+        <tr><td><code>TOP_DIVIDEND</code></td><td>Sort by dividend yield</td></tr>
+        <tr><td><code>CUSTOM</code></td><td>Custom scan criteria</td></tr>
+      </tbody></table>
+      </div>
+      <div class="ep-subhead">Request Example</div>
+      <pre><code>curl -X POST http://localhost:8090/api/scanner/custom \
+  -H "Content-Type: application/json" \
+  -d '{
+    "market": "US",
+    "category": "TOP_VOLUME",
+    "limit": 10,
+    "minPrice": 0.05,
+    "maxPrice": 100.0
+  }'</code></pre>
+      <div class="ep-subhead">Response Example</div>
+      <pre><code>["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "META", "NVDA", "JPM", "V", "JNJ"]</code></pre>
+      <p class="note">Returns a flat list of matching stock symbols (strings).</p>
+      <div class="ep-subhead">Error Codes</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>HTTP Status</th><th>Condition</th></tr></thead><tbody>
+        <tr><td>200</td><td>Success</td></tr>
+        <tr><td>400</td><td>Invalid market or category value</td></tr>
+        <tr><td>500</td><td>Data source unavailable or internal error</td></tr>
+      </tbody></table>
+      </div>
+    </div>
+
+    <div class="endpoint-card" id="ep-screener-run">
+      <div class="ep-head">
+        <span class="method-badge method-post">POST</span>
+        <h3><span class="endpoint-path">/api/screener/run</span></h3>
+      </div>
+      <p class="endpoint-desc">Executes a full daily screening scan. This endpoint fetches live market data from external data sources (Tiger Brokers, YFinance, etc.) and runs the volume-price pattern matching. Results are persisted to the database.</p>
+      <div class="ep-subhead">Request Parameters</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>Name</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr></thead><tbody>
+        <tr><td>date</td><td>String</td><td>No</td><td>Today</td><td>Trade date in <code>yyyy-MM-dd</code> or ISO-8601 format</td></tr>
+        <tr><td>limit</td><td>Integer</td><td>No</td><td><code>20</code></td><td>Maximum number of candidate stocks to process</td></tr>
+        <tr><td>windowDays</td><td>Integer</td><td>No</td><td><code>7</code></td><td>K-line lookback window in days (clamped to 3–7)</td></tr>
+      </tbody></table>
+      </div>
+      <div class="ep-subhead">Request Example</div>
+      <pre><code>curl -X POST "http://localhost:8090/api/screener/run?date=2026-05-10&amp;limit=50&amp;windowDays=5"</code></pre>
+      <div class="ep-subhead">Response Example</div>
+      <pre><code>{
+  "batchId": "batch_20260510_a1b2c3",
+  "tradeDate": "2026-05-10",
+  "totalCandidates": 150,
+  "processedStocks": 50,
+  "matchedStocks": 7
+}</code></pre>
+      <div class="ep-subhead">Error Codes</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>HTTP Status</th><th>Condition</th></tr></thead><tbody>
+        <tr><td>200</td><td>Success</td></tr>
+        <tr><td>400</td><td>Invalid date format or parameters</td></tr>
+        <tr><td>500</td><td>Internal error during scan</td></tr>
+      </tbody></table>
+      </div>
+    </div>
+
+    <div class="endpoint-card" id="ep-screener-snap">
+      <div class="ep-head">
+        <span class="method-badge method-post">POST</span>
+        <h3><span class="endpoint-path">/api/screener/run-from-snapshot</span></h3>
+      </div>
+      <p class="endpoint-desc">Runs the volume-price pattern screening using only already-imported snapshot K-line data (<code>source=tiger_snap</code>). Does <strong>not</strong> request any external market data. Requires the <code>X-INGEST-API-KEY</code> header when configured.</p>
+      <div class="ep-subhead">Request Parameters</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>Name</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr></thead><tbody>
+        <tr><td>date</td><td>String</td><td>No</td><td>Today</td><td>Trade date in <code>yyyy-MM-dd</code> or ISO-8601 format</td></tr>
+        <tr><td>limit</td><td>Integer</td><td>No</td><td><code>20</code></td><td>Maximum number of candidate stocks to process</td></tr>
+        <tr><td>windowDays</td><td>Integer</td><td>No</td><td><code>7</code></td><td>K-line lookback window in days (clamped to 3–7)</td></tr>
+      </tbody></table>
+      </div>
+      <div class="ep-subhead">Request Headers</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>Name</th><th>Required</th><th>Description</th></tr></thead><tbody>
+        <tr><td><code>X-INGEST-API-KEY</code></td><td>Conditional</td><td>Required when <code>ingest.api-key</code> is configured</td></tr>
+      </tbody></table>
+      </div>
+      <div class="ep-subhead">Request Example</div>
+      <pre><code>curl -X POST "http://localhost:8090/api/screener/run-from-snapshot?date=2026-05-10&amp;limit=30&amp;windowDays=5" \
+  -H "X-INGEST-API-KEY: your-api-key"</code></pre>
+      <div class="ep-subhead">Response Example</div>
+      <pre><code>{
+  "batchId": "batch_20260510_x1y2z3",
+  "tradeDate": "2026-05-10",
+  "totalCandidates": 48,
+  "processedStocks": 48,
+  "matchedStocks": 5
+}</code></pre>
+      <div class="ep-subhead">Error Codes</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>HTTP Status</th><th>Condition</th></tr></thead><tbody>
+        <tr><td>200</td><td>Success</td></tr>
+        <tr><td>400</td><td>Invalid date format or parameters</td></tr>
+        <tr><td>401</td><td>Missing or invalid X-INGEST-API-KEY</td></tr>
+        <tr><td>500</td><td>Internal error during scan</td></tr>
+      </tbody></table>
+      </div>
+    </div>
+    <div class="endpoint-card" id="ep-screener-res">
+      <div class="ep-head">
+        <span class="method-badge method-get">GET</span>
+        <h3><span class="endpoint-path">/api/screener/results</span></h3>
+      </div>
+      <p class="endpoint-desc">Retrieves screening results for a specific trade date. Optional price range filtering is supported.</p>
+      <div class="ep-subhead">Request Parameters</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>Name</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr></thead><tbody>
+        <tr><td>tradeDate</td><td>String</td><td>Yes</td><td>—</td><td>Trade date in <code>yyyy-MM-dd</code> or ISO-8601 format</td></tr>
+        <tr><td>minPrice</td><td>Double</td><td>No</td><td>—</td><td>Minimum price filter (optional)</td></tr>
+        <tr><td>maxPrice</td><td>Double</td><td>No</td><td>—</td><td>Maximum price filter (optional)</td></tr>
+      </tbody></table>
+      </div>
+      <div class="ep-subhead">Request Example</div>
+      <pre><code>curl "http://localhost:8090/api/screener/results?tradeDate=2026-05-10&amp;minPrice=0.05&amp;maxPrice=1.00"</code></pre>
+      <div class="ep-subhead">Response Example</div>
+      <pre><code>[
+  {
+    "symbol": "SBFM",
+    "price": 0.12,
+    "rise": true,
+    "source": "tiger_snap",
+    "tradeDate": "2026-05-10"
+  },
+  {
+    "symbol": "ABC",
+    "price": 0.08,
+    "rise": false,
+    "source": "YFinance",
+    "tradeDate": "2026-05-10"
+  }
+]</code></pre>
+      <div class="ep-subhead">Error Codes</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>HTTP Status</th><th>Condition</th></tr></thead><tbody>
+        <tr><td>200</td><td>Success</td></tr>
+        <tr><td>400</td><td>Invalid date format</td></tr>
+        <tr><td>500</td><td>Internal error</td></tr>
+      </tbody></table>
+      </div>
+    </div>
+
+    <div class="endpoint-card" id="ep-screener-latest">
+      <div class="ep-head">
+        <span class="method-badge method-get">GET</span>
+        <h3><span class="endpoint-path">/api/screener/results/latest</span></h3>
+      </div>
+      <p class="endpoint-desc">Retrieves the most recent screening results (latest batch/trade date). Optional price range filtering is supported.</p>
+      <div class="ep-subhead">Request Parameters</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>Name</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr></thead><tbody>
+        <tr><td>minPrice</td><td>Double</td><td>No</td><td>—</td><td>Minimum price filter (optional)</td></tr>
+        <tr><td>maxPrice</td><td>Double</td><td>No</td><td>—</td><td>Maximum price filter (optional)</td></tr>
+      </tbody></table>
+      </div>
+      <div class="ep-subhead">Request Example</div>
+      <pre><code>curl "http://localhost:8090/api/screener/results/latest?minPrice=0.05&amp;maxPrice=5.00"</code></pre>
+      <div class="ep-subhead">Response Example</div>
+      <p class="note">Same format as <code>GET /api/screener/results</code>.</p>
+      <div class="ep-subhead">Error Codes</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>HTTP Status</th><th>Condition</th></tr></thead><tbody>
+        <tr><td>200</td><td>Success</td></tr>
+        <tr><td>500</td><td>Internal error</td></tr>
+      </tbody></table>
+      </div>
+    </div>
+
+    <div class="endpoint-card" id="ep-ingest-wl">
+      <div class="ep-head">
+        <span class="method-badge method-post">POST</span>
+        <h3><span class="endpoint-path">/api/ingest/tiger-watchlist</span></h3>
+      </div>
+      <p class="endpoint-desc">Imports stock watchlist/quote data extracted from Tiger Brokers client screenshots via OCR (OpenClaw / Hermes). The endpoint parses each row, validates the symbol against Tiger market data, and persists the stock info for snapshot-based screening.</p>
+      <div class="ep-subhead">Request Headers</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>Name</th><th>Required</th><th>Description</th></tr></thead><tbody>
+        <tr><td><code>X-INGEST-API-KEY</code></td><td>Conditional</td><td>Required when <code>ingest.api-key</code> is configured</td></tr>
+        <tr><td><code>Content-Type</code></td><td>Yes</td><td><code>application/json</code></td></tr>
+      </tbody></table>
+      </div>
+      <div class="ep-subhead">Request Parameters (JSON body)</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>Name</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+        <tr><td>tradeDate</td><td>String</td><td>Yes</td><td>ISO-8601 date, e.g. <code>"2026-04-26"</code> — the trading date of the screenshot</td></tr>
+        <tr><td>rows</td><td>Array</td><td>Yes</td><td>List of watchlist row objects</td></tr>
+      </tbody></table>
+      </div>
+      <div class="ep-subhead">Row Object Fields</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>Name</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+        <tr><td>symbol</td><td>String</td><td>Yes</td><td>Stock symbol. Accepts JSON key <code>symbol</code> or <code>code</code> (via <code>@JsonAlias</code>)</td></tr>
+        <tr><td>name</td><td>String</td><td>Yes</td><td>Stock name (e.g. <code>"苹果"</code>, <code>"Apple Inc."</code>)</td></tr>
+        <tr><td>lastPrice</td><td>Double</td><td>Yes</td><td>Latest traded price</td></tr>
+        <tr><td>volume</td><td>Object</td><td>Yes</td><td>Trading volume — supports plain numbers (e.g. <code>73300</code>) or Chinese-unit strings (e.g. <code>"7.33万"</code>, <code>"1.47亿"</code>) — parsed automatically</td></tr>
+      </tbody></table>
+      </div>
+      <div class="ep-subhead">Request Example</div>
+      <pre><code>curl -X POST http://localhost:8090/api/ingest/tiger-watchlist \
+  -H "Content-Type: application/json" \
+  -H "X-INGEST-API-KEY: your-api-key" \
+  -d '{
+    "tradeDate": "2026-04-26",
+    "rows": [
+      {
+        "symbol": "AAPL",
+        "name": "苹果",
+        "lastPrice": 190.75,
+        "volume": "4523.10万"
+      },
+      {
+        "symbol": "MSFT",
+        "name": "微软",
+        "lastPrice": 420.50,
+        "volume": "1856.20万"
+      },
+      {
+        "code": "SBFM",
+        "name": "Sunshine Biopharma",
+        "lastPrice": 0.12,
+        "volume": 5842000
+      }
+    ]
+  }'</code></pre>
+      <blockquote><strong>Note:</strong> The <code>symbol</code> field can also be sent as <code>code</code> (backward compatibility). The <code>volume</code> field accepts both numeric and Chinese-unit string formats.</blockquote>
+      <div class="ep-subhead">Response Example</div>
+      <pre><code>{
+  "batchId": "batch_20260426_abcdef",
+  "tradeDate": "2026-04-26",
+  "imported": 5,
+  "skipped": 2,
+  "skipReasons": [
+    "symbol '???' is invalid — not found in Tiger market data",
+    "duplicate symbol: SBFM"
+  ]
+}</code></pre>
+      <div class="ep-subhead">Error Codes</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>HTTP Status</th><th>Condition</th></tr></thead><tbody>
+        <tr><td>200</td><td>Success</td></tr>
+        <tr><td>400</td><td>Invalid request body (e.g. missing fields, bad volume format)</td></tr>
+        <tr><td>401</td><td>Missing or invalid X-INGEST-API-KEY</td></tr>
+        <tr><td>500</td><td>Internal error during import</td></tr>
+      </tbody></table>
+      </div>
+    </div>
+    <div class="endpoint-card" id="ep-page-daily">
+      <div class="ep-head">
+        <span class="method-badge method-get">GET</span>
+        <h3><span class="endpoint-path">/screener/daily</span></h3>
+      </div>
+      <p class="endpoint-desc">(Thymeleaf page) Renders the screening dashboard HTML page. Displays:</p>
+      <ul>
+        <li>Screening results table for the specified trade date</li>
+        <li>Price filters and window-days configuration</li>
+        <li>Snapshot import K-line matrix grid (48 cells)</li>
+        <li>Notice message banner</li>
+      </ul>
+      <div class="ep-subhead">Request Parameters (query string)</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>Name</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr></thead><tbody>
+        <tr><td>tradeDate</td><td>String</td><td>No</td><td>Today</td><td>Trade date in <code>yyyy-MM-dd</code> format</td></tr>
+        <tr><td>minPrice</td><td>Double</td><td>No</td><td>—</td><td>Minimum price filter</td></tr>
+        <tr><td>maxPrice</td><td>Double</td><td>No</td><td>—</td><td>Maximum price filter</td></tr>
+        <tr><td>windowDays</td><td>Integer</td><td>No</td><td><code>7</code></td><td>K-line window (clamped to 3–7)</td></tr>
+        <tr><td>notice</td><td>String</td><td>No</td><td>—</td><td>Notice message displayed as banner</td></tr>
+      </tbody></table>
+      </div>
+      <div class="ep-subhead">Request Example</div>
+      <pre><code>curl "http://localhost:8090/screener/daily?tradeDate=2026-05-10&amp;minPrice=0.05&amp;maxPrice=1.00&amp;windowDays=5"</code></pre>
+      <div class="ep-subhead">Response</div>
+      <p><code>200 OK</code> — HTML page rendered via Thymeleaf template <code>screener-daily</code>.</p>
+      <div class="ep-subhead">Model Attributes (available in Thymeleaf template)</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>Attribute</th><th>Type</th><th>Description</th></tr></thead><tbody>
+        <tr><td>tradeDate</td><td>String</td><td>Current trade date</td></tr>
+        <tr><td>minPrice</td><td>Double</td><td>Minimum price filter (or null)</td></tr>
+        <tr><td>maxPrice</td><td>Double</td><td>Maximum price filter (or null)</td></tr>
+        <tr><td>windowDays</td><td>Integer</td><td>K-line window days</td></tr>
+        <tr><td>notice</td><td>String</td><td>Notice banner message (or null)</td></tr>
+        <tr><td>rows</td><td>List&lt;ScreeningResultDto&gt;</td><td>Screening result rows</td></tr>
+        <tr><td>snapshotGrid</td><td>SnapshotGridViewDto</td><td>Snapshot K-line matrix grid data</td></tr>
+      </tbody></table>
+      </div>
+    </div>
+
+    <div class="endpoint-card" id="ep-page-run">
+      <div class="ep-head">
+        <span class="method-badge method-post">POST</span>
+        <h3><span class="endpoint-path">/screener/run</span></h3>
+      </div>
+      <p class="endpoint-desc">(Thymeleaf form action) Triggers the daily screening scan and redirects to <code>GET /screener/daily</code> with a notice message showing the scan summary.</p>
+      <div class="ep-subhead">Request Parameters (form/query)</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>Name</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr></thead><tbody>
+        <tr><td>tradeDate</td><td>String</td><td>No</td><td>Today</td><td>Trade date in <code>yyyy-MM-dd</code> format</td></tr>
+        <tr><td>limit</td><td>Integer</td><td>No</td><td><code>20</code></td><td>Maximum candidate stocks</td></tr>
+        <tr><td>windowDays</td><td>Integer</td><td>No</td><td><code>7</code></td><td>K-line window (clamped to 3–7)</td></tr>
+      </tbody></table>
+      </div>
+      <div class="ep-subhead">Request Example</div>
+      <pre><code>curl -X POST "http://localhost:8090/screener/run?tradeDate=2026-05-10&amp;limit=50&amp;windowDays=5"</code></pre>
+      <div class="ep-subhead">Response</div>
+      <p><code>302 Redirect</code> → <code>/screener/daily?tradeDate=...&amp;windowDays=...&amp;notice=...</code></p>
+      <p class="note">The <code>notice</code> parameter is auto-generated:<br>
+      <code>已执行筛选: processed=&lt;count&gt;, matched=&lt;count&gt;, windowDays=&lt;n&gt;, batchId=&lt;id&gt;</code></p>
+    </div>
+
+    <div class="endpoint-card" id="ep-root">
+      <div class="ep-head">
+        <span class="method-badge method-get">GET</span>
+        <h3><span class="endpoint-path">/</span></h3>
+      </div>
+      <p class="endpoint-desc">Root path — permanently redirects to <code>/screener/daily</code>.</p>
+      <div class="ep-subhead">Request Parameters</div>
+      <p style="font-size:13px;color:var(--text-secondary);">None</p>
+      <div class="ep-subhead">Request Example</div>
+      <pre><code>curl -L http://localhost:8090/</code></pre>
+      <div class="ep-subhead">Response</div>
+      <p><code>302 Redirect</code> → <code>/screener/daily</code></p>
+    </div>
+  </section>
+
+  <hr class="section-hr">
+
+  <section id="data-models">
+    <h2>Data Models</h2>
+    <div class="endpoint-card" id="dm-klinedata">
+      <div class="ep-head"><h3 style="margin:0;">KLineData</h3></div>
+      <p class="endpoint-desc">Used by: StockController (object endpoints)</p>
+      <div class="table-wrap">
+      <table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+        <tr><td>symbol</td><td>String</td><td>Stock symbol</td></tr>
+        <tr><td>time</td><td>Long</td><td>Unix epoch milliseconds of the data point</td></tr>
+        <tr><td>open</td><td>Double</td><td>Opening price</td></tr>
+        <tr><td>high</td><td>Double</td><td>Highest price</td></tr>
+        <tr><td>low</td><td>Double</td><td>Lowest price</td></tr>
+        <tr><td>close</td><td>Double</td><td>Closing price</td></tr>
+        <tr><td>volume</td><td>Long</td><td>Trading volume (shares)</td></tr>
+        <tr><td>amount</td><td>Double</td><td>Trading amount (currency)</td></tr>
+        <tr><td>items</td><td>List&lt;KLineIterator&gt;</td><td>List of individual K-line data points</td></tr>
+        <tr><td>nextPageToken</td><td>String</td><td>Pagination token for next page (reserved)</td></tr>
+        <tr><td>errorCode</td><td>String</td><td>Error code from data source (if any)</td></tr>
+        <tr><td>errorMessage</td><td>String</td><td>Error message from data source (if any)</td></tr>
+        <tr><td>code</td><td>String</td><td>Response code from data source</td></tr>
+        <tr><td>message</td><td>String</td><td>Response message from data source</td></tr>
+      </tbody></table>
+      </div>
+    </div>
+
+    <div class="endpoint-card" id="dm-klineiter">
+      <div class="ep-head"><h3 style="margin:0;">KLineIterator</h3></div>
+      <p class="endpoint-desc">Used by: Inside <code>KLineData.items</code></p>
+      <div class="table-wrap">
+      <table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+        <tr><td>symbol</td><td>String</td><td>Stock symbol</td></tr>
+        <tr><td>time</td><td>Long</td><td>Unix epoch milliseconds</td></tr>
+        <tr><td>timeString</td><td>String</td><td>Human-readable time string (alternative)</td></tr>
+        <tr><td>open</td><td>Double</td><td>Opening price</td></tr>
+        <tr><td>high</td><td>Double</td><td>Highest price</td></tr>
+        <tr><td>low</td><td>Double</td><td>Lowest price</td></tr>
+        <tr><td>close</td><td>Double</td><td>Closing price</td></tr>
+        <tr><td>volume</td><td>Long</td><td>Trading volume (shares)</td></tr>
+        <tr><td>amount</td><td>Double</td><td>Trading amount (currency)</td></tr>
+        <tr><td>openBD</td><td>BigDecimal</td><td>Opening price (BigDecimal precision)</td></tr>
+        <tr><td>highBD</td><td>BigDecimal</td><td>Highest price (BigDecimal precision)</td></tr>
+        <tr><td>lowBD</td><td>BigDecimal</td><td>Lowest price (BigDecimal precision)</td></tr>
+        <tr><td>closeBD</td><td>BigDecimal</td><td>Closing price (BigDecimal precision)</td></tr>
+      </tbody></table>
+      </div>
+    </div>
+
+    <div class="endpoint-card" id="dm-apiresponse">
+      <div class="ep-head"><h3 style="margin:0;">ApiResponse&lt;T&gt;</h3></div>
+      <p class="endpoint-desc">Used by: GlobalExceptionHandler (error responses)</p>
+      <div class="table-wrap">
+      <table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+        <tr><td>success</td><td>Boolean</td><td>Whether the operation succeeded</td></tr>
+        <tr><td>message</td><td>String</td><td>Human-readable message (null on success)</td></tr>
+        <tr><td>data</td><td>T</td><td>Response payload (null on error)</td></tr>
+        <tr><td>errorType</td><td>String</td><td>Error type identifier (e.g. <code>"StockDataException"</code>)</td></tr>
+        <tr><td>timestamp</td><td>Instant</td><td>ISO-8601 timestamp of the response</td></tr>
+      </tbody></table>
+      </div>
+    </div>
+
+    <div class="endpoint-card" id="dm-screenerrun">
+      <div class="ep-head"><h3 style="margin:0;">ScreenerRunResponseDto</h3></div>
+      <p class="endpoint-desc">Used by: <code>POST /api/screener/run</code>, <code>POST /api/screener/run-from-snapshot</code></p>
+      <div class="table-wrap">
+      <table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+        <tr><td>batchId</td><td>String</td><td>Unique batch identifier for this scan run</td></tr>
+        <tr><td>tradeDate</td><td>LocalDate</td><td>Trade date of the scan (ISO-8601)</td></tr>
+        <tr><td>totalCandidates</td><td>Integer</td><td>Total number of candidate stocks considered</td></tr>
+        <tr><td>processedStocks</td><td>Integer</td><td>Number of stocks actually processed</td></tr>
+        <tr><td>matchedStocks</td><td>Integer</td><td>Number of stocks matching the volume-price pattern</td></tr>
+      </tbody></table>
+      </div>
+    </div>
+
+    <div class="endpoint-card" id="dm-screeningresult">
+      <div class="ep-head"><h3 style="margin:0;">ScreeningResultDto</h3></div>
+      <p class="endpoint-desc">Used by: <code>GET /api/screener/results</code>, <code>GET /api/screener/results/latest</code>, Thymeleaf <code>screener-daily</code> page</p>
+      <div class="table-wrap">
+      <table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+        <tr><td>symbol</td><td>String</td><td>Stock symbol (e.g. <code>"SBFM"</code>)</td></tr>
+        <tr><td>price</td><td>Double</td><td>Latest stock price</td></tr>
+        <tr><td>rise</td><td>Boolean</td><td>Whether the stock rose today (<code>true</code> = up, <code>false</code> = down)</td></tr>
+        <tr><td>source</td><td>String</td><td>Data source identifier (e.g. <code>"YFinance"</code>, <code>"Tiger"</code>, <code>"tiger_snap"</code>)</td></tr>
+        <tr><td>tradeDate</td><td>LocalDate</td><td>Trade date (ISO-8601)</td></tr>
+      </tbody></table>
+      </div>
+      <div class="ep-subhead">Validation rules</div>
+      <ul>
+        <li><code>symbol</code> must not be blank</li>
+        <li><code>tradeDate</code> must not be null</li>
+      </ul>
+    </div>
+
+    <div class="endpoint-card" id="dm-wlreq">
+      <div class="ep-head"><h3 style="margin:0;">TigerWatchlistIngestRequestDto</h3></div>
+      <p class="endpoint-desc">Used by: Request body for <code>POST /api/ingest/tiger-watchlist</code></p>
+      <div class="table-wrap">
+      <table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody>
+        <tr><td>tradeDate</td><td>String</td><td>Yes</td><td>ISO-8601 date of the screenshot (e.g. <code>"2026-04-26"</code>)</td></tr>
+        <tr><td>rows</td><td>List&lt;TigerWatchlistRowDto&gt;</td><td>Yes</td><td>List of stock rows from OCR</td></tr>
+      </tbody></table>
+      </div>
+    </div>
+
+    <div class="endpoint-card" id="dm-wlrow">
+      <div class="ep-head"><h3 style="margin:0;">TigerWatchlistRowDto</h3></div>
+      <p class="endpoint-desc">Used by: Inside <code>TigerWatchlistIngestRequestDto.rows</code></p>
+      <div class="table-wrap">
+      <table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>JSON Aliases</th><th>Description</th></tr></thead><tbody>
+        <tr><td>symbol</td><td>String</td><td>Yes</td><td><code>symbol</code>, <code>code</code></td><td>Stock symbol</td></tr>
+        <tr><td>name</td><td>String</td><td>Yes</td><td>—</td><td>Stock name</td></tr>
+        <tr><td>lastPrice</td><td>Double</td><td>Yes</td><td>—</td><td>Latest traded price</td></tr>
+        <tr><td>volume</td><td>Object</td><td>Yes</td><td>—</td><td>Trading volume — supports numbers (<code>73300</code>) or Chinese-unit strings (<code>"7.33万"</code>, <code>"1.47亿"</code>)</td></tr>
+      </tbody></table>
+      </div>
+    </div>
+    <div class="endpoint-card" id="dm-wlresp">
+      <div class="ep-head"><h3 style="margin:0;">TigerWatchlistIngestResponseDto</h3></div>
+      <p class="endpoint-desc">Used by: Response body for <code>POST /api/ingest/tiger-watchlist</code></p>
+      <div class="table-wrap">
+      <table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+        <tr><td>batchId</td><td>String</td><td>Unique batch identifier for this import</td></tr>
+        <tr><td>tradeDate</td><td>LocalDate</td><td>Trade date (ISO-8601)</td></tr>
+        <tr><td>imported</td><td>int</td><td>Number of stocks successfully imported</td></tr>
+        <tr><td>skipped</td><td>int</td><td>Number of stocks skipped</td></tr>
+        <tr><td>skipReasons</td><td>List&lt;String&gt;</td><td>Detailed reasons for each skipped row</td></tr>
+      </tbody></table>
+      </div>
+    </div>
+
+    <div class="endpoint-card" id="dm-snapgrid">
+      <div class="ep-head"><h3 style="margin:0;">SnapshotGridViewDto</h3></div>
+      <p class="endpoint-desc">Used by: Thymeleaf <code>screener-daily</code> page (<code>snapshotGrid</code> model attribute)</p>
+      <div class="table-wrap">
+      <table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+        <tr><td>dateHeaders</td><td>List&lt;String&gt;</td><td>Column headers — dates of available snapshot data</td></tr>
+        <tr><td>rows</td><td>List&lt;SnapshotGridRowDto&gt;</td><td>Row data — one per stock symbol</td></tr>
+      </tbody></table>
+      </div>
+    </div>
+
+    <div class="endpoint-card" id="dm-snaprow">
+      <div class="ep-head"><h3 style="margin:0;">SnapshotGridRowDto</h3></div>
+      <p class="endpoint-desc">Used by: Inside <code>SnapshotGridViewDto.rows</code></p>
+      <div class="table-wrap">
+      <table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+        <tr><td>symbol</td><td>String</td><td>Stock symbol</td></tr>
+        <tr><td>stockName</td><td>String</td><td>Stock name</td></tr>
+        <tr><td>cells</td><td>List&lt;String&gt;</td><td>Cell values — one per date column (price/volume representations)</td></tr>
+      </tbody></table>
+      </div>
+      <div class="ep-subhead">Validation rules</div>
+      <ul>
+        <li><code>symbol</code> must not be blank</li>
+        <li><code>stockName</code> defaults to empty string if null</li>
+      </ul>
+    </div>
+
+    <div class="endpoint-card" id="dm-scanmap">
+      <div class="ep-head"><h3 style="margin:0;">ScanResult Map (Low-Price Volume Pattern)</h3></div>
+      <p class="endpoint-desc">Used by: <code>GET /api/tiger/scan/low-price-volume-pattern</code>, <code>GET /api/tiger/scan/low-price-volume-pattern/fixstock</code></p>
+      <p>The response is a <code>Map&lt;String, Object&gt;</code> with the following structure:</p>
+      <div class="ep-subhead">Top-level fields</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+        <tr><td>statistics</td><td>Object</td><td>Scan statistics</td></tr>
+        <tr><td>statistics.totalCandidates</td><td>Integer</td><td>Total stocks scanned</td></tr>
+        <tr><td>statistics.processedStocks</td><td>Integer</td><td>Stocks successfully processed</td></tr>
+        <tr><td>statistics.matchingStocks</td><td>Integer</td><td>Stocks matching the volume pattern</td></tr>
+        <tr><td>matchingStocks</td><td>Array</td><td>List of matching stock objects</td></tr>
+      </tbody></table>
+      </div>
+      <div class="ep-subhead">Matching stock object</div>
+      <div class="table-wrap">
+      <table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+        <tr><td>symbol</td><td>String</td><td>Stock symbol</td></tr>
+        <tr><td>name</td><td>String</td><td>Company name</td></tr>
+        <tr><td>currentPrice</td><td>Double</td><td>Latest traded price</td></tr>
+        <tr><td>volume</td><td>Long</td><td>Trading volume</td></tr>
+        <tr><td>kline</td><td>String</td><td>KLineData JSON string</td></tr>
+      </tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-hr">
+
+  <section id="error-codes">
+    <h2>Error Codes Reference</h2>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>HTTP Status</th><th>Code</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>200</td><td>—</td><td>Request succeeded</td></tr>
+        <tr><td>302</td><td>—</td><td>Redirect (page endpoints)</td></tr>
+        <tr><td>400</td><td><code>IllegalArgumentException</code></td><td>Invalid request parameters, date format errors, or validation failures</td></tr>
+        <tr><td>401</td><td>—</td><td>Missing or invalid <code>X-INGEST-API-KEY</code></td></tr>
+        <tr><td>404</td><td><code>StockDataException</code></td><td>Stock symbol not found in data source</td></tr>
+        <tr><td>500</td><td><code>StockDataException</code></td><td>Data source unavailable or data fetch failure</td></tr>
+        <tr><td>500</td><td>(various)</td><td>General internal server error</td></tr>
+        <tr><td>503</td><td><code>StockDataException</code></td><td>Data source temporarily unavailable</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <hr class="section-hr">
+
+  <section id="configuration">
+    <h2>Configuration Reference</h2>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Property</th><th>Environment Variable</th><th>Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>server.port</code></td><td>—</td><td><code>8090</code></td><td>Application HTTP port</td></tr>
+        <tr><td><code>ingest.api-key</code></td><td>—</td><td><code>""</code></td><td>API key for protected endpoints (empty = disabled)</td></tr>
+        <tr><td><code>scanner.defaultLimit</code></td><td>—</td><td><code>20</code></td><td>Default scanner result limit</td></tr>
+        <tr><td><code>scanner.defaultMarket</code></td><td>—</td><td><code>US</code></td><td>Default scanner market</td></tr>
+        <tr><td><code>spring.datasource.url</code></td><td><code>MYSQL_DATABASE</code></td><td><code>stock_invest</code></td><td>MySQL database name</td></tr>
+        <tr><td><code>spring.datasource.username</code></td><td><code>MYSQL_USERNAME</code></td><td><code>root</code></td><td>Database user</td></tr>
+        <tr><td><code>spring.datasource.password</code></td><td><code>MYSQL_PASSWORD</code></td><td><code>allon23</code></td><td>Database password</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <hr class="section-hr">
+
+  <section id="data-source-profiles">
+    <h2>Data Source Profiles</h2>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Profile</th><th>Data Source</th><th>Activation</th></tr></thead>
+      <tbody>
+        <tr><td><code>twelvedata</code> (default)</td><td>TwelveData API</td><td><code>mvn spring-boot:run</code></td></tr>
+        <tr><td><code>tiger</code></td><td>Tiger Brokers Open API</td><td><code>mvn spring-boot:run -Dspring.profiles.active=tiger</code></td></tr>
+        <tr><td><code>yfinance</code></td><td>Yahoo Finance</td><td><code>mvn spring-boot:run -Dspring.profiles.active=yfinance</code></td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <hr class="section-hr">
+
+  <section id="data-source-fallback">
+    <h2>Data Source Fallback Order</h2>
+    <p>When fetching K-line data, the system tries data sources in priority order:</p>
+    <ol class="fallback-list">
+      <li><span class="fallback-num">1</span><span><span class="fallback-name">tigeropen</span> <span class="fallback-desc">— Tiger Brokers Open API</span></span></li>
+      <li><span class="fallback-num">2</span><span><span class="fallback-name">tiger</span> <span class="fallback-desc">— Tiger Brokers (alternative endpoint)</span></span></li>
+      <li><span class="fallback-num">3</span><span><span class="fallback-name">yfinance</span> <span class="fallback-desc">— Yahoo Finance</span></span></li>
+      <li><span class="fallback-num">4</span><span><span class="fallback-name">twelvedata</span> <span class="fallback-desc">— TwelveData API</span></span></li>
+      <li><span class="fallback-num">5</span><span><span class="fallback-name">tiingo</span> <span class="fallback-desc">— Tiingo API</span></span></li>
+    </ol>
+    <p>If a data source fails (unavailable, rate-limited, or symbol not found), the next source in the chain is automatically tried.</p>
+  </section>
+
+</main>
+</body>
+</html>
