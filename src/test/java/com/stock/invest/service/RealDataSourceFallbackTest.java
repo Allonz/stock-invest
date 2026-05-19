@@ -6,6 +6,7 @@ import com.stock.invest.client.TwelveDataRestClient;
 import com.stock.invest.client.YahooFinanceRestClient;
 import com.stock.invest.model.KLineData;
 import com.stock.invest.model.KLineIterator;
+import com.stock.invest.datasource.DataSourceAvailabilityChecker;
 import com.stock.invest.service.impl.MarketDataSourceRouterImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -17,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,6 +41,7 @@ class RealDataSourceFallbackTest {
     @Mock private YahooFinanceRestClient yahooFinanceRestClient;
     @Mock private TwelveDataRestClient twelveDataRestClient;
     @Mock private TiingoRestClient tiingoRestClient;
+    @Mock private DataSourceAvailabilityChecker availabilityChecker;
 
     @InjectMocks
     private MarketDataSourceRouterImpl marketDataSourceRouter;
@@ -71,7 +74,10 @@ class RealDataSourceFallbackTest {
 
     @BeforeEach
     void setUp() {
-        reset(tigerOpenPythonBridge, yahooFinanceRestClient, twelveDataRestClient, tiingoRestClient);
+        reset(tigerOpenPythonBridge, yahooFinanceRestClient, twelveDataRestClient, tiingoRestClient, availabilityChecker);
+        // All sources available by default for these fallback tests
+        when(availabilityChecker.getAvailableSourceNames())
+                .thenReturn(Arrays.asList("tiger", "tigeropen", "yfinance", "twelvedata", "tiingo"));
     }
 
     // ============================================================
