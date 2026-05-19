@@ -1,0 +1,7 @@
+2026-05-01 16:12:11 [scheduling-1] INFO  c.s.i.s.i.ScanOrchestratorServiceImpl:169 - snapshot-import scan done tradeDate=2026-05-01, windowDays=7, candidates=0, processed=0, matched=0
+2026-05-01 16:12:11 [scheduling-1] INFO  c.s.i.s.impl.DailyScanScheduler:34 - scheduled scan done: mode=snapshot, batchId=651ed49e-0d38-416a-9bb9-aaba49fc0d5c, tradeDate=2026-05-01, matched=0
+2026-05-01 16:21:03 [SpringContextShutdownHook] INFO  o.s.s.c.ThreadPoolTaskScheduler:218 - Shutting down ExecutorService 'taskScheduler'
+2026-05-01 16:21:03 [SpringContextShutdownHook] INFO  o.s.s.c.ThreadPoolTaskExecutor:218 - Shutting down ExecutorService 'applicationTaskExecutor'
+2026-05-01 16:21:03 [SpringContextShutdownHook] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean:601 - Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-05-01 16:21:03 [SpringContextShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource:350 - HikariPool-1 - Shutdown initiated...
+2026-05-01 16:21:03 [SpringContextShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource:352 - HikariPool-1 - Shutdown completed.

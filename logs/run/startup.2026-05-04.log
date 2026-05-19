@@ -1,0 +1,1007 @@
+2026-05-04 13:31:05 [main] INFO  o.s.b.t.a.j.TestDatabaseAutoConfiguration$EmbeddedDataSourceBeanFactoryPostProcessor:99 - Replacing 'dataSource' DataSource bean with embedded version
+2026-05-04 13:31:06 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.StockService$MockitoMock$605558602 ====
+2026-05-04 13:31:06 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:308 - Neither @ContextConfiguration nor @ContextHierarchy found for test class [com.stock.invest.repository.StockDailyBarRepositoryTest], using SpringBootContextLoader
+2026-05-04 13:31:06 [main] INFO  o.s.b.t.c.SpringBootTestContextBootstrapper:237 - Found @SpringBootConfiguration com.stock.invest.StockInvestApplication for test class com.stock.invest.repository.StockDailyBarRepositoryTest
+2026-05-04 13:31:06 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:248 - Loaded default TestExecutionListener class names from location [META-INF/spring.factories]: [org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener, org.springframework.test.context.web.ServletTestExecutionListener, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener, org.springframework.test.context.support.DependencyInjectionTestExecutionListener, org.springframework.test.context.support.DirtiesContextTestExecutionListener, org.springframework.test.context.transaction.TransactionalTestExecutionListener, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener, org.springframework.test.context.event.EventPublishingTestExecutionListener]
+2026-05-04 13:31:06 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:177 - Using TestExecutionListeners: [org.springframework.test.context.web.ServletTestExecutionListener@75345e47, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener@36f40d72, org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener@2c557eee, org.springframework.boot.test.autoconfigure.SpringBootDependencyInjectionTestExecutionListener@7c47b0f8, org.springframework.test.context.support.DirtiesContextTestExecutionListener@2b561f51, org.springframework.test.context.transaction.TransactionalTestExecutionListener@3d5f08d4, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener@3afaa39f, org.springframework.test.context.event.EventPublishingTestExecutionListener@7b7b1448, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener@60cc20e1, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener@25109d84, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener@4a1934e2, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener@6963b0bd, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener@68a94e58, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener@49741274]
+2026-05-04 13:31:15 [main] INFO  o.s.b.t.a.j.TestDatabaseAutoConfiguration$EmbeddedDataSourceBeanFactoryPostProcessor:99 - Replacing 'dataSource' DataSource bean with embedded version
+2026-05-04 13:31:16 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.StockService$MockitoMock$274102179 ====
+2026-05-04 13:31:16 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:308 - Neither @ContextConfiguration nor @ContextHierarchy found for test class [com.stock.invest.repository.StockDailyBarRepositoryTest], using SpringBootContextLoader
+2026-05-04 13:31:16 [main] INFO  o.s.b.t.c.SpringBootTestContextBootstrapper:237 - Found @SpringBootConfiguration com.stock.invest.StockInvestApplication for test class com.stock.invest.repository.StockDailyBarRepositoryTest
+2026-05-04 13:31:16 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:248 - Loaded default TestExecutionListener class names from location [META-INF/spring.factories]: [org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener, org.springframework.test.context.web.ServletTestExecutionListener, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener, org.springframework.test.context.support.DependencyInjectionTestExecutionListener, org.springframework.test.context.support.DirtiesContextTestExecutionListener, org.springframework.test.context.transaction.TransactionalTestExecutionListener, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener, org.springframework.test.context.event.EventPublishingTestExecutionListener]
+2026-05-04 13:31:16 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:177 - Using TestExecutionListeners: [org.springframework.test.context.web.ServletTestExecutionListener@18ff753c, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener@2ff62720, org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener@45295cfd, org.springframework.boot.test.autoconfigure.SpringBootDependencyInjectionTestExecutionListener@42c9b1ee, org.springframework.test.context.support.DirtiesContextTestExecutionListener@217c6a1e, org.springframework.test.context.transaction.TransactionalTestExecutionListener@3fad8636, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener@306cfb8a, org.springframework.test.context.event.EventPublishingTestExecutionListener@3fa57aa8, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener@7d4bdbd8, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener@2e847e71, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener@79636080, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener@6d87253e, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener@4e31b64d, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener@434b2e0c]
+2026-05-04 13:37:13 [main] INFO  o.s.b.t.a.j.TestDatabaseAutoConfiguration$EmbeddedDataSourceBeanFactoryPostProcessor:99 - Replacing 'dataSource' DataSource bean with embedded version
+2026-05-04 13:37:14 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.StockService$MockitoMock$1253057957 ====
+2026-05-04 13:37:14 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:308 - Neither @ContextConfiguration nor @ContextHierarchy found for test class [com.stock.invest.repository.StockDailyBarRepositoryTest], using SpringBootContextLoader
+2026-05-04 13:37:14 [main] INFO  o.s.b.t.c.SpringBootTestContextBootstrapper:237 - Found @SpringBootConfiguration com.stock.invest.StockInvestApplication for test class com.stock.invest.repository.StockDailyBarRepositoryTest
+2026-05-04 13:37:14 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:248 - Loaded default TestExecutionListener class names from location [META-INF/spring.factories]: [org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener, org.springframework.test.context.web.ServletTestExecutionListener, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener, org.springframework.test.context.support.DependencyInjectionTestExecutionListener, org.springframework.test.context.support.DirtiesContextTestExecutionListener, org.springframework.test.context.transaction.TransactionalTestExecutionListener, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener, org.springframework.test.context.event.EventPublishingTestExecutionListener]
+2026-05-04 13:37:14 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:177 - Using TestExecutionListeners: [org.springframework.test.context.web.ServletTestExecutionListener@1eee9b78, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener@36762234, org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener@18ff753c, org.springframework.boot.test.autoconfigure.SpringBootDependencyInjectionTestExecutionListener@2ff62720, org.springframework.test.context.support.DirtiesContextTestExecutionListener@45295cfd, org.springframework.test.context.transaction.TransactionalTestExecutionListener@42c9b1ee, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener@217c6a1e, org.springframework.test.context.event.EventPublishingTestExecutionListener@3fad8636, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener@306cfb8a, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener@3fa57aa8, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener@7d4bdbd8, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener@2e847e71, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener@79636080, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener@6d87253e]
+2026-05-04 13:37:40 [main] INFO  o.s.b.t.a.j.TestDatabaseAutoConfiguration$EmbeddedDataSourceBeanFactoryPostProcessor:99 - Replacing 'dataSource' DataSource bean with embedded version
+2026-05-04 13:37:41 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.StockService$MockitoMock$1353583616 ====
+2026-05-04 13:37:41 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:308 - Neither @ContextConfiguration nor @ContextHierarchy found for test class [com.stock.invest.repository.StockDailyBarRepositoryTest], using SpringBootContextLoader
+2026-05-04 13:37:41 [main] INFO  o.s.b.t.c.SpringBootTestContextBootstrapper:237 - Found @SpringBootConfiguration com.stock.invest.StockInvestApplication for test class com.stock.invest.repository.StockDailyBarRepositoryTest
+2026-05-04 13:37:41 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:248 - Loaded default TestExecutionListener class names from location [META-INF/spring.factories]: [org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener, org.springframework.test.context.web.ServletTestExecutionListener, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener, org.springframework.test.context.support.DependencyInjectionTestExecutionListener, org.springframework.test.context.support.DirtiesContextTestExecutionListener, org.springframework.test.context.transaction.TransactionalTestExecutionListener, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener, org.springframework.test.context.event.EventPublishingTestExecutionListener]
+2026-05-04 13:37:41 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:177 - Using TestExecutionListeners: [org.springframework.test.context.web.ServletTestExecutionListener@7b9fea11, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener@c7cf8c4, org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener@56e78538, org.springframework.boot.test.autoconfigure.SpringBootDependencyInjectionTestExecutionListener@731fae, org.springframework.test.context.support.DirtiesContextTestExecutionListener@438a2d3, org.springframework.test.context.transaction.TransactionalTestExecutionListener@6fe9c048, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener@54d46c8, org.springframework.test.context.event.EventPublishingTestExecutionListener@1ddba7a0, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener@5c34b0f2, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener@7dfec0bc, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener@12eaa2cd, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener@52ccf197, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener@2b06681c, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener@20f6b6e0]
+2026-05-04 13:38:14 [main] INFO  o.s.b.t.a.j.TestDatabaseAutoConfiguration$EmbeddedDataSourceBeanFactoryPostProcessor:99 - Replacing 'dataSource' DataSource bean with embedded version
+2026-05-04 13:38:15 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.StockService$MockitoMock$1232165997 ====
+2026-05-04 13:38:15 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:308 - Neither @ContextConfiguration nor @ContextHierarchy found for test class [com.stock.invest.repository.StockDailyBarRepositoryTest], using SpringBootContextLoader
+2026-05-04 13:38:15 [main] INFO  o.s.b.t.c.SpringBootTestContextBootstrapper:237 - Found @SpringBootConfiguration com.stock.invest.StockInvestApplication for test class com.stock.invest.repository.StockDailyBarRepositoryTest
+2026-05-04 13:38:15 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:248 - Loaded default TestExecutionListener class names from location [META-INF/spring.factories]: [org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener, org.springframework.test.context.web.ServletTestExecutionListener, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener, org.springframework.test.context.support.DependencyInjectionTestExecutionListener, org.springframework.test.context.support.DirtiesContextTestExecutionListener, org.springframework.test.context.transaction.TransactionalTestExecutionListener, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener, org.springframework.test.context.event.EventPublishingTestExecutionListener]
+2026-05-04 13:38:15 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:177 - Using TestExecutionListeners: [org.springframework.test.context.web.ServletTestExecutionListener@789d8fd6, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener@42fa5cb, org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener@3ae87e38, org.springframework.boot.test.autoconfigure.SpringBootDependencyInjectionTestExecutionListener@44e4cf8a, org.springframework.test.context.support.DirtiesContextTestExecutionListener@50930bff, org.springframework.test.context.transaction.TransactionalTestExecutionListener@296bfddb, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener@508b4f70, org.springframework.test.context.event.EventPublishingTestExecutionListener@32f14274, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener@7af56b26, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener@c86c486, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener@67ceaa9, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener@3ea6faf0, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener@6fdb1a59, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener@55c341d0]
+2026-05-04 13:42:26 [main] INFO  o.s.b.t.a.j.TestDatabaseAutoConfiguration$EmbeddedDataSourceBeanFactoryPostProcessor:99 - Replacing 'dataSource' DataSource bean with embedded version
+2026-05-04 13:42:27 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.StockService$MockitoMock$1043971342 ====
+2026-05-04 13:42:27 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:308 - Neither @ContextConfiguration nor @ContextHierarchy found for test class [com.stock.invest.repository.StockDailyBarRepositoryTest], using SpringBootContextLoader
+2026-05-04 13:42:27 [main] INFO  o.s.b.t.c.SpringBootTestContextBootstrapper:237 - Found @SpringBootConfiguration com.stock.invest.StockInvestApplication for test class com.stock.invest.repository.StockDailyBarRepositoryTest
+2026-05-04 13:42:27 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:248 - Loaded default TestExecutionListener class names from location [META-INF/spring.factories]: [org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener, org.springframework.test.context.web.ServletTestExecutionListener, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener, org.springframework.test.context.support.DependencyInjectionTestExecutionListener, org.springframework.test.context.support.DirtiesContextTestExecutionListener, org.springframework.test.context.transaction.TransactionalTestExecutionListener, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener, org.springframework.test.context.event.EventPublishingTestExecutionListener]
+2026-05-04 13:42:27 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:177 - Using TestExecutionListeners: [org.springframework.test.context.web.ServletTestExecutionListener@3e1897d, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener@7cdb05aa, org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener@2079fcfc, org.springframework.boot.test.autoconfigure.SpringBootDependencyInjectionTestExecutionListener@77401977, org.springframework.test.context.support.DirtiesContextTestExecutionListener@7865cc83, org.springframework.test.context.transaction.TransactionalTestExecutionListener@5cb76070, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener@3346e906, org.springframework.test.context.event.EventPublishingTestExecutionListener@443ac5b8, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener@126d0868, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener@753e4eb5, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener@713497cd, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener@63318b56, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener@19e5e110, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener@1e295f7f]
+2026-05-04 14:06:55 [main] INFO  o.s.b.t.a.j.TestDatabaseAutoConfiguration$EmbeddedDataSourceBeanFactoryPostProcessor:99 - Replacing 'dataSource' DataSource bean with embedded version
+2026-05-04 14:06:56 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.StockService$MockitoMock$19149136 ====
+2026-05-04 14:06:56 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:308 - Neither @ContextConfiguration nor @ContextHierarchy found for test class [com.stock.invest.repository.StockDailyBarRepositoryTest], using SpringBootContextLoader
+2026-05-04 14:06:56 [main] INFO  o.s.b.t.c.SpringBootTestContextBootstrapper:237 - Found @SpringBootConfiguration com.stock.invest.StockInvestApplication for test class com.stock.invest.repository.StockDailyBarRepositoryTest
+2026-05-04 14:06:56 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:248 - Loaded default TestExecutionListener class names from location [META-INF/spring.factories]: [org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener, org.springframework.test.context.web.ServletTestExecutionListener, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener, org.springframework.test.context.support.DependencyInjectionTestExecutionListener, org.springframework.test.context.support.DirtiesContextTestExecutionListener, org.springframework.test.context.transaction.TransactionalTestExecutionListener, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener, org.springframework.test.context.event.EventPublishingTestExecutionListener]
+2026-05-04 14:06:56 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:177 - Using TestExecutionListeners: [org.springframework.test.context.web.ServletTestExecutionListener@66abc325, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener@39403943, org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener@1c5fd813, org.springframework.boot.test.autoconfigure.SpringBootDependencyInjectionTestExecutionListener@49338f3, org.springframework.test.context.support.DirtiesContextTestExecutionListener@3c9971af, org.springframework.test.context.transaction.TransactionalTestExecutionListener@4abdd5e, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener@66d61298, org.springframework.test.context.event.EventPublishingTestExecutionListener@7b9fea11, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener@c7cf8c4, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener@56e78538, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener@731fae, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener@438a2d3, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener@6fe9c048, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener@54d46c8]
+2026-05-04 14:07:40 [main] INFO  o.s.b.t.a.j.TestDatabaseAutoConfiguration$EmbeddedDataSourceBeanFactoryPostProcessor:99 - Replacing 'dataSource' DataSource bean with embedded version
+2026-05-04 14:07:41 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.StockService$MockitoMock$106112710 ====
+2026-05-04 14:07:41 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:308 - Neither @ContextConfiguration nor @ContextHierarchy found for test class [com.stock.invest.repository.StockDailyBarRepositoryTest], using SpringBootContextLoader
+2026-05-04 14:07:41 [main] INFO  o.s.b.t.c.SpringBootTestContextBootstrapper:237 - Found @SpringBootConfiguration com.stock.invest.StockInvestApplication for test class com.stock.invest.repository.StockDailyBarRepositoryTest
+2026-05-04 14:07:41 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:248 - Loaded default TestExecutionListener class names from location [META-INF/spring.factories]: [org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener, org.springframework.test.context.web.ServletTestExecutionListener, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener, org.springframework.test.context.support.DependencyInjectionTestExecutionListener, org.springframework.test.context.support.DirtiesContextTestExecutionListener, org.springframework.test.context.transaction.TransactionalTestExecutionListener, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener, org.springframework.test.context.event.EventPublishingTestExecutionListener]
+2026-05-04 14:07:41 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:177 - Using TestExecutionListeners: [org.springframework.test.context.web.ServletTestExecutionListener@7adbec34, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener@4aea57dc, org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener@66abc325, org.springframework.boot.test.autoconfigure.SpringBootDependencyInjectionTestExecutionListener@39403943, org.springframework.test.context.support.DirtiesContextTestExecutionListener@1c5fd813, org.springframework.test.context.transaction.TransactionalTestExecutionListener@49338f3, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener@3c9971af, org.springframework.test.context.event.EventPublishingTestExecutionListener@4abdd5e, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener@66d61298, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener@7b9fea11, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener@c7cf8c4, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener@56e78538, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener@731fae, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener@438a2d3]
+2026-05-04 14:07:57 [main] INFO  o.s.b.t.a.j.TestDatabaseAutoConfiguration$EmbeddedDataSourceBeanFactoryPostProcessor:99 - Replacing 'dataSource' DataSource bean with embedded version
+2026-05-04 14:07:58 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.StockService$MockitoMock$1239164420 ====
+2026-05-04 14:07:58 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:308 - Neither @ContextConfiguration nor @ContextHierarchy found for test class [com.stock.invest.repository.StockDailyBarRepositoryTest], using SpringBootContextLoader
+2026-05-04 14:07:58 [main] INFO  o.s.b.t.c.SpringBootTestContextBootstrapper:237 - Found @SpringBootConfiguration com.stock.invest.StockInvestApplication for test class com.stock.invest.repository.StockDailyBarRepositoryTest
+2026-05-04 14:07:58 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:248 - Loaded default TestExecutionListener class names from location [META-INF/spring.factories]: [org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener, org.springframework.test.context.web.ServletTestExecutionListener, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener, org.springframework.test.context.support.DependencyInjectionTestExecutionListener, org.springframework.test.context.support.DirtiesContextTestExecutionListener, org.springframework.test.context.transaction.TransactionalTestExecutionListener, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener, org.springframework.test.context.event.EventPublishingTestExecutionListener]
+2026-05-04 14:07:58 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:177 - Using TestExecutionListeners: [org.springframework.test.context.web.ServletTestExecutionListener@7adbec34, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener@4aea57dc, org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener@66abc325, org.springframework.boot.test.autoconfigure.SpringBootDependencyInjectionTestExecutionListener@39403943, org.springframework.test.context.support.DirtiesContextTestExecutionListener@1c5fd813, org.springframework.test.context.transaction.TransactionalTestExecutionListener@49338f3, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener@3c9971af, org.springframework.test.context.event.EventPublishingTestExecutionListener@4abdd5e, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener@66d61298, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener@7b9fea11, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener@c7cf8c4, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener@56e78538, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener@731fae, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener@438a2d3]
+2026-05-04 14:36:11 [main] INFO  o.s.b.t.a.j.TestDatabaseAutoConfiguration$EmbeddedDataSourceBeanFactoryPostProcessor:99 - Replacing 'dataSource' DataSource bean with embedded version
+2026-05-04 14:36:12 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.StockService$MockitoMock$592824783 ====
+2026-05-04 14:36:13 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:308 - Neither @ContextConfiguration nor @ContextHierarchy found for test class [com.stock.invest.repository.StockDailyBarRepositoryTest], using SpringBootContextLoader
+2026-05-04 14:36:13 [main] INFO  o.s.b.t.c.SpringBootTestContextBootstrapper:237 - Found @SpringBootConfiguration com.stock.invest.StockInvestApplication for test class com.stock.invest.repository.StockDailyBarRepositoryTest
+2026-05-04 14:36:13 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:248 - Loaded default TestExecutionListener class names from location [META-INF/spring.factories]: [org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener, org.springframework.test.context.web.ServletTestExecutionListener, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener, org.springframework.test.context.support.DependencyInjectionTestExecutionListener, org.springframework.test.context.support.DirtiesContextTestExecutionListener, org.springframework.test.context.transaction.TransactionalTestExecutionListener, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener, org.springframework.test.context.event.EventPublishingTestExecutionListener]
+2026-05-04 14:36:13 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:177 - Using TestExecutionListeners: [org.springframework.test.context.web.ServletTestExecutionListener@66abc325, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener@39403943, org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener@1c5fd813, org.springframework.boot.test.autoconfigure.SpringBootDependencyInjectionTestExecutionListener@49338f3, org.springframework.test.context.support.DirtiesContextTestExecutionListener@3c9971af, org.springframework.test.context.transaction.TransactionalTestExecutionListener@4abdd5e, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener@66d61298, org.springframework.test.context.event.EventPublishingTestExecutionListener@7b9fea11, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener@c7cf8c4, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener@56e78538, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener@731fae, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener@438a2d3, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener@6fe9c048, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener@54d46c8]
+2026-05-04 14:38:12 [main] INFO  o.s.b.t.a.j.TestDatabaseAutoConfiguration$EmbeddedDataSourceBeanFactoryPostProcessor:99 - Replacing 'dataSource' DataSource bean with embedded version
+2026-05-04 14:38:13 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.StockService$MockitoMock$1931900047 ====
+2026-05-04 14:38:13 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:308 - Neither @ContextConfiguration nor @ContextHierarchy found for test class [com.stock.invest.repository.StockDailyBarRepositoryTest], using SpringBootContextLoader
+2026-05-04 14:38:13 [main] INFO  o.s.b.t.c.SpringBootTestContextBootstrapper:237 - Found @SpringBootConfiguration com.stock.invest.StockInvestApplication for test class com.stock.invest.repository.StockDailyBarRepositoryTest
+2026-05-04 14:38:13 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:248 - Loaded default TestExecutionListener class names from location [META-INF/spring.factories]: [org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener, org.springframework.test.context.web.ServletTestExecutionListener, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener, org.springframework.test.context.support.DependencyInjectionTestExecutionListener, org.springframework.test.context.support.DirtiesContextTestExecutionListener, org.springframework.test.context.transaction.TransactionalTestExecutionListener, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener, org.springframework.test.context.event.EventPublishingTestExecutionListener]
+2026-05-04 14:38:13 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:177 - Using TestExecutionListeners: [org.springframework.test.context.web.ServletTestExecutionListener@66abc325, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener@39403943, org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener@1c5fd813, org.springframework.boot.test.autoconfigure.SpringBootDependencyInjectionTestExecutionListener@49338f3, org.springframework.test.context.support.DirtiesContextTestExecutionListener@3c9971af, org.springframework.test.context.transaction.TransactionalTestExecutionListener@4abdd5e, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener@66d61298, org.springframework.test.context.event.EventPublishingTestExecutionListener@7b9fea11, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener@c7cf8c4, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener@56e78538, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener@731fae, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener@438a2d3, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener@6fe9c048, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener@54d46c8]
+2026-05-04 15:00:10 [main] INFO  o.s.b.t.a.j.TestDatabaseAutoConfiguration$EmbeddedDataSourceBeanFactoryPostProcessor:99 - Replacing 'dataSource' DataSource bean with embedded version
+2026-05-04 15:00:11 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.StockService$MockitoMock$1455491424 ====
+2026-05-04 15:00:11 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:308 - Neither @ContextConfiguration nor @ContextHierarchy found for test class [com.stock.invest.repository.StockDailyBarRepositoryTest], using SpringBootContextLoader
+2026-05-04 15:00:11 [main] INFO  o.s.b.t.c.SpringBootTestContextBootstrapper:237 - Found @SpringBootConfiguration com.stock.invest.StockInvestApplication for test class com.stock.invest.repository.StockDailyBarRepositoryTest
+2026-05-04 15:00:11 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:248 - Loaded default TestExecutionListener class names from location [META-INF/spring.factories]: [org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener, org.springframework.test.context.web.ServletTestExecutionListener, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener, org.springframework.test.context.support.DependencyInjectionTestExecutionListener, org.springframework.test.context.support.DirtiesContextTestExecutionListener, org.springframework.test.context.transaction.TransactionalTestExecutionListener, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener, org.springframework.test.context.event.EventPublishingTestExecutionListener]
+2026-05-04 15:00:11 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:177 - Using TestExecutionListeners: [org.springframework.test.context.web.ServletTestExecutionListener@67cd84f9, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener@52b891de, org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener@4ae6451d, org.springframework.boot.test.autoconfigure.SpringBootDependencyInjectionTestExecutionListener@5f32ab17, org.springframework.test.context.support.DirtiesContextTestExecutionListener@54530644, org.springframework.test.context.transaction.TransactionalTestExecutionListener@42734b71, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener@3a45308f, org.springframework.test.context.event.EventPublishingTestExecutionListener@70e54ec3, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener@3cc817bd, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener@64b8eb96, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener@776a7ec6, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener@2d23a5be, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener@51aa2a58, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener@726d8fa0]
+2026-05-04 15:01:27 [main] INFO  o.s.b.t.a.j.TestDatabaseAutoConfiguration$EmbeddedDataSourceBeanFactoryPostProcessor:99 - Replacing 'dataSource' DataSource bean with embedded version
+2026-05-04 15:01:28 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.StockService$MockitoMock$1556072411 ====
+2026-05-04 15:01:28 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:308 - Neither @ContextConfiguration nor @ContextHierarchy found for test class [com.stock.invest.repository.StockDailyBarRepositoryTest], using SpringBootContextLoader
+2026-05-04 15:01:28 [main] INFO  o.s.b.t.c.SpringBootTestContextBootstrapper:237 - Found @SpringBootConfiguration com.stock.invest.StockInvestApplication for test class com.stock.invest.repository.StockDailyBarRepositoryTest
+2026-05-04 15:01:28 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:248 - Loaded default TestExecutionListener class names from location [META-INF/spring.factories]: [org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener, org.springframework.test.context.web.ServletTestExecutionListener, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener, org.springframework.test.context.support.DependencyInjectionTestExecutionListener, org.springframework.test.context.support.DirtiesContextTestExecutionListener, org.springframework.test.context.transaction.TransactionalTestExecutionListener, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener, org.springframework.test.context.event.EventPublishingTestExecutionListener]
+2026-05-04 15:01:28 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:177 - Using TestExecutionListeners: [org.springframework.test.context.web.ServletTestExecutionListener@44e4cf8a, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener@50930bff, org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener@296bfddb, org.springframework.boot.test.autoconfigure.SpringBootDependencyInjectionTestExecutionListener@508b4f70, org.springframework.test.context.support.DirtiesContextTestExecutionListener@32f14274, org.springframework.test.context.transaction.TransactionalTestExecutionListener@7af56b26, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener@c86c486, org.springframework.test.context.event.EventPublishingTestExecutionListener@67ceaa9, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener@3ea6faf0, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener@6fdb1a59, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener@55c341d0, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener@348bd063, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener@3d73cd78, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener@acd115d]
+2026-05-04 15:15:30 [main] INFO  o.s.b.t.a.j.TestDatabaseAutoConfiguration$EmbeddedDataSourceBeanFactoryPostProcessor:99 - Replacing 'dataSource' DataSource bean with embedded version
+2026-05-04 15:15:32 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.StockService$MockitoMock$2087068364 ====
+2026-05-04 15:15:32 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:308 - Neither @ContextConfiguration nor @ContextHierarchy found for test class [com.stock.invest.repository.StockDailyBarRepositoryTest], using SpringBootContextLoader
+2026-05-04 15:15:32 [main] INFO  o.s.b.t.c.SpringBootTestContextBootstrapper:237 - Found @SpringBootConfiguration com.stock.invest.StockInvestApplication for test class com.stock.invest.repository.StockDailyBarRepositoryTest
+2026-05-04 15:15:32 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:248 - Loaded default TestExecutionListener class names from location [META-INF/spring.factories]: [org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener, org.springframework.test.context.web.ServletTestExecutionListener, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener, org.springframework.test.context.support.DependencyInjectionTestExecutionListener, org.springframework.test.context.support.DirtiesContextTestExecutionListener, org.springframework.test.context.transaction.TransactionalTestExecutionListener, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener, org.springframework.test.context.event.EventPublishingTestExecutionListener]
+2026-05-04 15:15:32 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:177 - Using TestExecutionListeners: [org.springframework.test.context.web.ServletTestExecutionListener@e890591, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener@1aaf73b7, org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener@731d0d5c, org.springframework.boot.test.autoconfigure.SpringBootDependencyInjectionTestExecutionListener@5e0442dd, org.springframework.test.context.support.DirtiesContextTestExecutionListener@18e76101, org.springframework.test.context.transaction.TransactionalTestExecutionListener@79349b61, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener@62581ef6, org.springframework.test.context.event.EventPublishingTestExecutionListener@1e36baca, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener@3dfa2f64, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener@60484429, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener@42c55978, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener@690e4b00, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener@5e3d84a, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener@2728add3]
+2026-05-04 15:16:34 [main] INFO  o.s.b.t.a.j.TestDatabaseAutoConfiguration$EmbeddedDataSourceBeanFactoryPostProcessor:99 - Replacing 'dataSource' DataSource bean with embedded version
+2026-05-04 15:16:35 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.StockService$MockitoMock$1872895425 ====
+2026-05-04 15:16:35 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:308 - Neither @ContextConfiguration nor @ContextHierarchy found for test class [com.stock.invest.repository.StockDailyBarRepositoryTest], using SpringBootContextLoader
+2026-05-04 15:16:35 [main] INFO  o.s.b.t.c.SpringBootTestContextBootstrapper:237 - Found @SpringBootConfiguration com.stock.invest.StockInvestApplication for test class com.stock.invest.repository.StockDailyBarRepositoryTest
+2026-05-04 15:16:35 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:248 - Loaded default TestExecutionListener class names from location [META-INF/spring.factories]: [org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener, org.springframework.test.context.web.ServletTestExecutionListener, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener, org.springframework.test.context.support.DependencyInjectionTestExecutionListener, org.springframework.test.context.support.DirtiesContextTestExecutionListener, org.springframework.test.context.transaction.TransactionalTestExecutionListener, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener, org.springframework.test.context.event.EventPublishingTestExecutionListener]
+2026-05-04 15:16:35 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:177 - Using TestExecutionListeners: [org.springframework.test.context.web.ServletTestExecutionListener@55a66bbf, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener@7f02b2d4, org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener@780dbed7, org.springframework.boot.test.autoconfigure.SpringBootDependencyInjectionTestExecutionListener@31859960, org.springframework.test.context.support.DirtiesContextTestExecutionListener@5718e77c, org.springframework.test.context.transaction.TransactionalTestExecutionListener@3d667b59, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener@28888124, org.springframework.test.context.event.EventPublishingTestExecutionListener@355b53cc, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener@2568611c, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener@2bda7a5b, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener@47374fa5, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener@289da1bc, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener@4e1b5532, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener@366bf608]
+2026-05-04 15:17:22 [main] INFO  o.s.b.t.a.j.TestDatabaseAutoConfiguration$EmbeddedDataSourceBeanFactoryPostProcessor:99 - Replacing 'dataSource' DataSource bean with embedded version
+2026-05-04 15:17:23 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.StockService$MockitoMock$1362647 ====
+2026-05-04 15:17:23 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:308 - Neither @ContextConfiguration nor @ContextHierarchy found for test class [com.stock.invest.repository.StockDailyBarRepositoryTest], using SpringBootContextLoader
+2026-05-04 15:17:23 [main] INFO  o.s.b.t.c.SpringBootTestContextBootstrapper:237 - Found @SpringBootConfiguration com.stock.invest.StockInvestApplication for test class com.stock.invest.repository.StockDailyBarRepositoryTest
+2026-05-04 15:17:23 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:248 - Loaded default TestExecutionListener class names from location [META-INF/spring.factories]: [org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener, org.springframework.test.context.web.ServletTestExecutionListener, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener, org.springframework.test.context.support.DependencyInjectionTestExecutionListener, org.springframework.test.context.support.DirtiesContextTestExecutionListener, org.springframework.test.context.transaction.TransactionalTestExecutionListener, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener, org.springframework.test.context.event.EventPublishingTestExecutionListener]
+2026-05-04 15:17:23 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:177 - Using TestExecutionListeners: [org.springframework.test.context.web.ServletTestExecutionListener@55a66bbf, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener@7f02b2d4, org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener@780dbed7, org.springframework.boot.test.autoconfigure.SpringBootDependencyInjectionTestExecutionListener@31859960, org.springframework.test.context.support.DirtiesContextTestExecutionListener@5718e77c, org.springframework.test.context.transaction.TransactionalTestExecutionListener@3d667b59, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener@28888124, org.springframework.test.context.event.EventPublishingTestExecutionListener@355b53cc, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener@2568611c, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener@2bda7a5b, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener@47374fa5, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener@289da1bc, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener@4e1b5532, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener@366bf608]
+2026-05-04 15:17:51 [main] INFO  o.s.b.t.a.j.TestDatabaseAutoConfiguration$EmbeddedDataSourceBeanFactoryPostProcessor:99 - Replacing 'dataSource' DataSource bean with embedded version
+2026-05-04 15:17:52 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.StockService$MockitoMock$1925265906 ====
+2026-05-04 15:17:52 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:308 - Neither @ContextConfiguration nor @ContextHierarchy found for test class [com.stock.invest.repository.StockDailyBarRepositoryTest], using SpringBootContextLoader
+2026-05-04 15:17:52 [main] INFO  o.s.b.t.c.SpringBootTestContextBootstrapper:237 - Found @SpringBootConfiguration com.stock.invest.StockInvestApplication for test class com.stock.invest.repository.StockDailyBarRepositoryTest
+2026-05-04 15:17:52 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:248 - Loaded default TestExecutionListener class names from location [META-INF/spring.factories]: [org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener, org.springframework.test.context.web.ServletTestExecutionListener, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener, org.springframework.test.context.support.DependencyInjectionTestExecutionListener, org.springframework.test.context.support.DirtiesContextTestExecutionListener, org.springframework.test.context.transaction.TransactionalTestExecutionListener, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener, org.springframework.test.context.event.EventPublishingTestExecutionListener]
+2026-05-04 15:17:52 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:177 - Using TestExecutionListeners: [org.springframework.test.context.web.ServletTestExecutionListener@4e1b5532, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener@366bf608, org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener@4b5cdd07, org.springframework.boot.test.autoconfigure.SpringBootDependencyInjectionTestExecutionListener@e890591, org.springframework.test.context.support.DirtiesContextTestExecutionListener@1aaf73b7, org.springframework.test.context.transaction.TransactionalTestExecutionListener@731d0d5c, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener@5e0442dd, org.springframework.test.context.event.EventPublishingTestExecutionListener@18e76101, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener@79349b61, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener@62581ef6, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener@1e36baca, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener@3dfa2f64, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener@60484429, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener@42c55978]
+2026-05-04 15:22:28 [main] INFO  o.s.b.t.a.j.TestDatabaseAutoConfiguration$EmbeddedDataSourceBeanFactoryPostProcessor:99 - Replacing 'dataSource' DataSource bean with embedded version
+2026-05-04 15:22:29 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.StockService$MockitoMock$1000387765 ====
+2026-05-04 15:22:29 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:308 - Neither @ContextConfiguration nor @ContextHierarchy found for test class [com.stock.invest.repository.StockDailyBarRepositoryTest], using SpringBootContextLoader
+2026-05-04 15:22:29 [main] INFO  o.s.b.t.c.SpringBootTestContextBootstrapper:237 - Found @SpringBootConfiguration com.stock.invest.StockInvestApplication for test class com.stock.invest.repository.StockDailyBarRepositoryTest
+2026-05-04 15:22:29 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:248 - Loaded default TestExecutionListener class names from location [META-INF/spring.factories]: [org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener, org.springframework.test.context.web.ServletTestExecutionListener, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener, org.springframework.test.context.support.DependencyInjectionTestExecutionListener, org.springframework.test.context.support.DirtiesContextTestExecutionListener, org.springframework.test.context.transaction.TransactionalTestExecutionListener, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener, org.springframework.test.context.event.EventPublishingTestExecutionListener]
+2026-05-04 15:22:29 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:177 - Using TestExecutionListeners: [org.springframework.test.context.web.ServletTestExecutionListener@da67c46, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener@5c7e55a4, org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener@7ae6927, org.springframework.boot.test.autoconfigure.SpringBootDependencyInjectionTestExecutionListener@7d0df326, org.springframework.test.context.support.DirtiesContextTestExecutionListener@43f7f48d, org.springframework.test.context.transaction.TransactionalTestExecutionListener@6d0a4a22, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener@1999e1f5, org.springframework.test.context.event.EventPublishingTestExecutionListener@b1fa523, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener@77307b51, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener@48d464cf, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener@1e14b269, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener@68543a35, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener@1cca2e9d, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener@77d3c3d7]
+2026-05-04 15:49:44 [main] INFO  o.s.b.t.a.j.TestDatabaseAutoConfiguration$EmbeddedDataSourceBeanFactoryPostProcessor:99 - Replacing 'dataSource' DataSource bean with embedded version
+2026-05-04 15:49:45 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.StockService$MockitoMock$1431954718 ====
+2026-05-04 15:49:45 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:308 - Neither @ContextConfiguration nor @ContextHierarchy found for test class [com.stock.invest.repository.StockDailyBarRepositoryTest], using SpringBootContextLoader
+2026-05-04 15:49:45 [main] INFO  o.s.b.t.c.SpringBootTestContextBootstrapper:237 - Found @SpringBootConfiguration com.stock.invest.StockInvestApplication for test class com.stock.invest.repository.StockDailyBarRepositoryTest
+2026-05-04 15:49:45 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:248 - Loaded default TestExecutionListener class names from location [META-INF/spring.factories]: [org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener, org.springframework.test.context.web.ServletTestExecutionListener, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener, org.springframework.test.context.support.DependencyInjectionTestExecutionListener, org.springframework.test.context.support.DirtiesContextTestExecutionListener, org.springframework.test.context.transaction.TransactionalTestExecutionListener, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener, org.springframework.test.context.event.EventPublishingTestExecutionListener]
+2026-05-04 15:49:45 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:177 - Using TestExecutionListeners: [org.springframework.test.context.web.ServletTestExecutionListener@4e1b5532, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener@366bf608, org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener@4b5cdd07, org.springframework.boot.test.autoconfigure.SpringBootDependencyInjectionTestExecutionListener@e890591, org.springframework.test.context.support.DirtiesContextTestExecutionListener@1aaf73b7, org.springframework.test.context.transaction.TransactionalTestExecutionListener@731d0d5c, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener@5e0442dd, org.springframework.test.context.event.EventPublishingTestExecutionListener@18e76101, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener@79349b61, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener@62581ef6, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener@1e36baca, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener@3dfa2f64, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener@60484429, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener@42c55978]
+2026-05-04 15:49:56 [main] INFO  o.s.b.t.a.j.TestDatabaseAutoConfiguration$EmbeddedDataSourceBeanFactoryPostProcessor:99 - Replacing 'dataSource' DataSource bean with embedded version
+2026-05-04 15:49:57 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.StockService$MockitoMock$2064995466 ====
+2026-05-04 15:49:57 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:308 - Neither @ContextConfiguration nor @ContextHierarchy found for test class [com.stock.invest.repository.StockDailyBarRepositoryTest], using SpringBootContextLoader
+2026-05-04 15:49:57 [main] INFO  o.s.b.t.c.SpringBootTestContextBootstrapper:237 - Found @SpringBootConfiguration com.stock.invest.StockInvestApplication for test class com.stock.invest.repository.StockDailyBarRepositoryTest
+2026-05-04 15:49:57 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:248 - Loaded default TestExecutionListener class names from location [META-INF/spring.factories]: [org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener, org.springframework.test.context.web.ServletTestExecutionListener, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener, org.springframework.test.context.support.DependencyInjectionTestExecutionListener, org.springframework.test.context.support.DirtiesContextTestExecutionListener, org.springframework.test.context.transaction.TransactionalTestExecutionListener, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener, org.springframework.test.context.event.EventPublishingTestExecutionListener]
+2026-05-04 15:49:57 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:177 - Using TestExecutionListeners: [org.springframework.test.context.web.ServletTestExecutionListener@4e1b5532, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener@366bf608, org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener@4b5cdd07, org.springframework.boot.test.autoconfigure.SpringBootDependencyInjectionTestExecutionListener@e890591, org.springframework.test.context.support.DirtiesContextTestExecutionListener@1aaf73b7, org.springframework.test.context.transaction.TransactionalTestExecutionListener@731d0d5c, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener@5e0442dd, org.springframework.test.context.event.EventPublishingTestExecutionListener@18e76101, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener@79349b61, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener@62581ef6, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener@1e36baca, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener@3dfa2f64, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener@60484429, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener@42c55978]
+2026-05-04 15:50:04 [main] INFO  o.s.b.t.a.j.TestDatabaseAutoConfiguration$EmbeddedDataSourceBeanFactoryPostProcessor:99 - Replacing 'dataSource' DataSource bean with embedded version
+2026-05-04 15:50:05 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.StockService$MockitoMock$1768729329 ====
+2026-05-04 15:50:05 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:308 - Neither @ContextConfiguration nor @ContextHierarchy found for test class [com.stock.invest.repository.StockDailyBarRepositoryTest], using SpringBootContextLoader
+2026-05-04 15:50:05 [main] INFO  o.s.b.t.c.SpringBootTestContextBootstrapper:237 - Found @SpringBootConfiguration com.stock.invest.StockInvestApplication for test class com.stock.invest.repository.StockDailyBarRepositoryTest
+2026-05-04 15:50:05 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:248 - Loaded default TestExecutionListener class names from location [META-INF/spring.factories]: [org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener, org.springframework.test.context.web.ServletTestExecutionListener, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener, org.springframework.test.context.support.DependencyInjectionTestExecutionListener, org.springframework.test.context.support.DirtiesContextTestExecutionListener, org.springframework.test.context.transaction.TransactionalTestExecutionListener, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener, org.springframework.test.context.event.EventPublishingTestExecutionListener]
+2026-05-04 15:50:05 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:177 - Using TestExecutionListeners: [org.springframework.test.context.web.ServletTestExecutionListener@4e1b5532, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener@366bf608, org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener@4b5cdd07, org.springframework.boot.test.autoconfigure.SpringBootDependencyInjectionTestExecutionListener@e890591, org.springframework.test.context.support.DirtiesContextTestExecutionListener@1aaf73b7, org.springframework.test.context.transaction.TransactionalTestExecutionListener@731d0d5c, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener@5e0442dd, org.springframework.test.context.event.EventPublishingTestExecutionListener@18e76101, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener@79349b61, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener@62581ef6, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener@1e36baca, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener@3dfa2f64, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener@60484429, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener@42c55978]
+2026-05-04 16:00:03 [main] INFO  o.s.b.t.a.j.TestDatabaseAutoConfiguration$EmbeddedDataSourceBeanFactoryPostProcessor:99 - Replacing 'dataSource' DataSource bean with embedded version
+2026-05-04 16:00:04 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.StockService$MockitoMock$86592271 ====
+2026-05-04 16:00:04 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:308 - Neither @ContextConfiguration nor @ContextHierarchy found for test class [com.stock.invest.repository.StockDailyBarRepositoryTest], using SpringBootContextLoader
+2026-05-04 16:00:04 [main] INFO  o.s.b.t.c.SpringBootTestContextBootstrapper:237 - Found @SpringBootConfiguration com.stock.invest.StockInvestApplication for test class com.stock.invest.repository.StockDailyBarRepositoryTest
+2026-05-04 16:00:04 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:248 - Loaded default TestExecutionListener class names from location [META-INF/spring.factories]: [org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener, org.springframework.test.context.web.ServletTestExecutionListener, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener, org.springframework.test.context.support.DependencyInjectionTestExecutionListener, org.springframework.test.context.support.DirtiesContextTestExecutionListener, org.springframework.test.context.transaction.TransactionalTestExecutionListener, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener, org.springframework.test.context.event.EventPublishingTestExecutionListener]
+2026-05-04 16:00:04 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:177 - Using TestExecutionListeners: [org.springframework.test.context.web.ServletTestExecutionListener@4e1b5532, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener@366bf608, org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener@4b5cdd07, org.springframework.boot.test.autoconfigure.SpringBootDependencyInjectionTestExecutionListener@e890591, org.springframework.test.context.support.DirtiesContextTestExecutionListener@1aaf73b7, org.springframework.test.context.transaction.TransactionalTestExecutionListener@731d0d5c, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener@5e0442dd, org.springframework.test.context.event.EventPublishingTestExecutionListener@18e76101, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener@79349b61, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener@62581ef6, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener@1e36baca, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener@3dfa2f64, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener@60484429, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener@42c55978]
+2026-05-04 16:00:12 [main] INFO  o.s.b.t.a.j.TestDatabaseAutoConfiguration$EmbeddedDataSourceBeanFactoryPostProcessor:99 - Replacing 'dataSource' DataSource bean with embedded version
+2026-05-04 16:00:12 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.StockService$MockitoMock$343551779 ====
+2026-05-04 16:00:12 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:308 - Neither @ContextConfiguration nor @ContextHierarchy found for test class [com.stock.invest.repository.StockDailyBarRepositoryTest], using SpringBootContextLoader
+2026-05-04 16:00:12 [main] INFO  o.s.b.t.c.SpringBootTestContextBootstrapper:237 - Found @SpringBootConfiguration com.stock.invest.StockInvestApplication for test class com.stock.invest.repository.StockDailyBarRepositoryTest
+2026-05-04 16:00:12 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:248 - Loaded default TestExecutionListener class names from location [META-INF/spring.factories]: [org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener, org.springframework.test.context.web.ServletTestExecutionListener, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener, org.springframework.test.context.support.DependencyInjectionTestExecutionListener, org.springframework.test.context.support.DirtiesContextTestExecutionListener, org.springframework.test.context.transaction.TransactionalTestExecutionListener, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener, org.springframework.test.context.event.EventPublishingTestExecutionListener]
+2026-05-04 16:00:12 [main] INFO  o.s.b.t.a.o.j.DataJpaTestContextBootstrapper:177 - Using TestExecutionListeners: [org.springframework.test.context.web.ServletTestExecutionListener@4e1b5532, org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener@366bf608, org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener@4b5cdd07, org.springframework.boot.test.autoconfigure.SpringBootDependencyInjectionTestExecutionListener@e890591, org.springframework.test.context.support.DirtiesContextTestExecutionListener@1aaf73b7, org.springframework.test.context.transaction.TransactionalTestExecutionListener@731d0d5c, org.springframework.test.context.jdbc.SqlScriptsTestExecutionListener@5e0442dd, org.springframework.test.context.event.EventPublishingTestExecutionListener@18e76101, org.springframework.boot.test.mock.mockito.ResetMocksTestExecutionListener@79349b61, org.springframework.boot.test.autoconfigure.restdocs.RestDocsTestExecutionListener@62581ef6, org.springframework.boot.test.autoconfigure.web.client.MockRestServiceServerResetTestExecutionListener@1e36baca, org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrintOnlyOnFailureTestExecutionListener@3dfa2f64, org.springframework.boot.test.autoconfigure.web.servlet.WebDriverTestExecutionListener@60484429, org.springframework.boot.test.autoconfigure.webservices.client.MockWebServiceServerTestExecutionListener@42c55978]
+2026-05-04 16:10:35 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 71385 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-05-04 16:10:35 [main] INFO  c.s.invest.StockInvestApplication:648 - No active profile set, falling back to default profiles: tiger
+2026-05-04 16:10:35 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8080 (http)
+2026-05-04 16:10:35 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 743 ms
+2026-05-04 16:11:06 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext:559 - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'entityManagerFactory' defined in class path resource [org/springframework/boot/autoconfigure/orm/jpa/HibernateJpaConfiguration.class]: Invocation of init method failed; nested exception is org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+2026-05-04 16:11:06 [main] INFO  o.s.b.a.l.ConditionEvaluationReportLoggingListener:136 - 
+
+Error starting ApplicationContext. To display the conditions report re-run your application with 'debug' enabled.
+2026-05-04 16:11:06 [main] ERROR o.s.boot.SpringApplication:834 - Application run failed
+org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'entityManagerFactory' defined in class path resource [org/springframework/boot/autoconfigure/orm/jpa/HibernateJpaConfiguration.class]: Invocation of init method failed; nested exception is org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1799)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:594)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:516)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:324)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:322)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202)
+	at org.springframework.context.support.AbstractApplicationContext.getBean(AbstractApplicationContext.java:1109)
+	at org.springframework.context.support.AbstractApplicationContext.finishBeanFactoryInitialization(AbstractApplicationContext.java:869)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:551)
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:143)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:755)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:747)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:402)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:312)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1247)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1236)
+	at com.stock.invest.StockInvestApplication.main(StockInvestApplication.java:29)
+Caused by: org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.createService(AbstractServiceRegistryImpl.java:275)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.initializeService(AbstractServiceRegistryImpl.java:237)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.getService(AbstractServiceRegistryImpl.java:214)
+	at org.hibernate.id.factory.internal.DefaultIdentifierGeneratorFactory.injectServices(DefaultIdentifierGeneratorFactory.java:152)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.injectDependencies(AbstractServiceRegistryImpl.java:286)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.initializeService(AbstractServiceRegistryImpl.java:243)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.getService(AbstractServiceRegistryImpl.java:214)
+	at org.hibernate.boot.internal.InFlightMetadataCollectorImpl.<init>(InFlightMetadataCollectorImpl.java:176)
+	at org.hibernate.boot.model.process.spi.MetadataBuildingProcess.complete(MetadataBuildingProcess.java:127)
+	at org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl.metadata(EntityManagerFactoryBuilderImpl.java:1224)
+	at org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl.build(EntityManagerFactoryBuilderImpl.java:1255)
+	at org.springframework.orm.jpa.vendor.SpringHibernateJpaPersistenceProvider.createContainerEntityManagerFactory(SpringHibernateJpaPersistenceProvider.java:58)
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.createNativeEntityManagerFactory(LocalContainerEntityManagerFactoryBean.java:365)
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.buildNativeEntityManagerFactory(AbstractEntityManagerFactoryBean.java:391)
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.afterPropertiesSet(AbstractEntityManagerFactoryBean.java:378)
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.afterPropertiesSet(LocalContainerEntityManagerFactoryBean.java:341)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.invokeInitMethods(AbstractAutowireCapableBeanFactory.java:1858)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1795)
+	... 17 common frames omitted
+Caused by: org.hibernate.HibernateException: Access to DialectResolutionInfo cannot be null when 'hibernate.dialect' not set
+	at org.hibernate.engine.jdbc.dialect.internal.DialectFactoryImpl.determineDialect(DialectFactoryImpl.java:100)
+	at org.hibernate.engine.jdbc.dialect.internal.DialectFactoryImpl.buildDialect(DialectFactoryImpl.java:54)
+	at org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator.initiateService(JdbcEnvironmentInitiator.java:137)
+	at org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator.initiateService(JdbcEnvironmentInitiator.java:35)
+	at org.hibernate.boot.registry.internal.StandardServiceRegistryImpl.initiateService(StandardServiceRegistryImpl.java:101)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.createService(AbstractServiceRegistryImpl.java:263)
+	... 34 common frames omitted
+2026-05-04 16:11:15 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 71844 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-05-04 16:11:15 [main] INFO  c.s.invest.StockInvestApplication:648 - No active profile set, falling back to default profiles: tiger
+2026-05-04 16:11:15 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8080 (http)
+2026-05-04 16:11:15 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 603 ms
+2026-05-04 16:11:46 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext:559 - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'entityManagerFactory' defined in class path resource [org/springframework/boot/autoconfigure/orm/jpa/HibernateJpaConfiguration.class]: Invocation of init method failed; nested exception is org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+2026-05-04 16:11:46 [main] INFO  o.s.b.a.l.ConditionEvaluationReportLoggingListener:136 - 
+
+Error starting ApplicationContext. To display the conditions report re-run your application with 'debug' enabled.
+2026-05-04 16:11:46 [main] ERROR o.s.boot.SpringApplication:834 - Application run failed
+org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'entityManagerFactory' defined in class path resource [org/springframework/boot/autoconfigure/orm/jpa/HibernateJpaConfiguration.class]: Invocation of init method failed; nested exception is org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1799)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:594)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:516)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:324)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:322)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202)
+	at org.springframework.context.support.AbstractApplicationContext.getBean(AbstractApplicationContext.java:1109)
+	at org.springframework.context.support.AbstractApplicationContext.finishBeanFactoryInitialization(AbstractApplicationContext.java:869)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:551)
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:143)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:755)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:747)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:402)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:312)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1247)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1236)
+	at com.stock.invest.StockInvestApplication.main(StockInvestApplication.java:29)
+Caused by: org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.createService(AbstractServiceRegistryImpl.java:275)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.initializeService(AbstractServiceRegistryImpl.java:237)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.getService(AbstractServiceRegistryImpl.java:214)
+	at org.hibernate.id.factory.internal.DefaultIdentifierGeneratorFactory.injectServices(DefaultIdentifierGeneratorFactory.java:152)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.injectDependencies(AbstractServiceRegistryImpl.java:286)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.initializeService(AbstractServiceRegistryImpl.java:243)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.getService(AbstractServiceRegistryImpl.java:214)
+	at org.hibernate.boot.internal.InFlightMetadataCollectorImpl.<init>(InFlightMetadataCollectorImpl.java:176)
+	at org.hibernate.boot.model.process.spi.MetadataBuildingProcess.complete(MetadataBuildingProcess.java:127)
+	at org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl.metadata(EntityManagerFactoryBuilderImpl.java:1224)
+	at org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl.build(EntityManagerFactoryBuilderImpl.java:1255)
+	at org.springframework.orm.jpa.vendor.SpringHibernateJpaPersistenceProvider.createContainerEntityManagerFactory(SpringHibernateJpaPersistenceProvider.java:58)
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.createNativeEntityManagerFactory(LocalContainerEntityManagerFactoryBean.java:365)
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.buildNativeEntityManagerFactory(AbstractEntityManagerFactoryBean.java:391)
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.afterPropertiesSet(AbstractEntityManagerFactoryBean.java:378)
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.afterPropertiesSet(LocalContainerEntityManagerFactoryBean.java:341)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.invokeInitMethods(AbstractAutowireCapableBeanFactory.java:1858)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1795)
+	... 17 common frames omitted
+Caused by: org.hibernate.HibernateException: Access to DialectResolutionInfo cannot be null when 'hibernate.dialect' not set
+	at org.hibernate.engine.jdbc.dialect.internal.DialectFactoryImpl.determineDialect(DialectFactoryImpl.java:100)
+	at org.hibernate.engine.jdbc.dialect.internal.DialectFactoryImpl.buildDialect(DialectFactoryImpl.java:54)
+	at org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator.initiateService(JdbcEnvironmentInitiator.java:137)
+	at org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator.initiateService(JdbcEnvironmentInitiator.java:35)
+	at org.hibernate.boot.registry.internal.StandardServiceRegistryImpl.initiateService(StandardServiceRegistryImpl.java:101)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.createService(AbstractServiceRegistryImpl.java:263)
+	... 34 common frames omitted
+2026-05-04 16:12:48 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 72431 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-05-04 16:12:48 [main] INFO  c.s.invest.StockInvestApplication:652 - The following profiles are active: h2
+2026-05-04 16:12:49 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8080 (http)
+2026-05-04 16:12:49 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 654 ms
+2026-05-04 16:12:49 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext:559 - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaConfiguration': Unsatisfied dependency expressed through constructor parameter 0; nested exception is org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'dataSource' defined in class path resource [org/springframework/boot/autoconfigure/jdbc/DataSourceConfiguration$Hikari.class]: Bean instantiation via factory method failed; nested exception is org.springframework.beans.BeanInstantiationException: Failed to instantiate [com.zaxxer.hikari.HikariDataSource]: Factory method 'dataSource' threw exception; nested exception is java.lang.IllegalStateException: Cannot load driver class: org.h2.Driver
+2026-05-04 16:12:49 [main] INFO  o.s.b.a.l.ConditionEvaluationReportLoggingListener:136 - 
+
+Error starting ApplicationContext. To display the conditions report re-run your application with 'debug' enabled.
+2026-05-04 16:12:49 [main] ERROR o.s.boot.SpringApplication:834 - Application run failed
+org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaConfiguration': Unsatisfied dependency expressed through constructor parameter 0; nested exception is org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'dataSource' defined in class path resource [org/springframework/boot/autoconfigure/jdbc/DataSourceConfiguration$Hikari.class]: Bean instantiation via factory method failed; nested exception is org.springframework.beans.BeanInstantiationException: Failed to instantiate [com.zaxxer.hikari.HikariDataSource]: Factory method 'dataSource' threw exception; nested exception is java.lang.IllegalStateException: Cannot load driver class: org.h2.Driver
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:799)
+	at org.springframework.beans.factory.support.ConstructorResolver.autowireConstructor(ConstructorResolver.java:228)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.autowireConstructor(AbstractAutowireCapableBeanFactory.java:1361)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1208)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:556)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:516)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:324)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:322)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202)
+	at org.springframework.beans.factory.support.ConstructorResolver.instantiateUsingFactoryMethod(ConstructorResolver.java:409)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.instantiateUsingFactoryMethod(AbstractAutowireCapableBeanFactory.java:1341)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1181)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:556)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:516)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:324)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:322)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202)
+	at org.springframework.context.support.AbstractApplicationContext.getBean(AbstractApplicationContext.java:1109)
+	at org.springframework.context.support.AbstractApplicationContext.finishBeanFactoryInitialization(AbstractApplicationContext.java:869)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:551)
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:143)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:755)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:747)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:402)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:312)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1247)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1236)
+	at com.stock.invest.StockInvestApplication.main(StockInvestApplication.java:29)
+Caused by: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'dataSource' defined in class path resource [org/springframework/boot/autoconfigure/jdbc/DataSourceConfiguration$Hikari.class]: Bean instantiation via factory method failed; nested exception is org.springframework.beans.BeanInstantiationException: Failed to instantiate [com.zaxxer.hikari.HikariDataSource]: Factory method 'dataSource' threw exception; nested exception is java.lang.IllegalStateException: Cannot load driver class: org.h2.Driver
+	at org.springframework.beans.factory.support.ConstructorResolver.instantiate(ConstructorResolver.java:657)
+	at org.springframework.beans.factory.support.ConstructorResolver.instantiateUsingFactoryMethod(ConstructorResolver.java:637)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.instantiateUsingFactoryMethod(AbstractAutowireCapableBeanFactory.java:1341)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1181)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:556)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:516)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:324)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:322)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202)
+	at org.springframework.beans.factory.config.DependencyDescriptor.resolveCandidate(DependencyDescriptor.java:276)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1307)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1227)
+	at org.springframework.beans.factory.support.ConstructorResolver.resolveAutowiredArgument(ConstructorResolver.java:886)
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:790)
+	... 29 common frames omitted
+Caused by: org.springframework.beans.BeanInstantiationException: Failed to instantiate [com.zaxxer.hikari.HikariDataSource]: Factory method 'dataSource' threw exception; nested exception is java.lang.IllegalStateException: Cannot load driver class: org.h2.Driver
+	at org.springframework.beans.factory.support.SimpleInstantiationStrategy.instantiate(SimpleInstantiationStrategy.java:185)
+	at org.springframework.beans.factory.support.ConstructorResolver.instantiate(ConstructorResolver.java:652)
+	... 43 common frames omitted
+Caused by: java.lang.IllegalStateException: Cannot load driver class: org.h2.Driver
+	at org.springframework.util.Assert.state(Assert.java:97)
+	at org.springframework.boot.autoconfigure.jdbc.DataSourceProperties.determineDriverClassName(DataSourceProperties.java:224)
+	at org.springframework.boot.autoconfigure.jdbc.DataSourceProperties.initializeDataSourceBuilder(DataSourceProperties.java:176)
+	at org.springframework.boot.autoconfigure.jdbc.DataSourceConfiguration.createDataSource(DataSourceConfiguration.java:43)
+	at org.springframework.boot.autoconfigure.jdbc.DataSourceConfiguration$Hikari.dataSource(DataSourceConfiguration.java:85)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.beans.factory.support.SimpleInstantiationStrategy.instantiate(SimpleInstantiationStrategy.java:154)
+	... 44 common frames omitted
+2026-05-04 16:13:35 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 73021 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-05-04 16:13:35 [main] INFO  c.s.invest.StockInvestApplication:652 - The following profiles are active: h2
+2026-05-04 16:13:36 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8080 (http)
+2026-05-04 16:13:36 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 667 ms
+2026-05-04 16:13:36 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext:559 - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'entityManagerFactory' defined in class path resource [org/springframework/boot/autoconfigure/orm/jpa/HibernateJpaConfiguration.class]: Invocation of init method failed; nested exception is org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+2026-05-04 16:13:36 [main] INFO  o.s.b.a.l.ConditionEvaluationReportLoggingListener:136 - 
+
+Error starting ApplicationContext. To display the conditions report re-run your application with 'debug' enabled.
+2026-05-04 16:13:36 [main] ERROR o.s.boot.SpringApplication:834 - Application run failed
+org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'entityManagerFactory' defined in class path resource [org/springframework/boot/autoconfigure/orm/jpa/HibernateJpaConfiguration.class]: Invocation of init method failed; nested exception is org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1799)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:594)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:516)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:324)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:322)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202)
+	at org.springframework.context.support.AbstractApplicationContext.getBean(AbstractApplicationContext.java:1109)
+	at org.springframework.context.support.AbstractApplicationContext.finishBeanFactoryInitialization(AbstractApplicationContext.java:869)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:551)
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:143)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:755)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:747)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:402)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:312)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1247)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1236)
+	at com.stock.invest.StockInvestApplication.main(StockInvestApplication.java:29)
+Caused by: org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.createService(AbstractServiceRegistryImpl.java:275)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.initializeService(AbstractServiceRegistryImpl.java:237)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.getService(AbstractServiceRegistryImpl.java:214)
+	at org.hibernate.id.factory.internal.DefaultIdentifierGeneratorFactory.injectServices(DefaultIdentifierGeneratorFactory.java:152)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.injectDependencies(AbstractServiceRegistryImpl.java:286)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.initializeService(AbstractServiceRegistryImpl.java:243)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.getService(AbstractServiceRegistryImpl.java:214)
+	at org.hibernate.boot.internal.InFlightMetadataCollectorImpl.<init>(InFlightMetadataCollectorImpl.java:176)
+	at org.hibernate.boot.model.process.spi.MetadataBuildingProcess.complete(MetadataBuildingProcess.java:127)
+	at org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl.metadata(EntityManagerFactoryBuilderImpl.java:1224)
+	at org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl.build(EntityManagerFactoryBuilderImpl.java:1255)
+	at org.springframework.orm.jpa.vendor.SpringHibernateJpaPersistenceProvider.createContainerEntityManagerFactory(SpringHibernateJpaPersistenceProvider.java:58)
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.createNativeEntityManagerFactory(LocalContainerEntityManagerFactoryBean.java:365)
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.buildNativeEntityManagerFactory(AbstractEntityManagerFactoryBean.java:391)
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.afterPropertiesSet(AbstractEntityManagerFactoryBean.java:378)
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.afterPropertiesSet(LocalContainerEntityManagerFactoryBean.java:341)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.invokeInitMethods(AbstractAutowireCapableBeanFactory.java:1858)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1795)
+	... 17 common frames omitted
+Caused by: org.hibernate.HibernateException: Access to DialectResolutionInfo cannot be null when 'hibernate.dialect' not set
+	at org.hibernate.engine.jdbc.dialect.internal.DialectFactoryImpl.determineDialect(DialectFactoryImpl.java:100)
+	at org.hibernate.engine.jdbc.dialect.internal.DialectFactoryImpl.buildDialect(DialectFactoryImpl.java:54)
+	at org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator.initiateService(JdbcEnvironmentInitiator.java:137)
+	at org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator.initiateService(JdbcEnvironmentInitiator.java:35)
+	at org.hibernate.boot.registry.internal.StandardServiceRegistryImpl.initiateService(StandardServiceRegistryImpl.java:101)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.createService(AbstractServiceRegistryImpl.java:263)
+	... 34 common frames omitted
+2026-05-04 16:14:25 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 73449 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-05-04 16:14:25 [main] INFO  c.s.invest.StockInvestApplication:652 - The following profiles are active: h2
+2026-05-04 16:14:26 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8080 (http)
+2026-05-04 16:14:26 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 679 ms
+2026-05-04 16:14:26 [main] INFO  o.s.b.a.h.H2ConsoleAutoConfiguration:73 - H2 console available at '/h2-console'. Database available at 'jdbc:h2:mem:stockinvest'
+2026-05-04 16:14:26 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext:559 - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'stockInvestApplication.StockServiceStartupLogger': Unsatisfied dependency expressed through field 'stockService'; nested exception is org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'priorityStockServiceImpl': Unsatisfied dependency expressed through field 'tigerStockService'; nested exception is org.springframework.beans.factory.NoSuchBeanDefinitionException: No qualifying bean of type 'com.stock.invest.service.impl.TigerStockServiceImpl' available: expected at least 1 bean which qualifies as autowire candidate. Dependency annotations: {@org.springframework.beans.factory.annotation.Autowired(required=true)}
+2026-05-04 16:14:26 [main] INFO  o.s.b.a.l.ConditionEvaluationReportLoggingListener:136 - 
+
+Error starting ApplicationContext. To display the conditions report re-run your application with 'debug' enabled.
+2026-05-04 16:14:26 [main] ERROR o.s.b.d.LoggingFailureAnalysisReporter:40 - 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Field tigerStockService in com.stock.invest.service.impl.PriorityStockServiceImpl required a bean of type 'com.stock.invest.service.impl.TigerStockServiceImpl' that could not be found.
+
+The injection point has the following annotations:
+	- @org.springframework.beans.factory.annotation.Autowired(required=true)
+
+
+Action:
+
+Consider defining a bean of type 'com.stock.invest.service.impl.TigerStockServiceImpl' in your configuration.
+
+2026-05-04 16:15:30 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 73963 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-05-04 16:15:30 [main] INFO  c.s.invest.StockInvestApplication:652 - The following profiles are active: h2,tiger
+2026-05-04 16:15:30 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8080 (http)
+2026-05-04 16:15:30 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 39 ms
+2026-05-04 16:15:30 [main] INFO  o.s.b.a.h.H2ConsoleAutoConfiguration:73 - H2 console available at '/h2-console'. Database available at 'jdbc:h2:mem:stockinvest'
+2026-05-04 16:15:31 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration:220 - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-05-04 16:15:32 [main] INFO  o.s.b.a.e.web.EndpointLinksResolver:58 - Exposing 3 endpoint(s) beneath base path '/actuator'
+2026-05-04 16:15:32 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:220 - Tomcat started on port(s): 8080 (http) with context path ''
+2026-05-04 16:15:32 [main] INFO  c.s.invest.StockInvestApplication:61 - Started StockInvestApplication in 3.014 seconds (JVM running for 3.178)
+2026-05-04 16:15:32 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.impl.PriorityStockServiceImpl ====
+2026-05-04 16:15:32 [main] INFO  c.s.invest.StockInvestApplication:33 - 当前激活的profiles: h2, tiger
+2026-05-04 16:54:40 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 87645 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-05-04 16:54:40 [main] INFO  c.s.invest.StockInvestApplication:648 - No active profile set, falling back to default profiles: twelvedata
+2026-05-04 16:54:41 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8090 (http)
+2026-05-04 16:54:41 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 652 ms
+2026-05-04 16:54:41 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext:559 - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaConfiguration': Unsatisfied dependency expressed through constructor parameter 0; nested exception is org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'dataSource' defined in class path resource [org/springframework/boot/autoconfigure/jdbc/DataSourceConfiguration$Hikari.class]: Bean instantiation via factory method failed; nested exception is org.springframework.beans.BeanInstantiationException: Failed to instantiate [com.zaxxer.hikari.HikariDataSource]: Factory method 'dataSource' threw exception; nested exception is java.lang.IllegalStateException: Cannot load driver class: com.mysql.cj.jdbc.Driver
+2026-05-04 16:54:41 [main] INFO  o.s.b.a.l.ConditionEvaluationReportLoggingListener:136 - 
+
+Error starting ApplicationContext. To display the conditions report re-run your application with 'debug' enabled.
+2026-05-04 16:54:41 [main] ERROR o.s.boot.SpringApplication:834 - Application run failed
+org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaConfiguration': Unsatisfied dependency expressed through constructor parameter 0; nested exception is org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'dataSource' defined in class path resource [org/springframework/boot/autoconfigure/jdbc/DataSourceConfiguration$Hikari.class]: Bean instantiation via factory method failed; nested exception is org.springframework.beans.BeanInstantiationException: Failed to instantiate [com.zaxxer.hikari.HikariDataSource]: Factory method 'dataSource' threw exception; nested exception is java.lang.IllegalStateException: Cannot load driver class: com.mysql.cj.jdbc.Driver
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:799)
+	at org.springframework.beans.factory.support.ConstructorResolver.autowireConstructor(ConstructorResolver.java:228)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.autowireConstructor(AbstractAutowireCapableBeanFactory.java:1361)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1208)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:556)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:516)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:324)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:322)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202)
+	at org.springframework.beans.factory.support.ConstructorResolver.instantiateUsingFactoryMethod(ConstructorResolver.java:409)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.instantiateUsingFactoryMethod(AbstractAutowireCapableBeanFactory.java:1341)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1181)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:556)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:516)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:324)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:322)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202)
+	at org.springframework.context.support.AbstractApplicationContext.getBean(AbstractApplicationContext.java:1109)
+	at org.springframework.context.support.AbstractApplicationContext.finishBeanFactoryInitialization(AbstractApplicationContext.java:869)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:551)
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:143)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:755)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:747)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:402)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:312)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1247)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1236)
+	at com.stock.invest.StockInvestApplication.main(StockInvestApplication.java:29)
+Caused by: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'dataSource' defined in class path resource [org/springframework/boot/autoconfigure/jdbc/DataSourceConfiguration$Hikari.class]: Bean instantiation via factory method failed; nested exception is org.springframework.beans.BeanInstantiationException: Failed to instantiate [com.zaxxer.hikari.HikariDataSource]: Factory method 'dataSource' threw exception; nested exception is java.lang.IllegalStateException: Cannot load driver class: com.mysql.cj.jdbc.Driver
+	at org.springframework.beans.factory.support.ConstructorResolver.instantiate(ConstructorResolver.java:657)
+	at org.springframework.beans.factory.support.ConstructorResolver.instantiateUsingFactoryMethod(ConstructorResolver.java:637)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.instantiateUsingFactoryMethod(AbstractAutowireCapableBeanFactory.java:1341)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1181)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:556)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:516)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:324)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:322)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202)
+	at org.springframework.beans.factory.config.DependencyDescriptor.resolveCandidate(DependencyDescriptor.java:276)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1307)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1227)
+	at org.springframework.beans.factory.support.ConstructorResolver.resolveAutowiredArgument(ConstructorResolver.java:886)
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:790)
+	... 29 common frames omitted
+Caused by: org.springframework.beans.BeanInstantiationException: Failed to instantiate [com.zaxxer.hikari.HikariDataSource]: Factory method 'dataSource' threw exception; nested exception is java.lang.IllegalStateException: Cannot load driver class: com.mysql.cj.jdbc.Driver
+	at org.springframework.beans.factory.support.SimpleInstantiationStrategy.instantiate(SimpleInstantiationStrategy.java:185)
+	at org.springframework.beans.factory.support.ConstructorResolver.instantiate(ConstructorResolver.java:652)
+	... 43 common frames omitted
+Caused by: java.lang.IllegalStateException: Cannot load driver class: com.mysql.cj.jdbc.Driver
+	at org.springframework.util.Assert.state(Assert.java:97)
+	at org.springframework.boot.autoconfigure.jdbc.DataSourceProperties.determineDriverClassName(DataSourceProperties.java:224)
+	at org.springframework.boot.autoconfigure.jdbc.DataSourceProperties.initializeDataSourceBuilder(DataSourceProperties.java:176)
+	at org.springframework.boot.autoconfigure.jdbc.DataSourceConfiguration.createDataSource(DataSourceConfiguration.java:43)
+	at org.springframework.boot.autoconfigure.jdbc.DataSourceConfiguration$Hikari.dataSource(DataSourceConfiguration.java:85)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.beans.factory.support.SimpleInstantiationStrategy.instantiate(SimpleInstantiationStrategy.java:154)
+	... 44 common frames omitted
+2026-05-04 16:55:34 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 88041 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-05-04 16:55:34 [main] INFO  c.s.invest.StockInvestApplication:648 - No active profile set, falling back to default profiles: twelvedata
+2026-05-04 16:55:35 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8090 (http)
+2026-05-04 16:55:35 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 598 ms
+2026-05-04 16:55:36 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext:559 - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'entityManagerFactory' defined in class path resource [org/springframework/boot/autoconfigure/orm/jpa/HibernateJpaConfiguration.class]: Invocation of init method failed; nested exception is org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+2026-05-04 16:55:36 [main] INFO  o.s.b.a.l.ConditionEvaluationReportLoggingListener:136 - 
+
+Error starting ApplicationContext. To display the conditions report re-run your application with 'debug' enabled.
+2026-05-04 16:55:36 [main] ERROR o.s.boot.SpringApplication:834 - Application run failed
+org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'entityManagerFactory' defined in class path resource [org/springframework/boot/autoconfigure/orm/jpa/HibernateJpaConfiguration.class]: Invocation of init method failed; nested exception is org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1799)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:594)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:516)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:324)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:322)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202)
+	at org.springframework.context.support.AbstractApplicationContext.getBean(AbstractApplicationContext.java:1109)
+	at org.springframework.context.support.AbstractApplicationContext.finishBeanFactoryInitialization(AbstractApplicationContext.java:869)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:551)
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:143)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:755)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:747)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:402)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:312)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1247)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1236)
+	at com.stock.invest.StockInvestApplication.main(StockInvestApplication.java:29)
+Caused by: org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.createService(AbstractServiceRegistryImpl.java:275)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.initializeService(AbstractServiceRegistryImpl.java:237)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.getService(AbstractServiceRegistryImpl.java:214)
+	at org.hibernate.id.factory.internal.DefaultIdentifierGeneratorFactory.injectServices(DefaultIdentifierGeneratorFactory.java:152)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.injectDependencies(AbstractServiceRegistryImpl.java:286)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.initializeService(AbstractServiceRegistryImpl.java:243)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.getService(AbstractServiceRegistryImpl.java:214)
+	at org.hibernate.boot.internal.InFlightMetadataCollectorImpl.<init>(InFlightMetadataCollectorImpl.java:176)
+	at org.hibernate.boot.model.process.spi.MetadataBuildingProcess.complete(MetadataBuildingProcess.java:127)
+	at org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl.metadata(EntityManagerFactoryBuilderImpl.java:1224)
+	at org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl.build(EntityManagerFactoryBuilderImpl.java:1255)
+	at org.springframework.orm.jpa.vendor.SpringHibernateJpaPersistenceProvider.createContainerEntityManagerFactory(SpringHibernateJpaPersistenceProvider.java:58)
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.createNativeEntityManagerFactory(LocalContainerEntityManagerFactoryBean.java:365)
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.buildNativeEntityManagerFactory(AbstractEntityManagerFactoryBean.java:391)
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.afterPropertiesSet(AbstractEntityManagerFactoryBean.java:378)
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.afterPropertiesSet(LocalContainerEntityManagerFactoryBean.java:341)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.invokeInitMethods(AbstractAutowireCapableBeanFactory.java:1858)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1795)
+	... 17 common frames omitted
+Caused by: org.hibernate.HibernateException: Access to DialectResolutionInfo cannot be null when 'hibernate.dialect' not set
+	at org.hibernate.engine.jdbc.dialect.internal.DialectFactoryImpl.determineDialect(DialectFactoryImpl.java:100)
+	at org.hibernate.engine.jdbc.dialect.internal.DialectFactoryImpl.buildDialect(DialectFactoryImpl.java:54)
+	at org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator.initiateService(JdbcEnvironmentInitiator.java:137)
+	at org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator.initiateService(JdbcEnvironmentInitiator.java:35)
+	at org.hibernate.boot.registry.internal.StandardServiceRegistryImpl.initiateService(StandardServiceRegistryImpl.java:101)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.createService(AbstractServiceRegistryImpl.java:263)
+	... 34 common frames omitted
+2026-05-04 16:57:20 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 88753 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-05-04 16:57:20 [main] INFO  c.s.invest.StockInvestApplication:648 - No active profile set, falling back to default profiles: twelvedata
+2026-05-04 16:57:20 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8080 (http)
+2026-05-04 16:57:20 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 646 ms
+2026-05-04 16:57:23 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext:559 - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'entityManagerFactory' defined in class path resource [org/springframework/boot/autoconfigure/orm/jpa/HibernateJpaConfiguration.class]: Invocation of init method failed; nested exception is org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+2026-05-04 16:57:23 [main] INFO  o.s.b.a.l.ConditionEvaluationReportLoggingListener:136 - 
+
+Error starting ApplicationContext. To display the conditions report re-run your application with 'debug' enabled.
+2026-05-04 16:57:23 [main] ERROR o.s.boot.SpringApplication:834 - Application run failed
+org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'entityManagerFactory' defined in class path resource [org/springframework/boot/autoconfigure/orm/jpa/HibernateJpaConfiguration.class]: Invocation of init method failed; nested exception is org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1799)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:594)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:516)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:324)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:322)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202)
+	at org.springframework.context.support.AbstractApplicationContext.getBean(AbstractApplicationContext.java:1109)
+	at org.springframework.context.support.AbstractApplicationContext.finishBeanFactoryInitialization(AbstractApplicationContext.java:869)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:551)
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:143)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:755)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:747)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:402)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:312)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1247)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1236)
+	at com.stock.invest.StockInvestApplication.main(StockInvestApplication.java:29)
+Caused by: org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.createService(AbstractServiceRegistryImpl.java:275)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.initializeService(AbstractServiceRegistryImpl.java:237)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.getService(AbstractServiceRegistryImpl.java:214)
+	at org.hibernate.id.factory.internal.DefaultIdentifierGeneratorFactory.injectServices(DefaultIdentifierGeneratorFactory.java:152)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.injectDependencies(AbstractServiceRegistryImpl.java:286)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.initializeService(AbstractServiceRegistryImpl.java:243)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.getService(AbstractServiceRegistryImpl.java:214)
+	at org.hibernate.boot.internal.InFlightMetadataCollectorImpl.<init>(InFlightMetadataCollectorImpl.java:176)
+	at org.hibernate.boot.model.process.spi.MetadataBuildingProcess.complete(MetadataBuildingProcess.java:127)
+	at org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl.metadata(EntityManagerFactoryBuilderImpl.java:1224)
+	at org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl.build(EntityManagerFactoryBuilderImpl.java:1255)
+	at org.springframework.orm.jpa.vendor.SpringHibernateJpaPersistenceProvider.createContainerEntityManagerFactory(SpringHibernateJpaPersistenceProvider.java:58)
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.createNativeEntityManagerFactory(LocalContainerEntityManagerFactoryBean.java:365)
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.buildNativeEntityManagerFactory(AbstractEntityManagerFactoryBean.java:391)
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.afterPropertiesSet(AbstractEntityManagerFactoryBean.java:378)
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.afterPropertiesSet(LocalContainerEntityManagerFactoryBean.java:341)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.invokeInitMethods(AbstractAutowireCapableBeanFactory.java:1858)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1795)
+	... 17 common frames omitted
+Caused by: org.hibernate.HibernateException: Access to DialectResolutionInfo cannot be null when 'hibernate.dialect' not set
+	at org.hibernate.engine.jdbc.dialect.internal.DialectFactoryImpl.determineDialect(DialectFactoryImpl.java:100)
+	at org.hibernate.engine.jdbc.dialect.internal.DialectFactoryImpl.buildDialect(DialectFactoryImpl.java:54)
+	at org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator.initiateService(JdbcEnvironmentInitiator.java:137)
+	at org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator.initiateService(JdbcEnvironmentInitiator.java:35)
+	at org.hibernate.boot.registry.internal.StandardServiceRegistryImpl.initiateService(StandardServiceRegistryImpl.java:101)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.createService(AbstractServiceRegistryImpl.java:263)
+	... 34 common frames omitted
+2026-05-04 16:58:34 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 89441 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-05-04 16:58:34 [main] INFO  c.s.invest.StockInvestApplication:652 - The following profiles are active: twelvedata
+2026-05-04 16:58:35 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8080 (http)
+2026-05-04 16:58:35 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 699 ms
+2026-05-04 16:58:37 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext:559 - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'entityManagerFactory' defined in class path resource [org/springframework/boot/autoconfigure/orm/jpa/HibernateJpaConfiguration.class]: Invocation of init method failed; nested exception is org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+2026-05-04 16:58:37 [main] INFO  o.s.b.a.l.ConditionEvaluationReportLoggingListener:136 - 
+
+Error starting ApplicationContext. To display the conditions report re-run your application with 'debug' enabled.
+2026-05-04 16:58:37 [main] ERROR o.s.boot.SpringApplication:834 - Application run failed
+org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'entityManagerFactory' defined in class path resource [org/springframework/boot/autoconfigure/orm/jpa/HibernateJpaConfiguration.class]: Invocation of init method failed; nested exception is org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1799)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:594)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:516)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:324)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:322)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202)
+	at org.springframework.context.support.AbstractApplicationContext.getBean(AbstractApplicationContext.java:1109)
+	at org.springframework.context.support.AbstractApplicationContext.finishBeanFactoryInitialization(AbstractApplicationContext.java:869)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:551)
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:143)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:755)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:747)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:402)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:312)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1247)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1236)
+	at com.stock.invest.StockInvestApplication.main(StockInvestApplication.java:29)
+Caused by: org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.createService(AbstractServiceRegistryImpl.java:275)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.initializeService(AbstractServiceRegistryImpl.java:237)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.getService(AbstractServiceRegistryImpl.java:214)
+	at org.hibernate.id.factory.internal.DefaultIdentifierGeneratorFactory.injectServices(DefaultIdentifierGeneratorFactory.java:152)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.injectDependencies(AbstractServiceRegistryImpl.java:286)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.initializeService(AbstractServiceRegistryImpl.java:243)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.getService(AbstractServiceRegistryImpl.java:214)
+	at org.hibernate.boot.internal.InFlightMetadataCollectorImpl.<init>(InFlightMetadataCollectorImpl.java:176)
+	at org.hibernate.boot.model.process.spi.MetadataBuildingProcess.complete(MetadataBuildingProcess.java:127)
+	at org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl.metadata(EntityManagerFactoryBuilderImpl.java:1224)
+	at org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl.build(EntityManagerFactoryBuilderImpl.java:1255)
+	at org.springframework.orm.jpa.vendor.SpringHibernateJpaPersistenceProvider.createContainerEntityManagerFactory(SpringHibernateJpaPersistenceProvider.java:58)
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.createNativeEntityManagerFactory(LocalContainerEntityManagerFactoryBean.java:365)
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.buildNativeEntityManagerFactory(AbstractEntityManagerFactoryBean.java:391)
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.afterPropertiesSet(AbstractEntityManagerFactoryBean.java:378)
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.afterPropertiesSet(LocalContainerEntityManagerFactoryBean.java:341)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.invokeInitMethods(AbstractAutowireCapableBeanFactory.java:1858)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1795)
+	... 17 common frames omitted
+Caused by: org.hibernate.HibernateException: Access to DialectResolutionInfo cannot be null when 'hibernate.dialect' not set
+	at org.hibernate.engine.jdbc.dialect.internal.DialectFactoryImpl.determineDialect(DialectFactoryImpl.java:100)
+	at org.hibernate.engine.jdbc.dialect.internal.DialectFactoryImpl.buildDialect(DialectFactoryImpl.java:54)
+	at org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator.initiateService(JdbcEnvironmentInitiator.java:137)
+	at org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator.initiateService(JdbcEnvironmentInitiator.java:35)
+	at org.hibernate.boot.registry.internal.StandardServiceRegistryImpl.initiateService(StandardServiceRegistryImpl.java:101)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.createService(AbstractServiceRegistryImpl.java:263)
+	... 34 common frames omitted
+2026-05-04 16:59:11 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 89895 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-05-04 16:59:11 [main] INFO  c.s.invest.StockInvestApplication:652 - The following profiles are active: twelvedata
+2026-05-04 16:59:12 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8080 (http)
+2026-05-04 16:59:12 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 788 ms
+2026-05-04 16:59:15 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext:559 - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'entityManagerFactory' defined in class path resource [org/springframework/boot/autoconfigure/orm/jpa/HibernateJpaConfiguration.class]: Invocation of init method failed; nested exception is org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+2026-05-04 16:59:15 [main] INFO  o.s.b.a.l.ConditionEvaluationReportLoggingListener:136 - 
+
+Error starting ApplicationContext. To display the conditions report re-run your application with 'debug' enabled.
+2026-05-04 16:59:15 [main] ERROR o.s.boot.SpringApplication:834 - Application run failed
+org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'entityManagerFactory' defined in class path resource [org/springframework/boot/autoconfigure/orm/jpa/HibernateJpaConfiguration.class]: Invocation of init method failed; nested exception is org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1799)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:594)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:516)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:324)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:322)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202)
+	at org.springframework.context.support.AbstractApplicationContext.getBean(AbstractApplicationContext.java:1109)
+	at org.springframework.context.support.AbstractApplicationContext.finishBeanFactoryInitialization(AbstractApplicationContext.java:869)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:551)
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:143)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:755)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:747)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:402)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:312)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1247)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1236)
+	at com.stock.invest.StockInvestApplication.main(StockInvestApplication.java:29)
+Caused by: org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.createService(AbstractServiceRegistryImpl.java:275)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.initializeService(AbstractServiceRegistryImpl.java:237)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.getService(AbstractServiceRegistryImpl.java:214)
+	at org.hibernate.id.factory.internal.DefaultIdentifierGeneratorFactory.injectServices(DefaultIdentifierGeneratorFactory.java:152)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.injectDependencies(AbstractServiceRegistryImpl.java:286)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.initializeService(AbstractServiceRegistryImpl.java:243)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.getService(AbstractServiceRegistryImpl.java:214)
+	at org.hibernate.boot.internal.InFlightMetadataCollectorImpl.<init>(InFlightMetadataCollectorImpl.java:176)
+	at org.hibernate.boot.model.process.spi.MetadataBuildingProcess.complete(MetadataBuildingProcess.java:127)
+	at org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl.metadata(EntityManagerFactoryBuilderImpl.java:1224)
+	at org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl.build(EntityManagerFactoryBuilderImpl.java:1255)
+	at org.springframework.orm.jpa.vendor.SpringHibernateJpaPersistenceProvider.createContainerEntityManagerFactory(SpringHibernateJpaPersistenceProvider.java:58)
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.createNativeEntityManagerFactory(LocalContainerEntityManagerFactoryBean.java:365)
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.buildNativeEntityManagerFactory(AbstractEntityManagerFactoryBean.java:391)
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.afterPropertiesSet(AbstractEntityManagerFactoryBean.java:378)
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.afterPropertiesSet(LocalContainerEntityManagerFactoryBean.java:341)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.invokeInitMethods(AbstractAutowireCapableBeanFactory.java:1858)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1795)
+	... 17 common frames omitted
+Caused by: org.hibernate.HibernateException: Access to DialectResolutionInfo cannot be null when 'hibernate.dialect' not set
+	at org.hibernate.engine.jdbc.dialect.internal.DialectFactoryImpl.determineDialect(DialectFactoryImpl.java:100)
+	at org.hibernate.engine.jdbc.dialect.internal.DialectFactoryImpl.buildDialect(DialectFactoryImpl.java:54)
+	at org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator.initiateService(JdbcEnvironmentInitiator.java:137)
+	at org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator.initiateService(JdbcEnvironmentInitiator.java:35)
+	at org.hibernate.boot.registry.internal.StandardServiceRegistryImpl.initiateService(StandardServiceRegistryImpl.java:101)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.createService(AbstractServiceRegistryImpl.java:263)
+	... 34 common frames omitted
+2026-05-04 17:01:49 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 91301 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-05-04 17:01:49 [main] INFO  c.s.invest.StockInvestApplication:648 - No active profile set, falling back to default profiles: twelvedata
+2026-05-04 17:01:50 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8080 (http)
+2026-05-04 17:01:50 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 686 ms
+2026-05-04 17:01:52 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext:559 - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'entityManagerFactory' defined in class path resource [org/springframework/boot/autoconfigure/orm/jpa/HibernateJpaConfiguration.class]: Invocation of init method failed; nested exception is org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+2026-05-04 17:01:52 [main] INFO  o.s.b.a.l.ConditionEvaluationReportLoggingListener:136 - 
+
+Error starting ApplicationContext. To display the conditions report re-run your application with 'debug' enabled.
+2026-05-04 17:01:52 [main] ERROR o.s.boot.SpringApplication:834 - Application run failed
+org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'entityManagerFactory' defined in class path resource [org/springframework/boot/autoconfigure/orm/jpa/HibernateJpaConfiguration.class]: Invocation of init method failed; nested exception is org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1799)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:594)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:516)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:324)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:322)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202)
+	at org.springframework.context.support.AbstractApplicationContext.getBean(AbstractApplicationContext.java:1109)
+	at org.springframework.context.support.AbstractApplicationContext.finishBeanFactoryInitialization(AbstractApplicationContext.java:869)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:551)
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:143)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:755)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:747)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:402)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:312)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1247)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1236)
+	at com.stock.invest.StockInvestApplication.main(StockInvestApplication.java:29)
+Caused by: org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.createService(AbstractServiceRegistryImpl.java:275)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.initializeService(AbstractServiceRegistryImpl.java:237)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.getService(AbstractServiceRegistryImpl.java:214)
+	at org.hibernate.id.factory.internal.DefaultIdentifierGeneratorFactory.injectServices(DefaultIdentifierGeneratorFactory.java:152)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.injectDependencies(AbstractServiceRegistryImpl.java:286)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.initializeService(AbstractServiceRegistryImpl.java:243)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.getService(AbstractServiceRegistryImpl.java:214)
+	at org.hibernate.boot.internal.InFlightMetadataCollectorImpl.<init>(InFlightMetadataCollectorImpl.java:176)
+	at org.hibernate.boot.model.process.spi.MetadataBuildingProcess.complete(MetadataBuildingProcess.java:127)
+	at org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl.metadata(EntityManagerFactoryBuilderImpl.java:1224)
+	at org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl.build(EntityManagerFactoryBuilderImpl.java:1255)
+	at org.springframework.orm.jpa.vendor.SpringHibernateJpaPersistenceProvider.createContainerEntityManagerFactory(SpringHibernateJpaPersistenceProvider.java:58)
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.createNativeEntityManagerFactory(LocalContainerEntityManagerFactoryBean.java:365)
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.buildNativeEntityManagerFactory(AbstractEntityManagerFactoryBean.java:391)
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.afterPropertiesSet(AbstractEntityManagerFactoryBean.java:378)
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.afterPropertiesSet(LocalContainerEntityManagerFactoryBean.java:341)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.invokeInitMethods(AbstractAutowireCapableBeanFactory.java:1858)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1795)
+	... 17 common frames omitted
+Caused by: org.hibernate.HibernateException: Access to DialectResolutionInfo cannot be null when 'hibernate.dialect' not set
+	at org.hibernate.engine.jdbc.dialect.internal.DialectFactoryImpl.determineDialect(DialectFactoryImpl.java:100)
+	at org.hibernate.engine.jdbc.dialect.internal.DialectFactoryImpl.buildDialect(DialectFactoryImpl.java:54)
+	at org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator.initiateService(JdbcEnvironmentInitiator.java:137)
+	at org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator.initiateService(JdbcEnvironmentInitiator.java:35)
+	at org.hibernate.boot.registry.internal.StandardServiceRegistryImpl.initiateService(StandardServiceRegistryImpl.java:101)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.createService(AbstractServiceRegistryImpl.java:263)
+	... 34 common frames omitted
+2026-05-04 17:02:09 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 91537 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-05-04 17:02:09 [main] INFO  c.s.invest.StockInvestApplication:648 - No active profile set, falling back to default profiles: twelvedata
+2026-05-04 17:02:10 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8080 (http)
+2026-05-04 17:02:10 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 719 ms
+2026-05-04 17:02:12 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext:559 - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'entityManagerFactory' defined in class path resource [org/springframework/boot/autoconfigure/orm/jpa/HibernateJpaConfiguration.class]: Invocation of init method failed; nested exception is org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+2026-05-04 17:02:12 [main] INFO  o.s.b.a.l.ConditionEvaluationReportLoggingListener:136 - 
+
+Error starting ApplicationContext. To display the conditions report re-run your application with 'debug' enabled.
+2026-05-04 17:02:12 [main] ERROR o.s.boot.SpringApplication:834 - Application run failed
+org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'entityManagerFactory' defined in class path resource [org/springframework/boot/autoconfigure/orm/jpa/HibernateJpaConfiguration.class]: Invocation of init method failed; nested exception is org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1799)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:594)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:516)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:324)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:322)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202)
+	at org.springframework.context.support.AbstractApplicationContext.getBean(AbstractApplicationContext.java:1109)
+	at org.springframework.context.support.AbstractApplicationContext.finishBeanFactoryInitialization(AbstractApplicationContext.java:869)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:551)
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:143)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:755)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:747)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:402)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:312)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1247)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1236)
+	at com.stock.invest.StockInvestApplication.main(StockInvestApplication.java:29)
+Caused by: org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.createService(AbstractServiceRegistryImpl.java:275)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.initializeService(AbstractServiceRegistryImpl.java:237)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.getService(AbstractServiceRegistryImpl.java:214)
+	at org.hibernate.id.factory.internal.DefaultIdentifierGeneratorFactory.injectServices(DefaultIdentifierGeneratorFactory.java:152)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.injectDependencies(AbstractServiceRegistryImpl.java:286)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.initializeService(AbstractServiceRegistryImpl.java:243)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.getService(AbstractServiceRegistryImpl.java:214)
+	at org.hibernate.boot.internal.InFlightMetadataCollectorImpl.<init>(InFlightMetadataCollectorImpl.java:176)
+	at org.hibernate.boot.model.process.spi.MetadataBuildingProcess.complete(MetadataBuildingProcess.java:127)
+	at org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl.metadata(EntityManagerFactoryBuilderImpl.java:1224)
+	at org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl.build(EntityManagerFactoryBuilderImpl.java:1255)
+	at org.springframework.orm.jpa.vendor.SpringHibernateJpaPersistenceProvider.createContainerEntityManagerFactory(SpringHibernateJpaPersistenceProvider.java:58)
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.createNativeEntityManagerFactory(LocalContainerEntityManagerFactoryBean.java:365)
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.buildNativeEntityManagerFactory(AbstractEntityManagerFactoryBean.java:391)
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.afterPropertiesSet(AbstractEntityManagerFactoryBean.java:378)
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.afterPropertiesSet(LocalContainerEntityManagerFactoryBean.java:341)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.invokeInitMethods(AbstractAutowireCapableBeanFactory.java:1858)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1795)
+	... 17 common frames omitted
+Caused by: org.hibernate.HibernateException: Access to DialectResolutionInfo cannot be null when 'hibernate.dialect' not set
+	at org.hibernate.engine.jdbc.dialect.internal.DialectFactoryImpl.determineDialect(DialectFactoryImpl.java:100)
+	at org.hibernate.engine.jdbc.dialect.internal.DialectFactoryImpl.buildDialect(DialectFactoryImpl.java:54)
+	at org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator.initiateService(JdbcEnvironmentInitiator.java:137)
+	at org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator.initiateService(JdbcEnvironmentInitiator.java:35)
+	at org.hibernate.boot.registry.internal.StandardServiceRegistryImpl.initiateService(StandardServiceRegistryImpl.java:101)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.createService(AbstractServiceRegistryImpl.java:263)
+	... 34 common frames omitted
+2026-05-04 17:02:47 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 91947 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-05-04 17:02:47 [main] INFO  c.s.invest.StockInvestApplication:652 - The following profiles are active: twelvedata
+2026-05-04 17:02:48 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8080 (http)
+2026-05-04 17:02:48 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 659 ms
+2026-05-04 17:02:50 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext:559 - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'entityManagerFactory' defined in class path resource [org/springframework/boot/autoconfigure/orm/jpa/HibernateJpaConfiguration.class]: Invocation of init method failed; nested exception is org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+2026-05-04 17:02:50 [main] INFO  o.s.b.a.l.ConditionEvaluationReportLoggingListener:136 - 
+
+Error starting ApplicationContext. To display the conditions report re-run your application with 'debug' enabled.
+2026-05-04 17:02:50 [main] ERROR o.s.boot.SpringApplication:834 - Application run failed
+org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'entityManagerFactory' defined in class path resource [org/springframework/boot/autoconfigure/orm/jpa/HibernateJpaConfiguration.class]: Invocation of init method failed; nested exception is org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1799)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:594)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:516)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:324)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:322)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:202)
+	at org.springframework.context.support.AbstractApplicationContext.getBean(AbstractApplicationContext.java:1109)
+	at org.springframework.context.support.AbstractApplicationContext.finishBeanFactoryInitialization(AbstractApplicationContext.java:869)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:551)
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:143)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:755)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:747)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:402)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:312)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1247)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1236)
+	at com.stock.invest.StockInvestApplication.main(StockInvestApplication.java:29)
+Caused by: org.hibernate.service.spi.ServiceException: Unable to create requested service [org.hibernate.engine.jdbc.env.spi.JdbcEnvironment]
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.createService(AbstractServiceRegistryImpl.java:275)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.initializeService(AbstractServiceRegistryImpl.java:237)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.getService(AbstractServiceRegistryImpl.java:214)
+	at org.hibernate.id.factory.internal.DefaultIdentifierGeneratorFactory.injectServices(DefaultIdentifierGeneratorFactory.java:152)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.injectDependencies(AbstractServiceRegistryImpl.java:286)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.initializeService(AbstractServiceRegistryImpl.java:243)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.getService(AbstractServiceRegistryImpl.java:214)
+	at org.hibernate.boot.internal.InFlightMetadataCollectorImpl.<init>(InFlightMetadataCollectorImpl.java:176)
+	at org.hibernate.boot.model.process.spi.MetadataBuildingProcess.complete(MetadataBuildingProcess.java:127)
+	at org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl.metadata(EntityManagerFactoryBuilderImpl.java:1224)
+	at org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl.build(EntityManagerFactoryBuilderImpl.java:1255)
+	at org.springframework.orm.jpa.vendor.SpringHibernateJpaPersistenceProvider.createContainerEntityManagerFactory(SpringHibernateJpaPersistenceProvider.java:58)
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.createNativeEntityManagerFactory(LocalContainerEntityManagerFactoryBean.java:365)
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.buildNativeEntityManagerFactory(AbstractEntityManagerFactoryBean.java:391)
+	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.afterPropertiesSet(AbstractEntityManagerFactoryBean.java:378)
+	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.afterPropertiesSet(LocalContainerEntityManagerFactoryBean.java:341)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.invokeInitMethods(AbstractAutowireCapableBeanFactory.java:1858)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1795)
+	... 17 common frames omitted
+Caused by: org.hibernate.HibernateException: Access to DialectResolutionInfo cannot be null when 'hibernate.dialect' not set
+	at org.hibernate.engine.jdbc.dialect.internal.DialectFactoryImpl.determineDialect(DialectFactoryImpl.java:100)
+	at org.hibernate.engine.jdbc.dialect.internal.DialectFactoryImpl.buildDialect(DialectFactoryImpl.java:54)
+	at org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator.initiateService(JdbcEnvironmentInitiator.java:137)
+	at org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator.initiateService(JdbcEnvironmentInitiator.java:35)
+	at org.hibernate.boot.registry.internal.StandardServiceRegistryImpl.initiateService(StandardServiceRegistryImpl.java:101)
+	at org.hibernate.service.internal.AbstractServiceRegistryImpl.createService(AbstractServiceRegistryImpl.java:263)
+	... 34 common frames omitted
+2026-05-04 17:05:50 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 93573 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-05-04 17:05:50 [main] INFO  c.s.invest.StockInvestApplication:652 - The following profiles are active: twelvedata
+2026-05-04 17:05:51 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8080 (http)
+2026-05-04 17:05:51 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 617 ms
+2026-05-04 17:05:51 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext:559 - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'stockInvestApplication.StockServiceStartupLogger': Unsatisfied dependency expressed through field 'stockService'; nested exception is org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'priorityStockServiceImpl': Unsatisfied dependency expressed through field 'tigerStockService'; nested exception is org.springframework.beans.factory.NoSuchBeanDefinitionException: No qualifying bean of type 'com.stock.invest.service.impl.TigerStockServiceImpl' available: expected at least 1 bean which qualifies as autowire candidate. Dependency annotations: {@org.springframework.beans.factory.annotation.Autowired(required=true)}
+2026-05-04 17:05:51 [main] INFO  o.s.b.a.l.ConditionEvaluationReportLoggingListener:136 - 
+
+Error starting ApplicationContext. To display the conditions report re-run your application with 'debug' enabled.
+2026-05-04 17:05:51 [main] ERROR o.s.b.d.LoggingFailureAnalysisReporter:40 - 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Field tigerStockService in com.stock.invest.service.impl.PriorityStockServiceImpl required a bean of type 'com.stock.invest.service.impl.TigerStockServiceImpl' that could not be found.
+
+The injection point has the following annotations:
+	- @org.springframework.beans.factory.annotation.Autowired(required=true)
+
+
+Action:
+
+Consider defining a bean of type 'com.stock.invest.service.impl.TigerStockServiceImpl' in your configuration.
+
+2026-05-04 17:09:49 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 95037 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-05-04 17:09:49 [main] INFO  c.s.invest.StockInvestApplication:648 - No active profile set, falling back to default profiles: twelvedata
+2026-05-04 17:09:49 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8080 (http)
+2026-05-04 17:09:49 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 585 ms
+2026-05-04 17:09:50 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext:559 - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'stockInvestApplication.StockServiceStartupLogger': Unsatisfied dependency expressed through field 'stockService'; nested exception is org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'priorityStockServiceImpl': Unsatisfied dependency expressed through field 'tigerStockService'; nested exception is org.springframework.beans.factory.NoSuchBeanDefinitionException: No qualifying bean of type 'com.stock.invest.service.impl.TigerStockServiceImpl' available: expected at least 1 bean which qualifies as autowire candidate. Dependency annotations: {@org.springframework.beans.factory.annotation.Autowired(required=true)}
+2026-05-04 17:09:50 [main] INFO  o.s.b.a.l.ConditionEvaluationReportLoggingListener:136 - 
+
+Error starting ApplicationContext. To display the conditions report re-run your application with 'debug' enabled.
+2026-05-04 17:09:50 [main] ERROR o.s.b.d.LoggingFailureAnalysisReporter:40 - 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Field tigerStockService in com.stock.invest.service.impl.PriorityStockServiceImpl required a bean of type 'com.stock.invest.service.impl.TigerStockServiceImpl' that could not be found.
+
+The injection point has the following annotations:
+	- @org.springframework.beans.factory.annotation.Autowired(required=true)
+
+
+Action:
+
+Consider defining a bean of type 'com.stock.invest.service.impl.TigerStockServiceImpl' in your configuration.
+
+2026-05-04 17:10:58 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 95489 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-05-04 17:10:58 [main] INFO  c.s.invest.StockInvestApplication:648 - No active profile set, falling back to default profiles: twelvedata
+2026-05-04 17:10:58 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8080 (http)
+2026-05-04 17:10:58 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 564 ms
+2026-05-04 17:10:59 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext:559 - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'stockInvestApplication.StockServiceStartupLogger': Unsatisfied dependency expressed through field 'stockService'; nested exception is org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'priorityStockServiceImpl': Unsatisfied dependency expressed through field 'tigerStockService'; nested exception is org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'tigerStockServiceImpl' defined in file [/home/allon/application/stock-invest/target/classes/com/stock/invest/service/impl/TigerStockServiceImpl.class]: Unsatisfied dependency expressed through constructor parameter 1; nested exception is org.springframework.beans.factory.NoSuchBeanDefinitionException: No qualifying bean of type 'com.tigerbrokers.stock.openapi.client.https.client.TigerHttpClient' available: expected at least 1 bean which qualifies as autowire candidate. Dependency annotations: {}
+2026-05-04 17:10:59 [main] INFO  o.s.b.a.l.ConditionEvaluationReportLoggingListener:136 - 
+
+Error starting ApplicationContext. To display the conditions report re-run your application with 'debug' enabled.
+2026-05-04 17:10:59 [main] ERROR o.s.b.d.LoggingFailureAnalysisReporter:40 - 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Parameter 1 of constructor in com.stock.invest.service.impl.TigerStockServiceImpl required a bean of type 'com.tigerbrokers.stock.openapi.client.https.client.TigerHttpClient' that could not be found.
+
+The injection point has the following annotations:
+	- @org.springframework.beans.factory.annotation.Autowired(required=true)
+
+
+Action:
+
+Consider defining a bean of type 'com.tigerbrokers.stock.openapi.client.https.client.TigerHttpClient' in your configuration.
+
+2026-05-04 17:11:22 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 95771 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-05-04 17:11:22 [main] INFO  c.s.invest.StockInvestApplication:648 - No active profile set, falling back to default profiles: twelvedata
+2026-05-04 17:11:23 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8080 (http)
+2026-05-04 17:11:23 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 555 ms
+2026-05-04 17:11:24 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration:220 - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-05-04 17:11:24 [main] INFO  o.s.b.a.e.web.EndpointLinksResolver:58 - Exposing 2 endpoint(s) beneath base path '/actuator'
+2026-05-04 17:11:24 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:220 - Tomcat started on port(s): 8080 (http) with context path ''
+2026-05-04 17:11:24 [main] INFO  c.s.invest.StockInvestApplication:61 - Started StockInvestApplication in 1.844 seconds (JVM running for 1.975)
+2026-05-04 17:11:24 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.impl.PriorityStockServiceImpl ====
+2026-05-04 17:11:24 [main] INFO  c.s.invest.StockInvestApplication:33 - 当前激活的profiles: 
+2026-05-04 17:11:24 [main] INFO  c.s.invest.StockInvestApplication:38 - 没有激活的profile，使用默认profile: twelvedata
+2026-05-04 18:01:44 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 112577 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-05-04 18:01:44 [main] INFO  c.s.invest.StockInvestApplication:652 - The following profiles are active: twelvedata
+2026-05-04 18:01:44 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8080 (http)
+2026-05-04 18:01:44 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 656 ms
+2026-05-04 18:01:45 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration:220 - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-05-04 18:01:45 [main] INFO  o.s.b.a.e.web.EndpointLinksResolver:58 - Exposing 2 endpoint(s) beneath base path '/actuator'
+2026-05-04 18:01:46 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:220 - Tomcat started on port(s): 8080 (http) with context path ''
+2026-05-04 18:01:46 [main] INFO  c.s.invest.StockInvestApplication:61 - Started StockInvestApplication in 2.061 seconds (JVM running for 2.232)
+2026-05-04 18:01:46 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.impl.PriorityStockServiceImpl ====
+2026-05-04 18:01:46 [main] INFO  c.s.invest.StockInvestApplication:33 - 当前激活的profiles: twelvedata
+2026-05-04 22:30:40 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 1149 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-05-04 22:30:40 [main] INFO  c.s.invest.StockInvestApplication:652 - The following profiles are active: twelvedata
+2026-05-04 22:30:41 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8080 (http)
+2026-05-04 22:30:41 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 721 ms
+2026-05-04 22:30:42 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration:220 - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-05-04 22:30:42 [main] INFO  o.s.b.a.e.web.EndpointLinksResolver:58 - Exposing 2 endpoint(s) beneath base path '/actuator'
+2026-05-04 22:30:42 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:220 - Tomcat started on port(s): 8080 (http) with context path ''
+2026-05-04 22:30:42 [main] INFO  c.s.invest.StockInvestApplication:61 - Started StockInvestApplication in 2.156 seconds (JVM running for 2.374)
+2026-05-04 22:30:42 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.impl.PriorityStockServiceImpl ====
+2026-05-04 22:30:42 [main] INFO  c.s.invest.StockInvestApplication:33 - 当前激活的profiles: twelvedata
+2026-05-04 22:31:39 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 1295 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-05-04 22:31:39 [main] INFO  c.s.invest.StockInvestApplication:652 - The following profiles are active: twelvedata
+2026-05-04 22:31:40 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8080 (http)
+2026-05-04 22:31:40 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 593 ms
+2026-05-04 22:31:41 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration:220 - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-05-04 22:31:41 [main] INFO  o.s.b.a.e.web.EndpointLinksResolver:58 - Exposing 2 endpoint(s) beneath base path '/actuator'
+2026-05-04 22:31:41 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:220 - Tomcat started on port(s): 8080 (http) with context path ''
+2026-05-04 22:31:41 [main] INFO  c.s.invest.StockInvestApplication:61 - Started StockInvestApplication in 1.821 seconds (JVM running for 1.953)
+2026-05-04 22:31:41 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.impl.PriorityStockServiceImpl ====
+2026-05-04 22:31:41 [main] INFO  c.s.invest.StockInvestApplication:33 - 当前激活的profiles: twelvedata
+2026-05-04 22:49:43 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 7839 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-05-04 22:49:43 [main] INFO  c.s.invest.StockInvestApplication:652 - The following profiles are active: twelvedata
+2026-05-04 22:49:44 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8090 (http)
+2026-05-04 22:49:44 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 544 ms
+2026-05-04 22:49:45 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration:220 - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-05-04 22:49:45 [main] INFO  o.s.b.a.e.web.EndpointLinksResolver:58 - Exposing 2 endpoint(s) beneath base path '/actuator'
+2026-05-04 22:49:45 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:220 - Tomcat started on port(s): 8090 (http) with context path ''
+2026-05-04 22:49:45 [main] INFO  c.s.invest.StockInvestApplication:61 - Started StockInvestApplication in 1.682 seconds (JVM running for 1.823)
+2026-05-04 22:49:45 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.impl.PriorityStockServiceImpl ====
+2026-05-04 22:49:45 [main] INFO  c.s.invest.StockInvestApplication:33 - 当前激活的profiles: twelvedata

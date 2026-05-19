@@ -1,0 +1,12 @@
+2026-04-29 15:30:06 [scheduling-1] INFO  c.s.i.s.i.ScanOrchestratorServiceImpl:169 - snapshot-import scan done tradeDate=2026-04-29, windowDays=7, candidates=0, processed=0, matched=0
+2026-04-29 15:30:06 [scheduling-1] INFO  c.s.i.s.impl.DailyScanScheduler:34 - scheduled scan done: mode=snapshot, batchId=1ad38e73-06d9-4416-a3b7-22d3244030ed, tradeDate=2026-04-29, matched=0
+2026-04-29 22:25:04 [http-nio-8090-exec-1] INFO  o.a.c.c.C.[Tomcat].[localhost].[/]:173 - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-29 22:25:04 [http-nio-8090-exec-1] INFO  o.s.web.servlet.DispatcherServlet:525 - Initializing Servlet 'dispatcherServlet'
+2026-04-29 22:25:04 [http-nio-8090-exec-1] INFO  o.s.web.servlet.DispatcherServlet:547 - Completed initialization in 25 ms
+2026-04-29 22:25:04 [http-nio-8090-exec-1] WARN  o.s.w.s.m.s.DefaultHandlerExceptionResolver:199 - Resolved [org.springframework.http.converter.HttpMessageNotReadableException: JSON parse error: Unrecognized field "items" (class com.stock.invest.dto.TigerWatchlistIngestRequestDto), not marked as ignorable; nested exception is com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException: Unrecognized field "items" (class com.stock.invest.dto.TigerWatchlistIngestRequestDto), not marked as ignorable (2 known properties: "rows", "tradeDate"])
+ at [Source: (PushbackInputStream); line: 2, column: 13] (through reference chain: com.stock.invest.dto.TigerWatchlistIngestRequestDto["items"])]
+2026-04-29 22:25:42 [http-nio-8090-exec-2] INFO  c.s.i.s.i.TigerWatchlistIngestServiceImpl:46 - tiger-watchlist ingest start tradeDate=2026-04-28, rows=51
+2026-04-29 22:25:42 [http-nio-8090-exec-2] INFO  c.s.i.s.i.TigerWatchlistIngestServiceImpl:106 - tiger-watchlist ingest done batchId=77a9237f-816a-428a-9a5b-ce894a9c3428, tradeDate=2026-04-28, imported=51, skipped=0
+2026-04-29 22:39:43 [http-nio-8090-exec-4] INFO  c.s.i.s.i.TigerWatchlistIngestServiceImpl:46 - tiger-watchlist ingest start tradeDate=2026-04-28, rows=50
+2026-04-29 22:39:43 [http-nio-8090-exec-4] INFO  c.s.i.s.i.TigerWatchlistIngestServiceImpl:106 - tiger-watchlist ingest done batchId=f5ac7f45-434a-4ce7-867e-d1310bb3c9a4, tradeDate=2026-04-28, imported=50, skipped=0
+2026-04-29 22:39:46 [http-nio-8090-exec-6] INFO  c.s.i.s.i.ScanOrchestratorServiceImpl:169 - snapshot-import scan done tradeDate=2026-04-28, windowDays=7, candidates=30, processed=30, matched=0

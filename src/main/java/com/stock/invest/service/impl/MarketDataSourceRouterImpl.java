@@ -4,6 +4,7 @@ import com.stock.invest.client.TigerOpenPythonBridge;
 import com.stock.invest.client.TwelveDataRestClient;
 import com.stock.invest.client.TiingoRestClient;
 import com.stock.invest.client.YahooFinanceRestClient;
+import com.stock.invest.datasource.DataSourceAvailabilityChecker;
 import com.stock.invest.model.KLineData;
 import com.stock.invest.service.MarketDataSourceRouter;
 import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
@@ -40,14 +41,17 @@ public class MarketDataSourceRouterImpl implements MarketDataSourceRouter {
     @Autowired(required = false)
     private TigerStockServiceImpl tigerStockService;
 
-    private static final List<String> SOURCE_ORDER = Arrays.asList("tiger", "tigeropen", "yfinance", "twelvedata", "tiingo");
+    @Autowired
+    private DataSourceAvailabilityChecker availabilityChecker;
+
     private static final long DEFAULT_COOLDOWN_MS = 5 * 60 * 1000L;
     private final Map<String, Long> sourceBackoffUntil = new ConcurrentHashMap<>();
+    private static final List<String> PRIORITY_ORDER = Arrays.asList("tiger", "tigeropen", "yfinance", "twelvedata", "tiingo");
 
     @Override
     public List<String> loadCandidates(int limit, double minPrice, double maxPrice) {
         log.debug("[DataSourceRouter] loadCandidates: begin — limit={}, minPrice={}, maxPrice={}", limit, minPrice, maxPrice);
-        for (String source : SOURCE_ORDER) {
+        for (String source : getActiveSourceOrder()) {
             log.debug("[DataSourceRouter] loadCandidates: trying source={}", source);
             List<String> out = tryLoadCandidates(source, limit, minPrice, maxPrice);
             if (!out.isEmpty()) {
@@ -82,6 +86,20 @@ public class MarketDataSourceRouterImpl implements MarketDataSourceRouter {
     public Optional<KLineData> fetchLatestDailyBar(String symbol, String preferredSource) {
         log.debug("[DataSourceRouter] fetchLatestDailyBar: begin — symbol={}, preferredSource={}", symbol, preferredSource);
         return fetchDailyBars(symbol, preferredSource, 1);
+    }
+
+    /**
+     * 获取当前可用的数据源列表，按优先级排序。
+     */
+    private List<String> getActiveSourceOrder() {
+        List<String> available = availabilityChecker.getAvailableSourceNames();
+        List<String> ordered = new ArrayList<>();
+        for (String source : PRIORITY_ORDER) {
+            if (available.contains(source)) {
+                ordered.add(source);
+            }
+        }
+        return ordered;
     }
 
     private List<String> tryLoadCandidates(String source, int limit, double minPrice, double maxPrice) {
@@ -236,13 +254,15 @@ public class MarketDataSourceRouterImpl implements MarketDataSourceRouter {
         }
     }
 
-    private static List<String> orderedSources(String preferred) {
-        if (preferred == null || preferred.trim().isEmpty()) {
-            return SOURCE_ORDER;
+    private List<String> orderedSources(String preferred) {
+        List<String> active = getActiveSourceOrder();
+        if (preferred == null || preferred.trim().isEmpty()
+                || !availabilityChecker.isAvailable(preferred)) {
+            return active;
         }
         List<String> ordered = new ArrayList<>();
         ordered.add(preferred);
-        for (String source : SOURCE_ORDER) {
+        for (String source : active) {
             if (!source.equals(preferred)) {
                 ordered.add(source);
             }

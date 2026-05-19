@@ -1,0 +1,72 @@
+2026-04-26 16:51:28 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 354092 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-04-26 16:51:28 [main] INFO  c.s.invest.StockInvestApplication:652 - The following profiles are active: twelvedata
+2026-04-26 16:51:28 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8090 (http)
+2026-04-26 16:51:28 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 568 ms
+2026-04-26 16:51:29 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration:220 - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-04-26 16:51:29 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:220 - Tomcat started on port(s): 8090 (http) with context path ''
+2026-04-26 16:51:29 [main] INFO  c.s.invest.StockInvestApplication:61 - Started StockInvestApplication in 1.855 seconds (JVM running for 2.01)
+2026-04-26 16:51:29 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.impl.PriorityStockServiceImpl ====
+2026-04-26 16:51:29 [main] INFO  c.s.invest.StockInvestApplication:33 - 当前激活的profiles: twelvedata
+2026-04-26 17:05:04 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 355390 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-04-26 17:05:04 [main] INFO  c.s.invest.StockInvestApplication:652 - The following profiles are active: twelvedata
+2026-04-26 17:05:05 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8090 (http)
+2026-04-26 17:05:05 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 572 ms
+2026-04-26 17:05:06 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration:220 - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-04-26 17:05:06 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:220 - Tomcat started on port(s): 8090 (http) with context path ''
+2026-04-26 17:05:06 [main] INFO  c.s.invest.StockInvestApplication:61 - Started StockInvestApplication in 1.799 seconds (JVM running for 1.951)
+2026-04-26 17:05:06 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.impl.PriorityStockServiceImpl ====
+2026-04-26 17:05:06 [main] INFO  c.s.invest.StockInvestApplication:33 - 当前激活的profiles: twelvedata
+2026-04-26 17:10:53 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 356432 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-04-26 17:10:53 [main] INFO  c.s.invest.StockInvestApplication:652 - The following profiles are active: twelvedata
+2026-04-26 17:10:54 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8090 (http)
+2026-04-26 17:10:54 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 586 ms
+2026-04-26 17:10:55 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration:220 - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-04-26 17:10:55 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:220 - Tomcat started on port(s): 8090 (http) with context path ''
+2026-04-26 17:10:55 [main] INFO  c.s.invest.StockInvestApplication:61 - Started StockInvestApplication in 1.878 seconds (JVM running for 2.04)
+2026-04-26 17:10:55 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.impl.PriorityStockServiceImpl ====
+2026-04-26 17:10:55 [main] INFO  c.s.invest.StockInvestApplication:33 - 当前激活的profiles: twelvedata
+2026-04-26 17:58:10 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 360718 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-04-26 17:58:10 [main] INFO  c.s.invest.StockInvestApplication:652 - The following profiles are active: twelvedata
+2026-04-26 17:58:10 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8090 (http)
+2026-04-26 17:58:10 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 595 ms
+2026-04-26 17:58:11 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration:220 - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-04-26 17:58:12 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:220 - Tomcat started on port(s): 8090 (http) with context path ''
+2026-04-26 17:58:12 [main] INFO  c.s.invest.StockInvestApplication:61 - Started StockInvestApplication in 2.203 seconds (JVM running for 2.363)
+2026-04-26 17:58:12 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.impl.PriorityStockServiceImpl ====
+2026-04-26 17:58:12 [main] INFO  c.s.invest.StockInvestApplication:33 - 当前激活的profiles: twelvedata
+2026-04-26 17:59:34 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 361635 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-04-26 17:59:34 [main] INFO  c.s.invest.StockInvestApplication:652 - The following profiles are active: twelvedata
+2026-04-26 17:59:34 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8090 (http)
+2026-04-26 17:59:34 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 524 ms
+2026-04-26 17:59:35 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration:220 - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-04-26 17:59:35 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:220 - Tomcat started on port(s): 8090 (http) with context path ''
+2026-04-26 17:59:35 [main] INFO  c.s.invest.StockInvestApplication:61 - Started StockInvestApplication in 1.674 seconds (JVM running for 1.815)
+2026-04-26 17:59:35 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.impl.PriorityStockServiceImpl ====
+2026-04-26 17:59:35 [main] INFO  c.s.invest.StockInvestApplication:33 - 当前激活的profiles: twelvedata
+2026-04-26 18:58:34 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 364206 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-04-26 18:58:34 [main] INFO  c.s.invest.StockInvestApplication:652 - The following profiles are active: twelvedata
+2026-04-26 18:58:35 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8090 (http)
+2026-04-26 18:58:35 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 600 ms
+2026-04-26 18:58:36 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration:220 - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-04-26 18:58:36 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:220 - Tomcat started on port(s): 8090 (http) with context path ''
+2026-04-26 18:58:36 [main] INFO  c.s.invest.StockInvestApplication:61 - Started StockInvestApplication in 1.943 seconds (JVM running for 2.135)
+2026-04-26 18:58:36 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.impl.PriorityStockServiceImpl ====
+2026-04-26 18:58:36 [main] INFO  c.s.invest.StockInvestApplication:33 - 当前激活的profiles: twelvedata
+2026-04-26 19:24:43 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 364776 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-04-26 19:24:43 [main] INFO  c.s.invest.StockInvestApplication:652 - The following profiles are active: twelvedata
+2026-04-26 19:24:44 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8090 (http)
+2026-04-26 19:24:44 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 613 ms
+2026-04-26 19:24:45 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration:220 - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-04-26 19:24:45 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:220 - Tomcat started on port(s): 8090 (http) with context path ''
+2026-04-26 19:24:45 [main] INFO  c.s.invest.StockInvestApplication:61 - Started StockInvestApplication in 2.007 seconds (JVM running for 2.2)
+2026-04-26 19:24:45 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.impl.PriorityStockServiceImpl ====
+2026-04-26 19:24:45 [main] INFO  c.s.invest.StockInvestApplication:33 - 当前激活的profiles: twelvedata
+2026-04-26 20:25:01 [main] INFO  c.s.invest.StockInvestApplication:55 - Starting StockInvestApplication on ASUS-DESKTOP with PID 373079 (/home/allon/application/stock-invest/target/classes started by allon in /home/allon/application/stock-invest)
+2026-04-26 20:25:01 [main] INFO  c.s.invest.StockInvestApplication:652 - The following profiles are active: twelvedata
+2026-04-26 20:25:01 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:108 - Tomcat initialized with port(s): 8090 (http)
+2026-04-26 20:25:01 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:285 - Root WebApplicationContext: initialization completed in 678 ms
+2026-04-26 20:25:02 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration:220 - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-04-26 20:25:02 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:220 - Tomcat started on port(s): 8090 (http) with context path ''
+2026-04-26 20:25:02 [main] INFO  c.s.invest.StockInvestApplication:61 - Started StockInvestApplication in 2.166 seconds (JVM running for 2.436)
+2026-04-26 20:25:02 [main] INFO  c.s.i.StockInvestApplication$StockServiceStartupLogger:68 - ==== 当前使用的StockService实现是: com.stock.invest.service.impl.PriorityStockServiceImpl ====
+2026-04-26 20:25:02 [main] INFO  c.s.invest.StockInvestApplication:33 - 当前激活的profiles: twelvedata

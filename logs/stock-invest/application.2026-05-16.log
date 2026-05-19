@@ -1,0 +1,103 @@
+2026-05-16 12:44:17 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate:132 - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-05-16 12:44:17 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate:201 - Finished Spring Data repository scanning in 23 ms. Found 2 JPA repository interfaces.
+2026-05-16 12:44:18 [main] INFO  o.a.coyote.http11.Http11NioProtocol:173 - Initializing ProtocolHandler ["http-nio-8090"]
+2026-05-16 12:44:18 [main] INFO  o.a.catalina.core.StandardService:173 - Starting service [Tomcat]
+2026-05-16 12:44:18 [main] INFO  o.a.catalina.core.StandardEngine:173 - Starting Servlet engine: [Apache Tomcat/9.0.83]
+2026-05-16 12:44:18 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/]:173 - Initializing Spring embedded WebApplicationContext
+2026-05-16 12:44:18 [main] INFO  com.zaxxer.hikari.HikariDataSource:110 - HikariPool-1 - Starting...
+2026-05-16 12:44:18 [main] INFO  com.zaxxer.hikari.HikariDataSource:123 - HikariPool-1 - Start completed.
+2026-05-16 12:44:18 [main] INFO  o.h.jpa.internal.util.LogHelper:31 - HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-05-16 12:44:18 [main] INFO  org.hibernate.Version:44 - HHH000412: Hibernate ORM core version 5.6.15.Final
+2026-05-16 12:44:18 [main] INFO  o.h.annotations.common.Version:56 - HCANN000001: Hibernate Commons Annotations {5.1.2.Final}
+2026-05-16 12:44:18 [main] INFO  org.hibernate.dialect.Dialect:175 - HHH000400: Using dialect: org.hibernate.dialect.MySQL8Dialect
+2026-05-16 12:44:18 [main] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator:52 - HHH000490: Using JtaPlatform implementation: [org.hibernate.engine.transaction.jta.platform.internal.NoJtaPlatform]
+2026-05-16 12:44:18 [main] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean:437 - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-05-16 12:44:19 [main] INFO  c.s.i.s.impl.TigerStockServiceImpl:53 - TigerStockServiceImpl: Service initialized
+2026-05-16 12:44:19 [main] INFO  c.s.i.s.i.TwelveDataStockServiceImpl:46 - TwelveDataStockServiceImpl 2026-05-16 12:44:19 : Service initialized
+2026-05-16 12:44:19 [main] INFO  c.s.i.s.i.YFinanceStockServiceImpl:48 - YFinanceStockServiceImpl : Service initialized
+2026-05-16 12:44:19 [main] INFO  o.a.coyote.http11.Http11NioProtocol:173 - Starting ProtocolHandler ["http-nio-8090"]
+2026-05-16 13:05:42 [http-nio-8090-exec-1] INFO  o.a.c.c.C.[Tomcat].[localhost].[/]:173 - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-05-16 13:05:42 [http-nio-8090-exec-1] INFO  o.s.web.servlet.DispatcherServlet:525 - Initializing Servlet 'dispatcherServlet'
+2026-05-16 13:05:42 [http-nio-8090-exec-1] INFO  o.s.web.servlet.DispatcherServlet:547 - Completed initialization in 0 ms
+2026-05-16 13:05:42 [http-nio-8090-exec-1] ERROR c.s.i.e.GlobalExceptionHandler:50 - 未处理的异常: JSON parse error: Unexpected character ('t' (code 116)): was expecting double-quote to start field name; nested exception is com.fasterxml.jackson.core.JsonParseException: Unexpected character ('t' (code 116)): was expecting double-quote to start field name
+ at [Source: (org.springframework.util.StreamUtils$NonClosingInputStream); line: 1, column: 3]
+org.springframework.http.converter.HttpMessageNotReadableException: JSON parse error: Unexpected character ('t' (code 116)): was expecting double-quote to start field name; nested exception is com.fasterxml.jackson.core.JsonParseException: Unexpected character ('t' (code 116)): was expecting double-quote to start field name
+ at [Source: (org.springframework.util.StreamUtils$NonClosingInputStream); line: 1, column: 3]
+	at org.springframework.http.converter.json.AbstractJackson2HttpMessageConverter.readJavaType(AbstractJackson2HttpMessageConverter.java:391)
+	at org.springframework.http.converter.json.AbstractJackson2HttpMessageConverter.read(AbstractJackson2HttpMessageConverter.java:343)
+	at org.springframework.web.servlet.mvc.method.annotation.AbstractMessageConverterMethodArgumentResolver.readWithMessageConverters(AbstractMessageConverterMethodArgumentResolver.java:185)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor.readWithMessageConverters(RequestResponseBodyMethodProcessor.java:160)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor.resolveArgument(RequestResponseBodyMethodProcessor.java:133)
+	at org.springframework.web.method.support.HandlerMethodArgumentResolverComposite.resolveArgument(HandlerMethodArgumentResolverComposite.java:122)
+	at org.springframework.web.method.support.InvocableHandlerMethod.getMethodArgumentValues(InvocableHandlerMethod.java:179)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:146)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:117)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:895)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:808)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1072)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:965)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1006)
+	at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:909)
+	at javax.servlet.http.HttpServlet.service(HttpServlet.java:555)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:883)
+	at javax.servlet.http.HttpServlet.service(HttpServlet.java:623)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:209)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:178)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:178)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:178)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.springframework.boot.actuate.metrics.web.servlet.WebMvcMetricsFilter.doFilterInternal(WebMvcMetricsFilter.java:96)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:178)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:178)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:168)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:481)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:130)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:342)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:390)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:928)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1794)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1191)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:61)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+Caused by: com.fasterxml.jackson.core.JsonParseException: Unexpected character ('t' (code 116)): was expecting double-quote to start field name
+ at [Source: (org.springframework.util.StreamUtils$NonClosingInputStream); line: 1, column: 3]
+	at com.fasterxml.jackson.core.JsonParser._constructError(JsonParser.java:2391)
+	at com.fasterxml.jackson.core.base.ParserMinimalBase._reportError(ParserMinimalBase.java:735)
+	at com.fasterxml.jackson.core.base.ParserMinimalBase._reportUnexpectedChar(ParserMinimalBase.java:659)
+	at com.fasterxml.jackson.core.json.UTF8StreamJsonParser._handleOddName(UTF8StreamJsonParser.java:2096)
+	at com.fasterxml.jackson.core.json.UTF8StreamJsonParser._parseName(UTF8StreamJsonParser.java:1746)
+	at com.fasterxml.jackson.core.json.UTF8StreamJsonParser.nextToken(UTF8StreamJsonParser.java:798)
+	at com.fasterxml.jackson.databind.deser.BeanDeserializer.deserialize(BeanDeserializer.java:181)
+	at com.fasterxml.jackson.databind.deser.DefaultDeserializationContext.readRootValue(DefaultDeserializationContext.java:323)
+	at com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4674)
+	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3682)
+	at org.springframework.http.converter.json.AbstractJackson2HttpMessageConverter.readJavaType(AbstractJackson2HttpMessageConverter.java:380)
+	... 55 common frames omitted
+2026-05-16 13:07:32 [http-nio-8090-exec-2] INFO  c.s.i.s.i.TigerWatchlistIngestServiceImpl:46 - tiger-watchlist ingest start tradeDate=2026-05-16, rows=128
+2026-05-16 13:07:32 [http-nio-8090-exec-2] INFO  c.s.i.s.i.TigerWatchlistIngestServiceImpl:97 - tiger-watchlist ingest done batchId=aa923a1d-3eca-491a-a95c-ff0a624474c1, tradeDate=2026-05-16, imported=128, skipped=0
+2026-05-16 13:20:41 [http-nio-8090-exec-3] INFO  c.s.i.s.i.TigerWatchlistIngestServiceImpl:46 - tiger-watchlist ingest start tradeDate=2026-05-16, rows=175
+2026-05-16 13:20:41 [http-nio-8090-exec-3] INFO  c.s.i.s.i.TigerWatchlistIngestServiceImpl:97 - tiger-watchlist ingest done batchId=f3b1433e-8bed-494b-9ff9-3be093258f62, tradeDate=2026-05-16, imported=173, skipped=2
+2026-05-16 13:59:35 [http-nio-8090-exec-4] INFO  c.s.i.s.i.TigerWatchlistIngestServiceImpl:46 - tiger-watchlist ingest start tradeDate=2026-05-16, rows=174
+2026-05-16 13:59:36 [http-nio-8090-exec-4] INFO  c.s.i.s.i.TigerWatchlistIngestServiceImpl:97 - tiger-watchlist ingest done batchId=7548d8dd-3d8b-413d-a653-e3d161b9cf66, tradeDate=2026-05-16, imported=172, skipped=2
+2026-05-16 17:15:15 [http-nio-8090-exec-5] INFO  c.s.i.s.i.TigerWatchlistIngestServiceImpl:46 - tiger-watchlist ingest start tradeDate=2026-05-16, rows=171
+2026-05-16 17:15:15 [http-nio-8090-exec-5] INFO  c.s.i.s.i.TigerWatchlistIngestServiceImpl:97 - tiger-watchlist ingest done batchId=f7c2de7e-fc6a-41e7-a8d4-c1884839d2ae, tradeDate=2026-05-16, imported=171, skipped=0
