@@ -1,7 +1,5 @@
 package com.stock.invest.model;
 
-import java.math.BigDecimal;
-
 /**
  * K线数据迭代器
  * 为解决"KLineData.KLineItem cannot be resolved to a type"问题，将KLineItem从KLineData内部类提取为独立类
@@ -16,12 +14,6 @@ public class KLineIterator {
     private double close;
     private long volume;
     private double amount;
-    
-    // 支持BigDecimal类型 - 为TigerStockServiceImpl提供支持
-    private BigDecimal openBD;
-    private BigDecimal highBD;
-    private BigDecimal lowBD;
-    private BigDecimal closeBD;
 
     public KLineIterator() {
     }
@@ -35,12 +27,6 @@ public class KLineIterator {
         this.close = close;
         this.volume = volume;
         this.amount = amount;
-        
-        // 同时初始化BigDecimal值
-        this.openBD = BigDecimal.valueOf(open);
-        this.highBD = BigDecimal.valueOf(high);
-        this.lowBD = BigDecimal.valueOf(low);
-        this.closeBD = BigDecimal.valueOf(close);
     }
 
     public String getSymbol() {
@@ -68,7 +54,7 @@ public class KLineIterator {
                 this.time = Long.parseLong(timeStr);
             }
         } catch (NumberFormatException e) {
-            // 非数字格式的time设默认值
+            this.time = 0L;
         }
     }
     
@@ -86,16 +72,6 @@ public class KLineIterator {
 
     public void setOpen(double open) {
         this.open = open;
-        this.openBD = BigDecimal.valueOf(open);
-    }
-    
-    public BigDecimal getOpenBD() {
-        return openBD;
-    }
-    
-    public void setOpen(BigDecimal open) {
-        this.openBD = open;
-        this.open = open != null ? open.doubleValue() : 0.0;
     }
 
     public double getHigh() {
@@ -104,16 +80,6 @@ public class KLineIterator {
 
     public void setHigh(double high) {
         this.high = high;
-        this.highBD = BigDecimal.valueOf(high);
-    }
-    
-    public BigDecimal getHighBD() {
-        return highBD;
-    }
-    
-    public void setHigh(BigDecimal high) {
-        this.highBD = high;
-        this.high = high != null ? high.doubleValue() : 0.0;
     }
 
     public double getLow() {
@@ -122,16 +88,6 @@ public class KLineIterator {
 
     public void setLow(double low) {
         this.low = low;
-        this.lowBD = BigDecimal.valueOf(low);
-    }
-    
-    public BigDecimal getLowBD() {
-        return lowBD;
-    }
-    
-    public void setLow(BigDecimal low) {
-        this.lowBD = low;
-        this.low = low != null ? low.doubleValue() : 0.0;
     }
 
     public double getClose() {
@@ -140,16 +96,6 @@ public class KLineIterator {
 
     public void setClose(double close) {
         this.close = close;
-        this.closeBD = BigDecimal.valueOf(close);
-    }
-    
-    public BigDecimal getCloseBD() {
-        return closeBD;
-    }
-    
-    public void setClose(BigDecimal close) {
-        this.closeBD = close;
-        this.close = close != null ? close.doubleValue() : 0.0;
     }
 
     public long getVolume() {
@@ -182,4 +128,4 @@ public class KLineIterator {
                 ", amount=" + amount +
                 '}';
     }
-} 
+}

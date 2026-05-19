@@ -1,7 +1,11 @@
 yfinance>=0.2.36
+# Twelve Data 官方 Python 客户端（PyPI: twelvedata）
+twelvedata>=1.3.0
 pandas>=2.0.0
 numpy>=1.24.0
 lxml>=4.9.0
 requests>=2.31.0
 backoff>=1.10.0
-pytz>=2024.1 
+pytz>=2024.1
+# Tiger OpenAPI Python SDK — PyPI 包名为 tigeropen（无 tiger-openapi 包）
+tigeropen>=3.5.0

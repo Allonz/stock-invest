@@ -2,176 +2,125 @@ package com.stock.invest.util;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.nio.charset.StandardCharsets;
+import java.util.concurrent.TimeUnit;
 
 @Component
 public class PythonScriptExecutor {
-    private static final Logger logger = LoggerFactory.getLogger(PythonScriptExecutor.class);
-    private static final boolean IS_WINDOWS = System.getProperty("os.name").toLowerCase().contains("win");
-    
-    // 使用Python路径
-    private static final String PYTHON_PATH = IS_WINDOWS ? "C:\\Program Files\\Python310\\python.exe" : "python";
-    private static final String PYTHON_CMD = IS_WINDOWS ? "\"" + PYTHON_PATH + "\"" : "python";
-    
-    public String executeScript(String scriptPath, String... args) throws IOException, InterruptedException {
-        // 检查Python是否可用
-        if (!isPythonAvailable()) {
-            logger.error("Python未安装或未添加到PATH环境变量中");
+
+    private static final Logger log = LoggerFactory.getLogger(PythonScriptExecutor.class);
+    private static final int DEFAULT_TIMEOUT_SECONDS = 30;
+
+    public String executeScript(String scriptName, String... args) throws IOException, InterruptedException {
+        return executeScriptWithEnvironment(Collections.emptyMap(), scriptName, args);
+    }
+
+    public String executeScriptWithEnvironment(Map<String, String> extraEnv, String scriptName, String... args)
+            throws IOException, InterruptedException {
+        String pythonExec = resolvePythonExecutable();
+
+        if (!PythonRuntimeSupport.isPythonRunnable(pythonExec, true)) {
+            log.error("Python未安装或未添加到PATH环境变量中");
             throw new IOException("Python未安装或未添加到PATH环境变量中");
         }
 
-        // 获取脚本文件的绝对路径
-        File scriptFile = new File(scriptPath);
-        if (!scriptFile.exists()) {
-            // 尝试从项目根目录查找文件
-            File projectRoot = new File(System.getProperty("user.dir"));
-            scriptFile = new File(projectRoot, scriptPath);
-            if (!scriptFile.exists()) {
-                logger.error("Python脚本文件不存在: {}", scriptPath);
-                throw new IOException("Python脚本文件不存在: " + scriptPath);
-            }
+        ClassPathResource resource = new ClassPathResource("python/" + scriptName);
+        if (!resource.exists()) {
+            log.error("Python脚本资源不存在: python/{}", scriptName);
+            throw new IOException("Python脚本资源不存在: python/" + scriptName);
         }
 
-        // 构建命令
-        List<String> command = new ArrayList<>();
-        command.add(PYTHON_PATH);
-        command.add(scriptFile.getAbsolutePath());
-        command.addAll(Arrays.asList(args));
-
-        // 创建进程构建器
-        ProcessBuilder processBuilder = new ProcessBuilder(command);
-        processBuilder.redirectErrorStream(true);
-        processBuilder.directory(new File(System.getProperty("user.dir"))); // 设置工作目录为项目根目录
-
-        // 执行命令并获取输出
-        Process process = processBuilder.start();
-        StringBuilder output = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                output.append(line).append("\n");
-            }
-        }
-        int exitCode = process.waitFor();
-
-        if (exitCode != 0) {
-            logger.error("Python脚本执行失败，退出码: {}", exitCode);
-            logger.error("错误输出: {}", output.toString());
-            throw new IOException("Python脚本执行失败，退出码: " + exitCode);
-        }
-
-        return output.toString();
-    }
-    
-    private static String tryExecuteWithPython(String scriptPath, String... args) throws IOException, InterruptedException {
-        // 构建命令
-        List<String> command = new ArrayList<>();
-        if (IS_WINDOWS) {
-            command.add(PYTHON_PATH); // 使用绝对路径
-        } else {
-            command.add(PYTHON_CMD);
-        }
-        command.add(scriptPath);
-        if (args != null && args.length > 0) {
-            command.addAll(Arrays.asList(args));
-        }
-        
-        logger.debug("执行Python命令: {}", String.join(" ", command));
-        
-        // 设置ProcessBuilder工作目录
-        ProcessBuilder processBuilder = new ProcessBuilder(command);
-        processBuilder.directory(new File(scriptPath).getParentFile());
-        
-        // 设置环境变量
-        Map<String, String> env = processBuilder.environment();
-        env.put("PYTHONIOENCODING", "utf-8");
-        
-        // 执行命令
-        Process process = processBuilder.start();
-        
-        // 读取输出
-        StringBuilder output = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                output.append(line).append("\n");
-            }
-        }
-        
-        // 等待进程完成
-        int exitCode = process.waitFor();
-        if (exitCode != 0) {
-            throw new IOException("Python脚本执行失败，退出码: " + exitCode);
-        }
-        
-        return output.toString();
-    }
-    
-    private static String tryExecuteWithPowerShell(String scriptPath, String... args) throws IOException, InterruptedException {
-        // 构建PowerShell命令
-        StringBuilder psCommand = new StringBuilder();
-        psCommand.append("& { & '").append(PYTHON_PATH).append("' '").append(new File(scriptPath).getAbsolutePath()).append("'");
-        
-        // 添加参数
-        if (args != null && args.length > 0) {
-            for (String arg : args) {
-                psCommand.append(" '").append(arg).append("'");
-            }
-        }
-        psCommand.append(" }");
-        
-        logger.debug("执行PowerShell命令: {}", psCommand.toString());
-        
-        // 创建临时文件用于输出重定向
-        Path tempFile = Files.createTempFile("python_output_", ".txt");
-        
+        Path tempFile = Files.createTempFile("py_script_", ".py");
         try {
-            // 构建PowerShell命令
+            Files.copy(resource.getInputStream(), tempFile, StandardCopyOption.REPLACE_EXISTING);
+            File scriptFile = tempFile.toFile();
+            scriptFile.deleteOnExit();
+
             List<String> command = new ArrayList<>();
-            command.add("powershell.exe");
-            command.add("-Command");
-            command.add(psCommand.toString() + " | Out-File -Encoding utf8 '" + tempFile.toAbsolutePath() + "'");
-            
-            // 执行命令
+            command.add(pythonExec);
+            command.add(scriptFile.getAbsolutePath());
+            command.addAll(Arrays.asList(args));
+
             ProcessBuilder processBuilder = new ProcessBuilder(command);
             processBuilder.redirectErrorStream(true);
-            Process process = processBuilder.start();
-            
-            // 等待进程完成
-            int exitCode = process.waitFor();
-            if (exitCode != 0) {
-                throw new IOException("PowerShell脚本执行失败，退出码: " + exitCode);
+            processBuilder.directory(new File(System.getProperty("user.dir")));
+            if (extraEnv != null && !extraEnv.isEmpty()) {
+                Map<String, String> env = processBuilder.environment();
+                for (Map.Entry<String, String> e : extraEnv.entrySet()) {
+                    if (e.getKey() != null && e.getValue() != null) {
+                        env.put(e.getKey(), e.getValue());
+                    }
+                }
             }
-            
-            // 读取输出
-            return new String(Files.readAllBytes(tempFile), StandardCharsets.UTF_8);
+
+            Process process = processBuilder.start();
+            try {
+                StringBuilder output = new StringBuilder();
+                try (BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        output.append(line).append("\n");
+                    }
+                }
+
+                boolean completed = process.waitFor(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+                if (!completed) {
+                    log.warn("Python脚本执行超时 ({}秒)，强制终止进程: {}", DEFAULT_TIMEOUT_SECONDS, scriptName);
+                    process.destroyForcibly();
+                    throw new IOException("Python脚本执行超时 (" + DEFAULT_TIMEOUT_SECONDS + "秒)，已强制终止进程");
+                }
+
+                int exitCode = process.exitValue();
+                if (exitCode != 0) {
+                    log.warn("Python脚本执行失败，退出码: {}", exitCode);
+                    log.warn("错误输出: {}", output.toString());
+                    throw new IOException("Python脚本执行失败，退出码: " + exitCode);
+                }
+
+                return output.toString();
+            } finally {
+                process.destroy();
+            }
         } finally {
-            // 删除临时文件
-            Files.deleteIfExists(tempFile);
+            try {
+                Files.deleteIfExists(tempFile);
+            } catch (IOException ignored) {
+                // cleanup best-effort
+            }
         }
     }
-    
-    private boolean isPythonAvailable() {
-        try {
-            Process process = Runtime.getRuntime().exec(PYTHON_CMD + " --version");
-            int exitCode = process.waitFor();
-            return exitCode == 0;
-        } catch (Exception e) {
-            logger.error("检查Python可用性时出错: {}", e.getMessage());
-            return false;
+
+    private String resolvePythonExecutable() {
+        String envOverride = PythonRuntimeSupport.firstNonBlank(
+                System.getenv("STOCK_INVEST_PYTHON"),
+                System.getenv("PYTHON_EXECUTABLE")
+        );
+        String exe = PythonRuntimeSupport.resolvePythonExecutable();
+        if (envOverride != null && exe.equals(envOverride)) {
+            log.info("使用环境变量指定的 Python: {}", exe);
+        } else if (PythonRuntimeSupport.isResolvedPythonFromProjectVenv(exe)) {
+            log.info("使用项目虚拟环境 Python: {}", exe);
+        } else if ("python3".equals(exe)) {
+            log.info("检测到 python 命令不可用，已回退使用 python3");
+        } else {
+            log.warn("未使用项目 .venv，当前解析到的 Python: {}", exe);
         }
+        return exe;
     }
-} 
+}

@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>低价股筛选结果</title>
+    <style>
+        :root {
+            --bg: #f3f6f9;
+            --card: #fbfcfe;
+            --text: #243447;
+            --muted: #6b7a8c;
+            --line: #d9e1ea;
+            --primary: #5a7da8;
+            --primary-hover: #496a92;
+            --ok: #2c7a7b;
+            --warn: #8a6d3b;
+        }
+
+        * { box-sizing: border-box; }
+        html, body {
+            height: 100%;
+        }
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .page-split {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            gap: 16px;
+            align-items: stretch;
+            margin: 16px 18px;
+            width: calc(100% - 36px);
+        }
+
+        .panel {
+            flex: 1 1 0;
+            min-width: 0;
+            min-height: 0;
+        }
+
+        /* 左侧：整列占满视口剩余高度，矩阵区域铺满卡片下半部分 */
+        .panel-snapshot {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(34, 60, 80, 0.06);
+            padding: 16px 18px;
+            margin-bottom: 14px;
+        }
+
+        .card.card-snapshot-fill {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 0;
+        }
+
+        .card.card-snapshot-fill h2 {
+            flex-shrink: 0;
+        }
+
+        .card.card-snapshot-fill .subhint {
+            flex-shrink: 0;
+        }
+
+        h2 {
+            margin: 0 0 12px 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #2d4059;
+        }
+
+        .subhint {
+            font-size: 12px;
+            color: var(--muted);
+            margin: -6px 0 12px 0;
+        }
+
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 14px;
+            align-items: center;
+        }
+
+        label {
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        input, select {
+            margin-left: 6px;
+            height: 32px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 0 10px;
+            background: #fff;
+            color: var(--text);
+            outline: none;
+        }
+
+        input:focus, select:focus {
+            border-color: #9cb7d6;
+            box-shadow: 0 0 0 3px rgba(124, 158, 194, 0.15);
+        }
+
+        button {
+            height: 32px;
+            border: 0;
+            border-radius: 8px;
+            padding: 0 14px;
+            background: var(--primary);
+            color: #fff;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        button:hover { background: var(--primary-hover); }
+
+        .notice {
+            margin-top: 8px;
+            background: #eef5ff;
+            border: 1px solid #cfe0f7;
+            color: #355c8a;
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 13px;
+        }
+
+        /* 落库矩阵：占满左侧可用高度；横向滚动看更多日期 */
+        .snapshot-scroll-wrap {
+            flex: 1;
+            min-height: 0;
+            overflow-x: auto;
+            overflow-y: auto;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: #fff;
+            -webkit-overflow-scrolling: touch;
+            /* 与 JS 拖动列宽同步，供固定列 left / width 使用 */
+            --sticky-code-w: 72px;
+            --sticky-name-w: 128px;
+        }
+
+        .snapshot-scroll-wrap table {
+            border-collapse: separate;
+            border-spacing: 0;
+            min-width: max-content;
+            table-layout: fixed;
+        }
+
+        .snapshot-scroll-wrap th,
+        .snapshot-scroll-wrap td {
+            border-bottom: 1px solid #edf1f5;
+            border-right: 1px solid #f0f3f7;
+            padding: 8px 10px;
+            text-align: left;
+            font-size: 12px;
+            background: #fff;
+            vertical-align: middle;
+        }
+
+        .snapshot-scroll-wrap thead th {
+            background: #f6f9fc;
+            color: #4d5f73;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        .snapshot-scroll-wrap .col-resize-handle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 6px;
+            margin-right: -3px;
+            height: 100%;
+            cursor: col-resize;
+            z-index: 5;
+            background: transparent;
+        }
+
+        .snapshot-scroll-wrap .col-resize-handle:hover {
+            background: rgba(90, 125, 168, 0.25);
+        }
+
+        .snapshot-scroll-wrap.snapshot-col-resizing,
+        .snapshot-scroll-wrap.snapshot-col-resizing * {
+            cursor: col-resize !important;
+            user-select: none !important;
+        }
+
+        .snapshot-scroll-wrap tbody tr:hover td {
+            background: #f9fbfd;
+        }
+
+        .snapshot-scroll-wrap tbody tr:hover td.sticky-code,
+        .snapshot-scroll-wrap tbody tr:hover td.sticky-name {
+            background: #f3f7fb;
+        }
+
+        .snapshot-scroll-wrap .sticky-code {
+            position: sticky;
+            left: 0;
+            z-index: 2;
+            width: var(--sticky-code-w);
+            min-width: var(--sticky-code-w);
+            max-width: var(--sticky-code-w);
+            box-shadow: 6px 0 10px -6px rgba(34, 60, 80, 0.18);
+        }
+
+        .snapshot-scroll-wrap .sticky-name {
+            position: sticky;
+            left: var(--sticky-code-w);
+            z-index: 2;
+            width: var(--sticky-name-w);
+            min-width: var(--sticky-name-w);
+            max-width: var(--sticky-name-w);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            box-shadow: 6px 0 10px -6px rgba(34, 60, 80, 0.18);
+        }
+
+        .snapshot-scroll-wrap thead .sticky-code,
+        .snapshot-scroll-wrap thead .sticky-name {
+            z-index: 3;
+            background: #f6f9fc;
+        }
+
+        .snapshot-scroll-wrap th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .snapshot-scroll-wrap th.sortable:hover {
+            background: #eef3f8;
+        }
+
+        .snapshot-scroll-wrap th.sortable .sort-ind {
+            display: inline-block;
+            margin-left: 4px;
+            font-size: 9px;
+            opacity: 0.55;
+            vertical-align: middle;
+        }
+
+        .snapshot-scroll-wrap th.sortable.sorted-asc .sort-ind,
+        .snapshot-scroll-wrap th.sortable.sorted-desc .sort-ind {
+            opacity: 0.95;
+        }
+
+        .snapshot-scroll-wrap .cell-metric {
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+
+        .snapshot-empty {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: var(--muted);
+            padding: 28px 12px;
+            font-size: 13px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: #fff;
+        }
+
+        .table-wrap {
+            overflow: auto;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: #fff;
+        }
+
+        .table-wrap table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 520px;
+        }
+
+        .table-wrap th, .table-wrap td {
+            border-bottom: 1px solid #edf1f5;
+            padding: 10px 12px;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .table-wrap th {
+            background: #f6f9fc;
+            color: #4d5f73;
+            font-weight: 600;
+        }
+
+        .table-wrap tr:hover td { background: #f9fbfd; }
+
+        .rise { color: var(--ok); font-weight: 600; }
+        .flat { color: var(--warn); }
+        .empty {
+            text-align: center;
+            color: var(--muted);
+            padding: 24px 0;
+        }
+    </style>
+</head>
+<body>
+<div class="page-split">
+    <!-- 左侧：截图导入落库矩阵 -->
+    <div class="panel panel-snapshot">
+        <div class="card card-snapshot-fill">
+            <h2>截图导入行情（落库）</h2>
+            <p class="subhint">数据来源 <code>tiger_snap</code>；日期列按时间从左到右递增，底部拖动条可左右滑动（右滑看更新日期，左滑看历史）。代码、名称两列固定。在表头<strong>两列之间的竖线</strong>上按住左键左右拖动可调整列宽。</p>
+            <div class="snapshot-scroll-wrap" th:if="${snapshotGrid != null && !snapshotGrid.isEmpty()}">
+                <table>
+                    <colgroup>
+                        <col data-snap-col="0" style="width:72px;min-width:48px">
+                        <col data-snap-col="1" style="width:128px;min-width:64px">
+                        <col th:each="dh, iterStat : ${snapshotGrid.dateHeaders}" th:attr="data-snap-col=${iterStat.index + 2}" style="width:96px;min-width:56px">
+                    </colgroup>
+                    <thead>
+                    <tr>
+                        <th class="sticky-code sortable" data-sort-col="0" scope="col" title="点击按代码排序；右缘拖动调列宽">代码<span class="sort-ind" aria-hidden="true"></span></th>
+                        <th class="sticky-name sortable" data-sort-col="1" scope="col" title="点击按名称排序；右缘拖动调列宽">名称<span class="sort-ind" aria-hidden="true"></span></th>
+                        <th th:each="dh : ${snapshotGrid.dateHeaders}" th:text="${dh}" class="cell-metric">2026-04-01</th>
+                    </tr>
+                    </thead>
+                    <tbody id="snapshot-matrix-tbody">
+                    <tr th:each="srow : ${snapshotGrid.rows}">
+                        <td class="sticky-code" th:text="${srow.symbol}">JOB</td>
+                        <td class="sticky-name" th:text="${srow.stockName}" th:title="${srow.stockName}">—</td>
+                        <td th:each="cell : ${srow.cells}" th:text="${cell}" class="cell-metric">0.23 / 1,000</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div th:if="${snapshotGrid == null || snapshotGrid.isEmpty()}" class="snapshot-empty">
+                暂无截图导入数据。请先通过 API 导入或等待数据落库。
+            </div>
+        </div>
+    </div>
+
+    <!-- 右侧：原筛选表单与结果 -->
+    <div class="panel">
+        <div class="card">
+            <h2>美股低价股筛选（按天）</h2>
+            <form method="post" th:action="@{/screener/run}" class="form-row">
+                <label>交易日:
+                    <input type="date" name="tradeDate" th:value="${tradeDate}">
+                </label>
+                <label>本次筛选数量:
+                    <input type="number" name="limit" value="20" min="1" max="500">
+                </label>
+                <label>周期天数:
+                    <select name="windowDays">
+                        <option value="3" th:selected="${windowDays == 3}">3天</option>
+                        <option value="4" th:selected="${windowDays == 4}">4天</option>
+                        <option value="5" th:selected="${windowDays == 5}">5天</option>
+                        <option value="6" th:selected="${windowDays == 6}">6天</option>
+                        <option value="7" th:selected="${windowDays == 7}">7天</option>
+                    </select>
+                </label>
+                <button type="submit">执行筛选</button>
+            </form>
+
+            <div th:if="${notice != null}" class="notice" th:text="${notice}">
+                已执行筛选
+            </div>
+        </div>
+
+        <div class="card">
+            <form method="get" th:action="@{/screener/daily}" class="form-row">
+                <label>交易日:
+                    <input type="date" name="tradeDate" th:value="${tradeDate}">
+                </label>
+                <label>最低价:
+                    <input type="number" step="0.0001" name="minPrice" th:value="${minPrice}">
+                </label>
+                <label>最高价:
+                    <input type="number" step="0.0001" name="maxPrice" th:value="${maxPrice}">
+                </label>
+                <input type="hidden" name="windowDays" th:value="${windowDays}">
+                <button type="submit">筛选结果</button>
+            </form>
+        </div>
+
+        <div class="card table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>代码</th>
+                    <th>最新价格</th>
+                    <th>是否涨</th>
+                    <th>数据源</th>
+                    <th>交易日</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${rows == null || #lists.isEmpty(rows)}">
+                    <td class="empty" colspan="5">当前没有匹配结果，请先点击“执行筛选”。</td>
+                </tr>
+                <tr th:each="row : ${rows}">
+                    <td th:text="${row.symbol}">ABC</td>
+                    <td th:text="${row.price}">0.10</td>
+                    <td>
+                        <span th:if="${row.rise}" class="rise">涨</span>
+                        <span th:if="${!row.rise}" class="flat">否</span>
+                    </td>
+                    <td th:text="${row.source}">twelvedata</td>
+                    <td th:text="${row.tradeDate}">2026-04-25</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<script>
+(function () {
+    var tbody = document.getElementById('snapshot-matrix-tbody');
+    if (!tbody) return;
+    var table = tbody.closest('table');
+    if (!table) return;
+    var scrollWrap = table.closest('.snapshot-scroll-wrap');
+    if (!scrollWrap) return;
+
+    var sortHeaders = table.querySelectorAll('thead th.sortable');
+    var currentCol = null;
+    var currentDir = 'asc';
+
+    function clearSortUi() {
+        sortHeaders.forEach(function (th) {
+            th.classList.remove('sorted-asc', 'sorted-desc');
+            var ind = th.querySelector('.sort-ind');
+            if (ind) ind.textContent = '';
+        });
+    }
+
+    function rowCompare(a, b, colIndex, dir) {
+        var ta = (a.cells[colIndex] && a.cells[colIndex].textContent) ? a.cells[colIndex].textContent.trim() : '';
+        var tb = (b.cells[colIndex] && b.cells[colIndex].textContent) ? b.cells[colIndex].textContent.trim() : '';
+        var cmp;
+        if (colIndex === 0) {
+            cmp = ta.localeCompare(tb, undefined, { numeric: true, sensitivity: 'base' });
+        } else {
+            cmp = ta.localeCompare(tb, 'zh-CN', { numeric: true, sensitivity: 'base' });
+        }
+        return dir === 'asc' ? cmp : -cmp;
+    }
+
+    sortHeaders.forEach(function (th) {
+        th.addEventListener('click', function (e) {
+            if (e.target && e.target.closest && e.target.closest('.col-resize-handle')) return;
+            var col = parseInt(th.getAttribute('data-sort-col'), 10);
+            if (isNaN(col)) return;
+            if (currentCol === col) {
+                currentDir = currentDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentCol = col;
+                currentDir = 'asc';
+            }
+            clearSortUi();
+            th.classList.add(currentDir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+            var ind = th.querySelector('.sort-ind');
+            if (ind) ind.textContent = currentDir === 'asc' ? '▲' : '▼';
+
+            var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+            rows.sort(function (a, b) { return rowCompare(a, b, col, currentDir); });
+            rows.forEach(function (row) { tbody.appendChild(row); });
+        });
+    });
+
+    /* 表头列边界拖动调宽 */
+    var colElements = table.querySelectorAll('colgroup col');
+    var headerCells = table.querySelectorAll('thead tr th');
+    if (colElements.length !== headerCells.length) return;
+
+    function colMinWidth(index) {
+        if (index === 0) return 48;
+        if (index === 1) return 64;
+        return 56;
+    }
+
+    var MAX_COL_W = 720;
+
+    function readColWidthPx(colEl) {
+        var w = colEl.getBoundingClientRect().width;
+        if (w > 1) return w;
+        var s = (colEl.getAttribute('style') || '').match(/width:\s*([\d.]+)px/i);
+        return s ? parseFloat(s[1]) : 80;
+    }
+
+    function applyColWidth(index, widthPx) {
+        var colEl = colElements[index];
+        if (!colEl) return;
+        var w = Math.round(widthPx);
+        var lo = colMinWidth(index);
+        var hi = MAX_COL_W;
+        if (w < lo) w = lo;
+        if (w > hi) w = hi;
+        colEl.style.width = w + 'px';
+        colEl.style.minWidth = lo + 'px';
+        if (index === 0) {
+            scrollWrap.style.setProperty('--sticky-code-w', w + 'px');
+        } else if (index === 1) {
+            scrollWrap.style.setProperty('--sticky-name-w', w + 'px');
+        }
+    }
+
+    headerCells.forEach(function (th, index) {
+        var handle = document.createElement('span');
+        handle.className = 'col-resize-handle';
+        handle.setAttribute('title', '拖动调整本列宽度');
+        handle.setAttribute('aria-hidden', 'true');
+        th.appendChild(handle);
+
+        handle.addEventListener('mousedown', function (e) {
+            if (e.button !== 0) return;
+            e.preventDefault();
+            e.stopPropagation();
+
+            var startX = e.clientX;
+            var startW = readColWidthPx(colElements[index]);
+
+            scrollWrap.classList.add('snapshot-col-resizing');
+
+            function onMove(ev) {
+                var dx = ev.clientX - startX;
+                applyColWidth(index, startW + dx);
+            }
+
+            function onUp() {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                scrollWrap.classList.remove('snapshot-col-resizing');
+            }
+
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        });
+    });
+})();
+</script>
+</body>
+</html>

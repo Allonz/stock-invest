@@ -8,12 +8,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.util.FileCopyUtils;
+import org.springframework.context.annotation.Profile;
 
 import java.io.File;
-import java.io.FileOutputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -23,6 +23,7 @@ import java.util.Properties;
  * Tiger API 配置类
  */
 @Configuration
+@Profile("tiger")
 public class TigerApiConfig {
     
     private static final Logger logger = LoggerFactory.getLogger(TigerApiConfig.class);
@@ -39,93 +40,100 @@ public class TigerApiConfig {
     @Value("${tiger.api.log_path:logs/tiger}")
     private String logPath;
 
+    @Value("${tiger.api.account:}")
+    private String account;
+
+    @Value("${tiger.api.license:TBNZ}")
+    private String license;
+
+    @Value("${tiger.api.env:PROD}")
+    private String env;
+
+    @Value("${tiger.api.private_key_pk1:}")
+    private String privateKeyPk1;
+
+    @Value("${tiger.api.private_key_pk8:}")
+    private String privateKeyPk8;
+
     /**
      * 创建并配置 TigerHttpClient 实例
      * @return TigerHttpClient 实例
      */
     @Bean
     public TigerHttpClient tigerHttpClient() {
-        // 输出日志信息
         logger.info("Initializing TigerHttpClient with config:");
         logger.info("configFilePath: {}", configFilePath);
-        logger.info("tigerId: {}", tigerId);
         logger.info("privateKey length: {}", privateKey != null ? privateKey.length() : 0);
         logger.info("logPath: {}", logPath);
-        
-        // 配置客户端
+
         ClientConfig clientConfig = new ClientConfig();
-        
-        // 设置日志
         ApiLogger.setEnabled(true, logPath);
-        
+
         try {
-            // 1. 准备配置目录
             String configDir = prepareConfigDirectory();
-            
-            // 2. 准备配置文件
             prepareConfigFiles(configDir);
-            
-            // 3. 设置配置文件路径
             clientConfig.configFilePath = configDir;
             logger.info("Using config directory: {}", configDir);
-            
-            // 4. 设置基本选项
+
             clientConfig.isSslSocket = true;
             clientConfig.isAutoGrabPermission = true;
             clientConfig.failRetryCounts = 2;
-            
-            // 5. 设置API凭证
-            if (tigerId != null && !tigerId.isEmpty()) {
-                clientConfig.tigerId = tigerId;
-                logger.info("Using tigerId from application.yml: {}", tigerId);
-            } else {
-                // 尝试从配置文件读取tiger_id
-                Properties props = loadConfigProperties(configDir);
-                String configTigerId = props.getProperty("tiger_id");
-                if (configTigerId != null && !configTigerId.isEmpty()) {
-                    clientConfig.tigerId = configTigerId;
-                    logger.info("Using tigerId from config file: {}", configTigerId);
-                } else {
-                    throw new IllegalArgumentException("tigerId is required but not configured");
-                }
-            }
-            
-            // 设置私钥
-            String finalPrivateKey = privateKey;
-            if (finalPrivateKey == null || finalPrivateKey.isEmpty()) {
-                // 尝试从配置文件读取私钥
-                Properties props = loadConfigProperties(configDir);
-                finalPrivateKey = props.getProperty("private_key_pk8");
-                if (finalPrivateKey == null || finalPrivateKey.isEmpty()) {
-                    finalPrivateKey = props.getProperty("private_key");
-                }
-            }
-            
-            if (finalPrivateKey != null && !finalPrivateKey.isEmpty()) {
-                // 清理私钥格式
-                String cleanedPrivateKey = finalPrivateKey.replaceAll("\\s+", "");
-                if (cleanedPrivateKey.contains("-----BEGIN")) {
-                    cleanedPrivateKey = cleanedPrivateKey
-                        .replaceAll("-----BEGIN.*KEY-----", "")
-                        .replaceAll("-----END.*KEY-----", "")
-                        .replaceAll("\\s+", "");
-                }
-                clientConfig.privateKey = cleanedPrivateKey;
-                logger.info("Using privateKey from configuration");
-            } else {
-                throw new IllegalArgumentException("privateKey is required but not configured");
-            }
-            
-            // 6. 创建客户端实例
+
+            applyTigerId(clientConfig, configDir);
+            applyPrivateKey(clientConfig, configDir);
+
             TigerHttpClient client = TigerHttpClient.getInstance().clientConfig(clientConfig);
             logger.info("TigerHttpClient initialized successfully");
             return client;
-            
         } catch (Exception e) {
             String errorMsg = "Failed to initialize TigerHttpClient: " + e.getMessage();
             logger.error(errorMsg, e);
             throw new RuntimeException(errorMsg, e);
         }
+    }
+
+    private void applyTigerId(ClientConfig clientConfig, String configDir) throws IOException {
+        if (tigerId != null && !tigerId.isEmpty()) {
+            clientConfig.tigerId = tigerId;
+            logger.debug("Using tigerId from application.yml");
+        } else {
+            Properties props = loadConfigProperties(configDir);
+            String configTigerId = props.getProperty("tiger_id");
+            if (configTigerId != null && !configTigerId.isEmpty()) {
+                clientConfig.tigerId = configTigerId;
+                logger.info("Using tigerId from config file: {}", configTigerId);
+            } else {
+                throw new IllegalArgumentException("tigerId is required but not configured");
+            }
+        }
+    }
+
+    private void applyPrivateKey(ClientConfig clientConfig, String configDir) throws IOException {
+        String finalPrivateKey = privateKey;
+        if (finalPrivateKey == null || finalPrivateKey.isEmpty()) {
+            Properties props = loadConfigProperties(configDir);
+            finalPrivateKey = props.getProperty("private_key_pk8");
+            if (finalPrivateKey == null || finalPrivateKey.isEmpty()) {
+                finalPrivateKey = props.getProperty("private_key");
+            }
+        }
+        if (finalPrivateKey != null && !finalPrivateKey.isEmpty()) {
+            clientConfig.privateKey = cleanPrivateKey(finalPrivateKey);
+            logger.info("Using privateKey from configuration");
+        } else {
+            throw new IllegalArgumentException("privateKey is required but not configured");
+        }
+    }
+
+    private String cleanPrivateKey(String rawKey) {
+        String cleaned = rawKey.replaceAll("\\s+", "");
+        if (cleaned.contains("-----BEGIN")) {
+            cleaned = cleaned
+                    .replaceAll("-----BEGIN.*KEY-----", "")
+                    .replaceAll("-----END.*KEY-----", "")
+                    .replaceAll("\\s+", "");
+        }
+        return cleaned;
     }
     
     /**
@@ -150,27 +158,27 @@ public class TigerApiConfig {
      * @param configDir 配置目录路径
      */
     private void prepareConfigFiles(String configDir) throws IOException {
-        // 尝试从resources目录获取tiger_openapi_config.properties文件
-        try {
-            ClassPathResource configResource = new ClassPathResource("tiger_openapi_config.properties");
-            if (configResource.exists()) {
-                File targetFile = new File(configDir, "tiger_openapi_config.properties");
-                FileCopyUtils.copy(configResource.getInputStream(), new FileOutputStream(targetFile));
-                logger.info("Copied tiger_openapi_config.properties to {}", targetFile.getAbsolutePath());
-                
-                // 验证复制后的文件存在
-                if (targetFile.exists() && targetFile.length() > 0) {
-                    logger.info("Verified config file exists and has content, size: {} bytes", targetFile.length());
-                } else {
-                    logger.warn("Config file copy seems to have failed, file doesn't exist or is empty");
-                }
-            } else {
-                logger.warn("tiger_openapi_config.properties not found in resources");
-            }
-        } catch (IOException e) {
-            logger.warn("Could not copy tiger_openapi_config.properties from resources", e);
-            throw e;
+        File targetFile = new File(configDir, "tiger_openapi_config.properties");
+        Properties props = new Properties();
+        if (privateKeyPk1 != null && !privateKeyPk1.trim().isEmpty()) {
+            props.setProperty("private_key_pk1", privateKeyPk1.trim());
         }
+        if (privateKeyPk8 != null && !privateKeyPk8.trim().isEmpty()) {
+            props.setProperty("private_key_pk8", privateKeyPk8.trim());
+        }
+        if (tigerId != null && !tigerId.trim().isEmpty()) {
+            props.setProperty("tiger_id", tigerId.trim());
+        }
+        if (account != null && !account.trim().isEmpty()) {
+            props.setProperty("account", account.trim());
+        }
+        props.setProperty("license", license);
+        props.setProperty("env", env);
+
+        try (OutputStream output = Files.newOutputStream(targetFile.toPath())) {
+            props.store(output, "Generated from application.yml");
+        }
+        logger.info("Generated tiger_openapi_config.properties at {}", targetFile.getAbsolutePath());
     }
     
     /**
@@ -182,7 +190,7 @@ public class TigerApiConfig {
         Properties properties = new Properties();
         File configFile = new File(configDir, "tiger_openapi_config.properties");
         if (configFile.exists() && configFile.length() > 0) {
-            try (java.io.FileInputStream fis = new java.io.FileInputStream(configFile)) {
+            try (FileInputStream fis = new FileInputStream(configFile)) {
                 properties.load(fis);
                 logger.info("Loaded {} properties from config file", properties.size());
             }

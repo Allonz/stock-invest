@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>筛选结果 - Stock Invest</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #f5f7fa; }
+        .batch-list { max-height: 500px; overflow-y: auto; }
+        .batch-item { cursor: pointer; transition: background 0.15s; }
+        .batch-item:hover { background: #e9ecef; }
+        .batch-item.active { background: #cfe2ff; font-weight: 600; }
+        .rise-badge { color: #e53e3e; }
+        .flat-badge { color: #718096; }
+        .window-tab .badge { font-size: 0.7rem; vertical-align: middle; }
+    </style>
+</head>
+<body>
+<div class="container-fluid py-4">
+    <nav class="mb-4">
+        <a th:href="@{/page/bars}" class="btn btn-sm btn-outline-secondary me-2">日线数据</a>
+        <a th:href="@{/page/screening}" class="btn btn-sm btn-outline-primary me-2">筛选结果</a>
+        <a th:href="@{/page/fill-tasks}" class="btn btn-sm btn-outline-secondary">补填任务</a>
+    </nav>
+
+    <h4 class="mb-3">🔍 筛选结果</h4>
+
+    <div class="row">
+        <!-- Batch History (Sidebar) -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">筛选批次</h6>
+                </div>
+                <div class="list-group list-group-flush batch-list">
+                    <a th:each="batch : ${batchHistory}"
+                       th:href="@{/page/screening(batchId=${batch.batchId})}"
+                       class="list-group-item list-group-item-action batch-item"
+                       th:classappend="${batch.batchId == currentBatchId} ? 'active' : ''">
+                        <div class="d-flex justify-content-between">
+                            <small th:text="${batch.batchId}">batch-id</small>
+                            <span class="badge bg-secondary rounded-pill" th:text="${batch.matchCount}">0</span>
+                        </div>
+                        <small class="text-muted" th:text="${batch.lastTradeDate}">2026-01-01</small>
+                    </a>
+                    <div th:if="${#lists.isEmpty(batchHistory)}" class="list-group-item text-muted text-center small">
+                        暂无筛选记录
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9">
+            <!-- Filter -->
+            <div class="card mb-3">
+                <div class="card-body py-2">
+                    <form method="get" th:action="@{/page/screening}" class="row g-2 align-items-end">
+                        <input type="hidden" name="batchId" th:value="${currentBatchId}">
+                        <div class="col-md-4">
+                            <label class="form-label">Symbol 搜索</label>
+                            <input type="text" name="symbol" class="form-control form-control-sm"
+                                   placeholder="输入股票代码搜索" th:value="${filterSymbol}">
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary btn-sm w-100">搜索</button>
+                        </div>
+                        <div class="col-md-3 text-end">
+                            <small class="text-muted">
+                                当前批次: <strong th:text="${currentBatchId}">--</strong>
+                            </small>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Window Tabs -->
+            <div class="card">
+                <div class="card-header p-0">
+                    <ul class="nav nav-tabs card-header-tabs mx-2 mt-2" id="windowTabs" role="tablist">
+                        <li class="nav-item window-tab" th:each="wd : ${T(java.util.List).of(2,3,4,5,6,7)}">
+                            <button class="nav-link" th:classappend="${wd == 7 ? 'active' : ''}"
+                                    th:id="'tab-' + ${wd} + 'd'"
+                                    data-bs-toggle="tab"
+                                    th:attr="data-bs-target='#pane-' + ${wd} + 'd'"
+                                    type="button" role="tab">
+                                <span th:text="${wd} + '天'">7天</span>
+                                <span class="badge bg-secondary" th:text="${totalHits[wd + 'd'] != null ? totalHits[wd + 'd'] : 0}">0</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="tab-content mt-0">
+                <div th:each="wd : ${T(java.util.List).of(2,3,4,5,6,7)}"
+                     th:id="'pane-' + ${wd} + 'd'"
+                     th:classappend="${wd == 7 ? 'tab-pane fade show active' : 'tab-pane fade'}"
+                     role="tabpanel">
+                    <div class="card">
+                        <div class="card-body p-0">
+                            <table class="table table-striped table-hover mb-0">
+                                <thead class="table-light">
+                                <tr>
+                                    <th>股票代码</th>
+                                    <th>最新价</th>
+                                    <th>上日收盘</th>
+                                    <th>涨跌</th>
+                                    <th>数据源</th>
+                                    <th>交易日期</th>
+                                    <th>批次 ID</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:if="${windowResults[wd + 'd'] == null or #lists.isEmpty(windowResults[wd + 'd'])}">
+                                    <td colspan="7" class="text-center text-muted py-3">暂无匹配数据</td>
+                                </tr>
+                                <tr th:each="m : ${windowResults[wd + 'd']}">
+                                    <td><strong th:text="${m.symbol}">AAPL</strong></td>
+                                    <td class="text-end" th:text="${#numbers.formatDecimal(m.price, 0, 'COMMA', 4, 'POINT')}">0.00</td>
+                                    <td class="text-end" th:text="${m.lastClose != null ? #numbers.formatDecimal(m.lastClose, 0, 'COMMA', 4, 'POINT') : '--'}">--</td>
+                                    <td>
+                                        <span th:if="${m.rise}" class="rise-badge">↑ 涨</span>
+                                        <span th:if="${!m.rise}" class="flat-badge">↓ 跌</span>
+                                    </td>
+                                    <td><span class="badge bg-info" th:text="${m.dataSource}">source</span></td>
+                                    <td th:text="${m.tradeDate}">2026-01-01</td>
+                                    <td><code th:text="${m.batchId}">batch</code></td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

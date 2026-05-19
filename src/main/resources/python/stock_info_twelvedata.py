@@ -3,91 +3,214 @@
 
 import sys
 import json
-from datetime import datetime
+import os
+import time
+import random
+from datetime import datetime, timedelta
+from typing import List, Dict, Any, Optional
+import urllib.request
+import urllib.parse
+import urllib.error
 
-def get_low_price_stocks(limit=20):
-    """
-    模拟获取低价股票列表
-    在实际应用中，这里应该调用TwelveData API
-    """
-    # 这里使用模拟数据
-    stocks = [
-        {
-            "symbol": "AAPL",
-            "name": "Apple Inc.",
-            "price": 0.15,  # 修改为低价股票示例
-            "volume": 1000000,
-            "change": 2.5,
-            "changePercent": 1.67,
-            "timestamp": datetime.now().isoformat()
-        },
-        {
-            "symbol": "MSFT",
-            "name": "Microsoft Corporation",
-            "price": 0.18,  # 修改为低价股票示例
-            "volume": 800000,
-            "change": -1.25,
-            "changePercent": -0.44,
-            "timestamp": datetime.now().isoformat()
-        }
-    ]
+# TwelveData API base URL
+TWELVEDATA_BASE_URL = "https://api.twelvedata.com"
+API_KEY = os.environ.get("TWELVEDATA_API_KEY", "")
+
+# Rate limiting
+last_request_time = 0
+min_request_interval = 8  # Free tier: 8 requests per minute
+
+
+def rate_limit():
+    global last_request_time
+    current_time = time.time()
+    elapsed = current_time - last_request_time
+    if elapsed < min_request_interval:
+        time.sleep(min_request_interval - elapsed + random.uniform(1, 3))
+    last_request_time = time.time()
+
+
+def api_request(endpoint: str, params: Dict[str, str]) -> Dict:
+    """Make a request to TwelveData API."""
+    if not API_KEY:
+        raise Exception("TWELVEDATA_API_KEY environment variable not set")
+
+    params["apikey"] = API_KEY
+    url = f"{TWELVEDATA_BASE_URL}/{endpoint}?{urllib.parse.urlencode(params)}"
     
-    # 按价格排序
-    sorted_stocks = sorted(stocks, key=lambda x: x["price"])
-    return sorted_stocks[:int(limit)]
-
-def scan_stocks(market, limit=20, min_price=None, max_price=None):
-    """
-    扫描指定市场的股票
-    """
+    rate_limit()
+    
     try:
-        stocks = get_low_price_stocks(limit)
-        
-        # 过滤价格范围
-        filtered_stocks = []
-        min_price = float(min_price) if min_price and min_price != "" else 0
-        max_price = float(max_price) if max_price and max_price != "" else float('inf')
-        
-        for stock in stocks:
-            price = stock['price']
-            if min_price <= price <= max_price:
-                filtered_stocks.append(stock['symbol'])
-        
-        return filtered_stocks
+        req = urllib.request.Request(url)
+        req.add_header("User-Agent", "StockInvest/1.0")
+        with urllib.request.urlopen(req, timeout=30) as response:
+            data = json.loads(response.read().decode("utf-8"))
+            if "code" in data and data["code"] != 200:
+                raise Exception(f"API error: {data.get('message', 'Unknown error')}")
+            return data
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode("utf-8") if e.fp else ""
+        raise Exception(f"HTTP {e.code}: {error_body}")
+    except urllib.error.URLError as e:
+        raise Exception(f"Connection error: {e.reason}")
+
+
+def get_stock_info(symbol: str) -> str:
+    """获取股票信息 (TwelveData API)."""
+    try:
+        data = api_request("quote", {"symbol": symbol, "dp": "2"})
+        result = {
+            "symbol": data.get("symbol", symbol),
+            "name": data.get("name", symbol),
+            "currentPrice": float(data.get("close", 0)),
+            "openPrice": float(data.get("open", 0)),
+            "highPrice": float(data.get("high", 0)),
+            "lowPrice": float(data.get("low", 0)),
+            "volume": int(data.get("volume", 0)),
+            "change": float(data.get("change", 0)),
+            "changePercent": float(data.get("percent_change", 0)),
+        }
+        return json.dumps(result)
     except Exception as e:
-        print(json.dumps({"error": str(e)}), file=sys.stderr)
-        return []
+        return json.dumps({"error": str(e)})
+
+
+def get_stock_list() -> str:
+    """获取股票列表 (TwelveData API)."""
+    try:
+        data = api_request("stocks", {"exchange": "NYSE", "country": "United States"})
+        stocks = data.get("data", [])
+        symbols = [s["symbol"] for s in stocks[:100]]
+        return json.dumps(symbols)
+    except Exception as e:
+        return json.dumps({"error": str(e)})
+
+
+def get_daily_kline(symbol: str) -> str:
+    """获取日K线数据 (TwelveData API)."""
+    try:
+        data = api_request("time_series", {
+            "symbol": symbol,
+            "interval": "1day",
+            "outputsize": "7",
+            "dp": "2"
+        })
+        values = data.get("values", [])
+        items = []
+        for v in reversed(values):
+            items.append({
+                "time": int(datetime.strptime(v["datetime"], "%Y-%m-%d").timestamp()),
+                "timeString": v["datetime"],
+                "open": float(v["open"]),
+                "high": float(v["high"]),
+                "low": float(v["low"]),
+                "close": float(v["close"]),
+                "volume": int(v.get("volume", 0)),
+                "amount": float(v["close"]) * int(v.get("volume", 0))
+            })
+        return json.dumps({"symbol": symbol, "items": items})
+    except Exception as e:
+        return json.dumps({"error": str(e)})
+
+
+def get_batch_kline(symbols: str, period: str, count: int) -> str:
+    """获取批量K线数据."""
+    try:
+        symbol_list = symbols.split(",")
+        result = []
+        for symbol in symbol_list:
+            kline_data = json.loads(get_daily_kline(symbol))
+            if "error" not in kline_data:
+                result.append(kline_data)
+        return json.dumps(result)
+    except Exception as e:
+        return json.dumps({"error": str(e)})
+
+
+def scan_stocks(market: str, limit: int, min_price: str = "", max_price: str = "") -> str:
+    """扫描股票 (TwelveData API)."""
+    try:
+        exchanges = {
+            "US": ["NYSE", "NASDAQ"],
+            "HK": ["HKEX"],
+            "CN": ["SSE", "SZSE"]
+        }
+        if market not in exchanges:
+            return json.dumps({"error": f"Unsupported market: {market}"})
+
+        # Get stocks from exchanges
+        all_symbols = []
+        for exchange in exchanges[market]:
+            try:
+                data = api_request("stocks", {"exchange": exchange})
+                stocks = data.get("data", [])
+                all_symbols.extend([s["symbol"] for s in stocks[:50]])
+            except Exception as e:
+                print(f"Error fetching stocks for {exchange}: {str(e)}", file=sys.stderr)
+                continue
+
+        # Get prices and filter
+        stock_prices = {}
+        for symbol in all_symbols:
+            try:
+                info_json = get_stock_info(symbol)
+                info = json.loads(info_json)
+                if "error" not in info and info.get("currentPrice", 0) > 0:
+                    price = info["currentPrice"]
+                    if (not min_price or price >= float(min_price)) and \
+                       (not max_price or price <= float(max_price)):
+                        stock_prices[symbol] = price
+            except Exception:
+                continue
+
+        sorted_symbols = sorted(stock_prices.items(), key=lambda x: x[1], reverse=True)
+        result = [symbol for symbol, _ in sorted_symbols[:limit]]
+        return json.dumps(result)
+    except Exception as e:
+        return json.dumps({"error": str(e)})
+
+
+def main():
+    if len(sys.argv) < 2:
+        print(json.dumps({"error": "No command specified"}))
+        sys.exit(1)
+
+    command = sys.argv[1]
+
+    if command == "get_stock_info":
+        if len(sys.argv) < 3:
+            print(json.dumps({"error": "Symbol not specified"}))
+            sys.exit(1)
+        print(get_stock_info(sys.argv[2]))
+
+    elif command == "get_stock_list":
+        print(get_stock_list())
+
+    elif command == "get_daily_kline":
+        if len(sys.argv) < 3:
+            print(json.dumps({"error": "Symbol not specified"}))
+            sys.exit(1)
+        print(get_daily_kline(sys.argv[2]))
+
+    elif command == "get_batch_kline":
+        if len(sys.argv) < 5:
+            print(json.dumps({"error": "Missing parameters"}))
+            sys.exit(1)
+        print(get_batch_kline(sys.argv[2], sys.argv[3], int(sys.argv[4])))
+
+    elif command == "scan_stocks":
+        if len(sys.argv) < 3:
+            print(json.dumps({"error": "Market not specified"}))
+            sys.exit(1)
+        market = sys.argv[2]
+        limit = int(sys.argv[3]) if len(sys.argv) > 3 else 20
+        min_price = sys.argv[4] if len(sys.argv) > 4 else ""
+        max_price = sys.argv[5] if len(sys.argv) > 5 else ""
+        print(scan_stocks(market, limit, min_price, max_price))
+
+    else:
+        print(json.dumps({"error": f"Unknown command: {command}"}))
+
 
 if __name__ == "__main__":
-    try:
-        if len(sys.argv) < 2:
-            print(json.dumps({"error": "No command specified"}))
-            sys.exit(1)
-            
-        command = sys.argv[1]
-        
-        if command == "get_low_price_stocks":
-            limit = int(sys.argv[2]) if len(sys.argv) > 2 else 20
-            result = get_low_price_stocks(limit)
-            print(json.dumps(result))
-            
-        elif command == "scan_stocks":
-            if len(sys.argv) < 3:
-                print(json.dumps({"error": "Market not specified"}))
-                sys.exit(1)
-                
-            market = sys.argv[2]
-            limit = int(sys.argv[3]) if len(sys.argv) > 3 else 20
-            min_price = sys.argv[4] if len(sys.argv) > 4 else None
-            max_price = sys.argv[5] if len(sys.argv) > 5 else None
-            
-            result = scan_stocks(market, limit, min_price, max_price)
-            print(json.dumps(result))
-            
-        else:
-            print(json.dumps({"error": f"Unknown command: {command}"}))
-            sys.exit(1)
-            
-    except Exception as e:
-        print(json.dumps({"error": str(e)}), file=sys.stderr)
-        sys.exit(1)
+    main()
