@@ -50,7 +50,5 @@ public class KLineData {
         this.items = items != null ? items : new ArrayList<KLineIterator>();
     }
 
-    public void addItem(KLineIterator item) {
-        this.items.add(item);
-    }
+
 }

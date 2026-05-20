@@ -2,6 +2,8 @@ package com.stock.invest.config;
 
 import com.tigerbrokers.stock.openapi.client.config.ClientConfig;
 import com.tigerbrokers.stock.openapi.client.https.client.TigerHttpClient;
+import com.tigerbrokers.stock.openapi.client.struct.enums.Env;
+import com.tigerbrokers.stock.openapi.client.struct.enums.License;
 import com.tigerbrokers.stock.openapi.client.util.ApiLogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,10 +12,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -25,7 +25,7 @@ import java.util.Properties;
 @Configuration
 @Profile("tiger")
 public class TigerApiConfig {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(TigerApiConfig.class);
 
     @Value("${tiger.api.configFilePath:}")
@@ -70,17 +70,24 @@ public class TigerApiConfig {
         ApiLogger.setEnabled(true, logPath);
 
         try {
-            String configDir = prepareConfigDirectory();
-            prepareConfigFiles(configDir);
-            clientConfig.configFilePath = configDir;
-            logger.info("Using config directory: {}", configDir);
-
+            // 所有配置在内存中完成，不向磁盘写入私钥
             clientConfig.isSslSocket = true;
             clientConfig.isAutoGrabPermission = true;
             clientConfig.failRetryCounts = 2;
 
-            applyTigerId(clientConfig, configDir);
-            applyPrivateKey(clientConfig, configDir);
+            // 直接设置 env/license/account，无需经过文件
+            if (env != null && !env.isEmpty()) {
+                clientConfig.setEnv(Env.valueOf(env));
+            }
+            if (license != null && !license.isEmpty()) {
+                clientConfig.license = License.valueOf(license);
+            }
+            if (account != null && !account.isEmpty()) {
+                clientConfig.defaultAccount = account;
+            }
+
+            resolveTigerId(clientConfig);
+            resolvePrivateKey(clientConfig);
 
             TigerHttpClient client = TigerHttpClient.getInstance().clientConfig(clientConfig);
             logger.info("TigerHttpClient initialized successfully");
@@ -92,12 +99,15 @@ public class TigerApiConfig {
         }
     }
 
-    private void applyTigerId(ClientConfig clientConfig, String configDir) throws IOException {
+    /**
+     * 解析 tigerId：优先从 application.yml 取值，其次从外部配置文件读取
+     */
+    private void resolveTigerId(ClientConfig clientConfig) throws IOException {
         if (tigerId != null && !tigerId.isEmpty()) {
             clientConfig.tigerId = tigerId;
             logger.debug("Using tigerId from application.yml");
-        } else {
-            Properties props = loadConfigProperties(configDir);
+        } else if (configFilePath != null && !configFilePath.isEmpty()) {
+            Properties props = loadConfigProperties(configFilePath);
             String configTigerId = props.getProperty("tiger_id");
             if (configTigerId != null && !configTigerId.isEmpty()) {
                 clientConfig.tigerId = configTigerId;
@@ -105,96 +115,70 @@ public class TigerApiConfig {
             } else {
                 throw new IllegalArgumentException("tigerId is required but not configured");
             }
+        } else {
+            throw new IllegalArgumentException("tigerId is required but not configured; set tiger.api.tiger_id or tiger.api.configFilePath");
         }
     }
 
-    private void applyPrivateKey(ClientConfig clientConfig, String configDir) throws IOException {
+    /**
+     * 解析私钥：优先从 application.yml 的 private_key/private_key_pk8 取值，
+     * 其次从外部配置文件读取。写入方式从磁盘文件改为内存直接赋值。
+     */
+    private void resolvePrivateKey(ClientConfig clientConfig) throws IOException {
         String finalPrivateKey = privateKey;
         if (finalPrivateKey == null || finalPrivateKey.isEmpty()) {
-            Properties props = loadConfigProperties(configDir);
-            finalPrivateKey = props.getProperty("private_key_pk8");
-            if (finalPrivateKey == null || finalPrivateKey.isEmpty()) {
-                finalPrivateKey = props.getProperty("private_key");
+            if (privateKeyPk8 != null && !privateKeyPk8.isEmpty()) {
+                finalPrivateKey = privateKeyPk8;
+            } else if (privateKeyPk1 != null && !privateKeyPk1.isEmpty()) {
+                finalPrivateKey = privateKeyPk1;
+            } else if (configFilePath != null && !configFilePath.isEmpty()) {
+                Properties props = loadConfigProperties(configFilePath);
+                finalPrivateKey = props.getProperty("private_key_pk8");
+                if (finalPrivateKey == null || finalPrivateKey.isEmpty()) {
+                    finalPrivateKey = props.getProperty("private_key");
+                }
             }
         }
         if (finalPrivateKey != null && !finalPrivateKey.isEmpty()) {
             clientConfig.privateKey = cleanPrivateKey(finalPrivateKey);
             logger.info("Using privateKey from configuration");
         } else {
-            throw new IllegalArgumentException("privateKey is required but not configured");
+            throw new IllegalArgumentException("privateKey is required but not configured; set tiger.api.private_key or tiger.api.configFilePath");
         }
     }
 
+    /**
+     * 清理 PEM 私钥：
+     * 1. 先移除 PEM 头尾标记（如 -----BEGIN RSA PRIVATE KEY-----）
+     * 2. 再移除所有空白字符（换行、空格、制表符）
+     * 顺序不可颠倒，否则先清空白会破坏 PEM 格式标记
+     */
     private String cleanPrivateKey(String rawKey) {
-        String cleaned = rawKey.replaceAll("\\s+", "");
-        if (cleaned.contains("-----BEGIN")) {
-            cleaned = cleaned
-                    .replaceAll("-----BEGIN.*KEY-----", "")
-                    .replaceAll("-----END.*KEY-----", "")
-                    .replaceAll("\\s+", "");
-        }
+        // Step 1: 移除 PEM 头尾标记
+        String cleaned = rawKey
+                .replaceAll("-----BEGIN [A-Z ]+-----", "")
+                .replaceAll("-----END [A-Z ]+-----", "");
+        // Step 2: 移除所有剩余空白
+        cleaned = cleaned.replaceAll("\\s+", "");
         return cleaned;
     }
-    
-    /**
-     * 准备配置目录
-     * @return 配置目录的路径
-     */
-    private String prepareConfigDirectory() throws IOException {
-        // 在临时目录下创建tiger_config目录
-        Path configDirPath = Paths.get(System.getProperty("java.io.tmpdir"), "tiger_config");
-        
-        if (!Files.exists(configDirPath)) {
-            Files.createDirectories(configDirPath);
-            logger.info("Created Tiger API config directory: {}", configDirPath);
-        }
-        
-        return configDirPath.toString();
-    }
-    
-    /**
-     * 准备配置文件
-     * 从resources目录复制配置文件到临时目录
-     * @param configDir 配置目录路径
-     */
-    private void prepareConfigFiles(String configDir) throws IOException {
-        File targetFile = new File(configDir, "tiger_openapi_config.properties");
-        Properties props = new Properties();
-        if (privateKeyPk1 != null && !privateKeyPk1.trim().isEmpty()) {
-            props.setProperty("private_key_pk1", privateKeyPk1.trim());
-        }
-        if (privateKeyPk8 != null && !privateKeyPk8.trim().isEmpty()) {
-            props.setProperty("private_key_pk8", privateKeyPk8.trim());
-        }
-        if (tigerId != null && !tigerId.trim().isEmpty()) {
-            props.setProperty("tiger_id", tigerId.trim());
-        }
-        if (account != null && !account.trim().isEmpty()) {
-            props.setProperty("account", account.trim());
-        }
-        props.setProperty("license", license);
-        props.setProperty("env", env);
 
-        try (OutputStream output = Files.newOutputStream(targetFile.toPath())) {
-            props.store(output, "Generated from application.yml");
-        }
-        logger.info("Generated tiger_openapi_config.properties at {}", targetFile.getAbsolutePath());
-    }
-    
     /**
-     * 加载配置文件属性
-     * @param configDir 配置目录路径
+     * 从外部配置文件加载属性（只读，不写入敏感信息）
+     * @param filePath 配置文件路径
      * @return 配置属性对象
      */
-    private Properties loadConfigProperties(String configDir) throws IOException {
+    private Properties loadConfigProperties(String filePath) throws IOException {
         Properties properties = new Properties();
-        File configFile = new File(configDir, "tiger_openapi_config.properties");
-        if (configFile.exists() && configFile.length() > 0) {
-            try (FileInputStream fis = new FileInputStream(configFile)) {
+        Path path = Paths.get(filePath);
+        if (Files.exists(path) && Files.size(path) > 0) {
+            try (FileInputStream fis = new FileInputStream(path.toFile())) {
                 properties.load(fis);
-                logger.info("Loaded {} properties from config file", properties.size());
+                logger.info("Loaded {} properties from config file: {}", properties.size(), filePath);
             }
+        } else {
+            logger.warn("Config file not found or empty: {}", filePath);
         }
         return properties;
     }
-} 
+}

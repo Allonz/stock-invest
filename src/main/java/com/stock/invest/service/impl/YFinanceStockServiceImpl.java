@@ -4,8 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stock.invest.model.KLineData;
 import com.stock.invest.model.KLineIterator;
 import com.stock.invest.model.StockInfo;
-import com.stock.invest.client.YahooFinanceRestClient;
-import com.stock.invest.config.ScannerProperties;
 import com.stock.invest.util.PythonScriptExecutor;
 import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
 import org.slf4j.Logger;
@@ -28,23 +26,15 @@ public class YFinanceStockServiceImpl {
 
     private final ObjectMapper objectMapper;
     private final PythonScriptExecutor pythonScriptExecutor;
-    private final YahooFinanceRestClient yahooFinanceRestClient;
-    
-    private final ScannerProperties scannerProperties;
     private final String implementation;
 
     public YFinanceStockServiceImpl(
             ObjectMapper objectMapper,
             PythonScriptExecutor pythonScriptExecutor,
-            YahooFinanceRestClient yahooFinanceRestClient,
-            
-            ScannerProperties scannerProperties,
             @Value("${stock.service.implementation:yfinance}") String implementation) {
         log.info("YFinanceStockServiceImpl : Service initialized");
         this.objectMapper = objectMapper;
         this.pythonScriptExecutor = pythonScriptExecutor;
-        this.yahooFinanceRestClient = yahooFinanceRestClient;
-        this.scannerProperties = scannerProperties;
         this.implementation = implementation;
     }
 
@@ -70,20 +60,15 @@ public class YFinanceStockServiceImpl {
     
     public KLineData getDailyKLineDataAsObject(String symbol, int days) {
         try {
-            // 使用 days 参数获取指定股票的K线数据
-            StockInfo stockInfo = getStockInfo(symbol);
-            if (stockInfo == null) {
-                return new KLineData();
-            }
             
             // 创建K线数据对象
             KLineData klineData = new KLineData();
-            klineData.setSymbol(stockInfo.getSymbol());
+            klineData.setSymbol(symbol);
             klineData.setTime(System.currentTimeMillis());
             
             // 获取K线数据
             // 使用PythonScriptExecutor获取K线数据
-            KLineData pythonKLineData = getDailyKLine(symbol);
+            KLineData pythonKLineData = getDailyKLine(symbol, days);
             if (pythonKLineData != null && pythonKLineData.getItems() != null && !pythonKLineData.getItems().isEmpty()) {
                 klineData.setItems(pythonKLineData.getItems());
                 
@@ -98,12 +83,7 @@ public class YFinanceStockServiceImpl {
                 // 如果没有数据，添加一个空的数据项
                 KLineIterator item = new KLineIterator();
                 item.setTime(System.currentTimeMillis());
-                item.setOpen(stockInfo.getCurrentPrice());
-                item.setHigh(stockInfo.getCurrentPrice());
-                item.setLow(stockInfo.getCurrentPrice());
-                item.setClose(stockInfo.getCurrentPrice());
-                item.setVolume((int)stockInfo.getVolume());
-                klineData.addItem(item);
+                klineData.setItems(List.of(item));
             }
             
             return klineData;
@@ -200,6 +180,16 @@ public class YFinanceStockServiceImpl {
     public KLineData getDailyKLine(String symbol) {
         try {
             String result = pythonScriptExecutor.executeScript(getScriptName(), "get_daily_kline", symbol);
+            return objectMapper.readValue(result, KLineData.class);
+        } catch (Exception e) {
+            log.warn("Failed to get daily kline for {}: {}", symbol, e.getMessage());
+            return new KLineData();
+        }
+    }
+
+    public KLineData getDailyKLine(String symbol, int days) {
+        try {
+            String result = pythonScriptExecutor.executeScript(getScriptName(), "get_daily_kline", symbol, String.valueOf(days));
             return objectMapper.readValue(result, KLineData.class);
         } catch (Exception e) {
             log.warn("Failed to get daily kline for {}: {}", symbol, e.getMessage());

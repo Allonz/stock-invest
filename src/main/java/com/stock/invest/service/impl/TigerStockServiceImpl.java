@@ -1,9 +1,9 @@
 package com.stock.invest.service.impl;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stock.invest.model.KLineData;
 import com.stock.invest.model.KLineIterator;
+import com.stock.invest.model.StockInfo;
 import com.tigerbrokers.stock.openapi.client.https.client.TigerHttpClient;
 import com.tigerbrokers.stock.openapi.client.https.request.quote.QuoteKlineRequest;
 import com.tigerbrokers.stock.openapi.client.https.response.quote.QuoteKlineResponse;
@@ -77,12 +77,11 @@ public class TigerStockServiceImpl {
             QuoteKlineResponse response = client.execute(request);
             
             // 检查响应
-            if (response != null && response.isSuccess()) {
-                return objectMapper.writeValueAsString(response.getKlineItems());
-            } else {
-                log.error("获取K线数据失败: {}", response != null ? response.getMessage() : "响应为空");
+            if (response == null || !response.isSuccess()) {
+                log.error("获取K线数据失败: {}", response == null ? "响应为空" : response.getMessage());
                 return "{}";
             }
+            return objectMapper.writeValueAsString(response.getKlineItems());
         } catch (Exception e) {
             log.warn("获取K线数据时出错: {}", e.getMessage());
             return "{}";
@@ -107,25 +106,24 @@ public class TigerStockServiceImpl {
             QuoteKlineResponse response = client.execute(request);
             
             // 检查响应
-            if (response != null && response.isSuccess()) {
-                // 创建KLineData对象
-                KLineData kLineData = new KLineData();
-                kLineData.setSymbol(symbol);
-                
-                // 解析K线数据
-                List<KLineIterator> items = new ArrayList<>();
-                for (KlineItem item : response.getKlineItems()) {
-                    parseAndAddKLineIterator(items, item);
-                }
-                
-                // 设置K线数据
-                kLineData.setItems(items);
-                    
-                return kLineData;
-            } else {
-                log.error("获取K线数据失败: {}", response != null ? response.getMessage() : "响应为空");
+            if (response == null || !response.isSuccess()) {
+                log.error("获取K线数据失败: {}", response == null ? "响应为空" : response.getMessage());
                 return new KLineData();
             }
+            // 创建KLineData对象
+            KLineData kLineData = new KLineData();
+            kLineData.setSymbol(symbol);
+            
+            // 解析K线数据
+            List<KLineIterator> items = new ArrayList<>();
+            for (KlineItem item : response.getKlineItems()) {
+                parseAndAddKLineIterator(items, item);
+            }
+            
+            // 设置K线数据
+            kLineData.setItems(items);
+                
+            return kLineData;
         } catch (Exception e) {
             log.warn("获取K线数据时出错: {}", e.getMessage());
             return new KLineData();
@@ -135,29 +133,12 @@ public class TigerStockServiceImpl {
     /**
      * 解析并添加K线迭代器
      * @param items K线迭代器列表
-     * @param rawItem 原始K线数据
+     * @param item K线数据项
      */
-    private void parseAndAddKLineIterator(List<KLineIterator> items, Object rawItem) {
+    private void parseAndAddKLineIterator(List<KLineIterator> items, KlineItem item) {
         try {
-            if (rawItem instanceof KlineItem) {
-                KlineItem item = (KlineItem) rawItem;
-                for (KlinePoint point : item.getItems()) {
-                    KLineIterator iterator = convertTigerKlinePointToKLineIterator(item.getSymbol(), point);
-                    items.add(iterator);
-                }
-            } else if (rawItem instanceof Map) {
-        @SuppressWarnings("unchecked")
-                Map<String, Object> item = (Map<String, Object>) rawItem;
-                KLineIterator iterator = new KLineIterator(
-                    (String) item.get("symbol"),
-                    Long.parseLong(item.get("time").toString()),
-                    Double.parseDouble(item.get("open").toString()),
-                    Double.parseDouble(item.get("high").toString()),
-                    Double.parseDouble(item.get("low").toString()),
-                    Double.parseDouble(item.get("close").toString()),
-                    Long.parseLong(item.get("volume").toString()),
-                    Double.parseDouble(item.get("amount").toString())
-                );
+            for (KlinePoint point : item.getItems()) {
+                KLineIterator iterator = convertTigerKlinePointToKLineIterator(item.getSymbol(), point);
                 items.add(iterator);
             }
         } catch (Exception e) {
@@ -202,13 +183,13 @@ public class TigerStockServiceImpl {
         return scanLowPriceStocksWithVolumePattern(20);
     }
 
-    public com.stock.invest.model.StockInfo getStockInfo(String symbol) {
+    public StockInfo getStockInfo(String symbol) {
         try {
             
             // 获取K线数据
             KLineData kLineData = getDailyKLineDataAsObject(symbol);
             if (kLineData == null || kLineData.getItems().isEmpty()) {
-                com.stock.invest.model.StockInfo emptyInfo = new com.stock.invest.model.StockInfo();
+                StockInfo emptyInfo = new StockInfo();
                 emptyInfo.setSymbol(symbol);
                 return emptyInfo;
             }
@@ -217,7 +198,7 @@ public class TigerStockServiceImpl {
             KLineIterator latest = kLineData.getItems().get(0);
             
             // 创建股票信息对象
-            com.stock.invest.model.StockInfo stockInfo = new com.stock.invest.model.StockInfo();
+            StockInfo stockInfo = new StockInfo();
             stockInfo.setSymbol(symbol);
             stockInfo.setCurrentPrice(latest.getClose());
             stockInfo.setVolume((int)latest.getVolume());
@@ -227,7 +208,7 @@ public class TigerStockServiceImpl {
             return stockInfo;
         } catch (Exception e) {
             log.warn("获取股票信息时出错: {}", e.getMessage());
-            com.stock.invest.model.StockInfo emptyInfo = new com.stock.invest.model.StockInfo();
+            StockInfo emptyInfo = new StockInfo();
             emptyInfo.setSymbol(symbol);
             return emptyInfo;
         }
@@ -301,24 +282,20 @@ public class TigerStockServiceImpl {
             MarketScannerResponse response = client.execute(request);
             
             // 检查响应
-            if (response != null && response.isSuccess()) {
-                List<String> stocks = new ArrayList<>();
-                // 使用Jackson ObjectMapper处理响应数据
-                JsonNode responseJson = objectMapper.readTree(objectMapper.writeValueAsString(response));
-                JsonNode dataArray = responseJson.get("data");
-                if (dataArray != null && dataArray.isArray()) {
-                    for (JsonNode item : dataArray) {
-                        JsonNode symbolNode = item.get("symbol");
-                        if (symbolNode != null && !symbolNode.asText().isEmpty()) {
-                            stocks.add(symbolNode.asText());
-                        }
-                    }
-                }
-                return stocks;
-            } else {
-                log.error("获取股票列表失败: {}", response != null ? response.getMessage() : "响应为空");
+            if (response == null || !response.isSuccess()) {
+                log.error("获取股票列表失败: {}", response == null ? "响应为空" : response.getMessage());
                 return getFallbackStockList(market, limit);
             }
+            
+            // 直接从响应中提取股票代码
+            if (response.getMarketScannerBatchItem() == null
+                || response.getMarketScannerBatchItem().getItems() == null) {
+                return Collections.emptyList();
+            }
+            return response.getMarketScannerBatchItem().getItems().stream()
+                .map(item -> item.getSymbol())
+                .filter(symbol -> symbol != null && !symbol.isEmpty())
+                .collect(Collectors.toList());
         } catch (Exception e) {
             log.warn("获取股票列表时出错: {}", e.getMessage());
             return getFallbackStockList(market, limit);
@@ -350,10 +327,19 @@ public class TigerStockServiceImpl {
             
             // 获取每只股票的K线数据
             for (String symbol : symbols) {
+                // 解析K线周期
+                KType kType;
+                try {
+                    kType = KType.valueOf(period.toLowerCase());
+                } catch (IllegalArgumentException e) {
+                    log.error("Invalid KType period value: {}", period, e);
+                    throw e;
+                }
+
                 // 创建K线请求
                 QuoteKlineRequest request = QuoteKlineRequest.newRequest(
                     Collections.singletonList(symbol),
-                    KType.valueOf(period.toLowerCase()),
+                    kType,
                     LocalDate.now().minusDays(count).format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
                     LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))
                     .withLimit(count);
@@ -362,16 +348,16 @@ public class TigerStockServiceImpl {
                 QuoteKlineResponse response = client.execute(request);
                 
                 // 检查响应
-                if (response != null && response.isSuccess()) {
-                    if (response.getKlineItems() == null || response.getKlineItems().isEmpty()) {
-                        continue;
-                    }
-                    // 转换K线数据
-                    KLineData kLineData = convertTigerKlineItemToKLineData(response.getKlineItems().get(0));
-                    result.add(kLineData);
-                } else {
-                    log.error("获取K线数据失败: {}", response != null ? response.getMessage() : "响应为空");
+                if (response == null || !response.isSuccess()) {
+                    log.error("获取K线数据失败: {}", response == null ? "响应为空" : response.getMessage());
+                    continue;
                 }
+                if (response.getKlineItems() == null || response.getKlineItems().isEmpty()) {
+                    continue;
+                }
+                // 转换K线数据
+                KLineData kLineData = convertTigerKlineItemToKLineData(response.getKlineItems().get(0));
+                result.add(kLineData);
             }
             
             return result;
@@ -421,4 +407,4 @@ public class TigerStockServiceImpl {
     public KLineData getDailyKLine(String symbol) {
         return getDailyKLineDataAsObject(symbol);
     }
-} 
+}

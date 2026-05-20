@@ -44,7 +44,7 @@ public class PatternEvaluateServiceImpl implements PatternEvaluateService {
         long[] vol = new long[windowDays];
         for (int i = 0; i < windowDays; i++) {
             StockDailyBar bar = barsOldestFirst.get(start + i);
-            if (bar == null || bar.getVolume() == null) {
+            if (bar == null || bar.getVolume() == null || bar.getVolume() == 0L) {
                 log.debug("[PatternEval] matchesIncreasingVolumePattern: null bar at index={}", i);
                 return false;
             }
@@ -77,7 +77,7 @@ public class PatternEvaluateServiceImpl implements PatternEvaluateService {
         long[] vol = new long[windowDays];
         for (int i = 0; i < windowDays; i++) {
             KLineIterator bar = barsOldestFirst.get(start + i);
-            if (bar == null) {
+            if (bar == null || bar.getVolume() == 0L) {
                 log.debug("[PatternEval] matchesIncreasingVolumePatternFromKLine: null bar at index={}", i);
                 return false;
             }
@@ -95,9 +95,15 @@ public class PatternEvaluateServiceImpl implements PatternEvaluateService {
     private static boolean checkIncreasingPattern(long[] vols, int windowDays) {
         log.debug("[PatternEval] checkIncreasingPattern: begin — windowDays={}", windowDays);
 
+        // Build prefix sum for O(1) tail average calculation
+        long[] prefixSum = new long[vols.length + 1];
+        for (int i = 0; i < vols.length; i++) {
+            prefixSum[i + 1] = prefixSum[i] + vols[i];
+        }
+
         for (int len = windowDays; len > 1; len--) {
-            double longerAvg = averageTail(vols, len);
-            double shorterAvg = averageTail(vols, len - 1);
+            double longerAvg = (prefixSum[vols.length] - prefixSum[vols.length - len]) / (double) len;
+            double shorterAvg = (prefixSum[vols.length] - prefixSum[vols.length - len + 1]) / (double) (len - 1);
             log.debug("[PatternEval] checkIncreasingPattern: comparing — len={}, longerAvg={}, shorterAvg={}",
                     len, String.format("%.2f", longerAvg), String.format("%.2f", shorterAvg));
             if (!(longerAvg < shorterAvg)) {
@@ -106,7 +112,7 @@ public class PatternEvaluateServiceImpl implements PatternEvaluateService {
             }
         }
 
-        double avg2 = averageTail(vols, 2);
+        double avg2 = (prefixSum[vols.length] - prefixSum[vols.length - 2]) / 2.0;
         double lastVol = vols[windowDays - 1];
         log.debug("[PatternEval] checkIncreasingPattern: final check — avg2={}, lastVol={}", String.format("%.2f", avg2), lastVol);
         boolean result = avg2 < lastVol;
@@ -114,12 +120,5 @@ public class PatternEvaluateServiceImpl implements PatternEvaluateService {
         return result;
     }
 
-    private static double averageTail(long[] vols, int tailLength) {
-        long sum = 0L;
-        int start = vols.length - tailLength;
-        for (int i = start; i < vols.length; i++) {
-            sum += vols[i];
-        }
-        return sum * 1.0D / tailLength;
-    }
+
 }

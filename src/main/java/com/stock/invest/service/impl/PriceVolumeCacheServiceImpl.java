@@ -4,13 +4,12 @@ import com.stock.invest.entity.StockDailyBar;
 import com.stock.invest.model.KLineData;
 import com.stock.invest.model.KLineIterator;
 import com.stock.invest.repository.StockDailyBarRepository;
+import com.stock.invest.service.LatestBarsCacheService;
 import com.stock.invest.service.MarketDataSourceRouter;
 import com.stock.invest.service.PriceVolumeCacheService;
 import com.stock.invest.util.KLineDataUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,7 +17,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,12 +30,15 @@ public class PriceVolumeCacheServiceImpl implements PriceVolumeCacheService {
 
     private final StockDailyBarRepository stockDailyBarRepository;
     private final MarketDataSourceRouter marketDataSourceRouter;
+    private final LatestBarsCacheService latestBarsCacheService;
 
     public PriceVolumeCacheServiceImpl(
             StockDailyBarRepository stockDailyBarRepository,
-            MarketDataSourceRouter marketDataSourceRouter) {
+            MarketDataSourceRouter marketDataSourceRouter,
+            LatestBarsCacheService latestBarsCacheService) {
         this.stockDailyBarRepository = stockDailyBarRepository;
         this.marketDataSourceRouter = marketDataSourceRouter;
+        this.latestBarsCacheService = latestBarsCacheService;
     }
 
     @Override
@@ -46,12 +47,8 @@ public class PriceVolumeCacheServiceImpl implements PriceVolumeCacheService {
     }
 
     @Override
-    @Cacheable(value = "dailyBars", key = "#symbol + '-' + #windowDays")
     public List<StockDailyBar> getLatestBars(String symbol, int windowDays) {
-        int days = sanitizeWindowDays(windowDays);
-        List<StockDailyBar> latest = stockDailyBarRepository.findBySymbolOrderByTradeDateDesc(symbol, PageRequest.of(0, days));
-        latest.sort(Comparator.comparing(StockDailyBar::getTradeDate));
-        return latest;
+        return latestBarsCacheService.getLatestBars(symbol, windowDays);
     }
 
     @Override

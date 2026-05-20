@@ -13,12 +13,18 @@ import java.util.concurrent.TimeUnit;
 @EnableCaching
 public class CacheConfig {
 
+    private final CacheProperties cacheProperties;
+
+    public CacheConfig(CacheProperties cacheProperties) {
+        this.cacheProperties = cacheProperties;
+    }
+
     @Bean
     public CacheManager cacheManager() {
         CaffeineCacheManager cacheManager = new CaffeineCacheManager("dailyBars", "stockInfo");
         cacheManager.setCaffeine(Caffeine.newBuilder()
-                .maximumSize(500)
-                .expireAfterWrite(30, TimeUnit.MINUTES));
+                .maximumSize(cacheProperties.getMaximumSize())
+                .expireAfterWrite(cacheProperties.getExpireAfterWriteMinutes(), TimeUnit.MINUTES));
         return cacheManager;
     }
 }

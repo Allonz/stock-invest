@@ -27,7 +27,7 @@ import java.time.LocalDate;
 )
 public class DataFillTask {
 
-    public static final int MAX_RETRIES = 10;
+    public static final int MAX_RETRIES = 35;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -22,7 +22,7 @@ import java.util.Optional;
  * 通知相关接口。
  */
 @RestController
-@RequestMapping("/api/notification")
+@RequestMapping("/api/v1/notification")
 public class NotificationController {
 
     private static final Logger log = LoggerFactory.getLogger(NotificationController.class);

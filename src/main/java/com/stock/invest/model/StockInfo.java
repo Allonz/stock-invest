@@ -14,7 +14,7 @@ public class StockInfo {
     private String name;
     private double currentPrice;
     private double openPrice;
-    private int volume;
+    private long volume;
     private double change;
     private double changePercent;
 }

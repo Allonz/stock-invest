@@ -112,7 +112,9 @@ public class TestDataFactory {
         KLineData kd = new KLineData();
         kd.setSymbol(symbol);
         KLineIterator item = new KLineIterator(symbol, epochMillis, open, close + 1, close - 1, close, volume, 0);
-        kd.addItem(item);
+        List<KLineIterator> itemsList = new ArrayList<>();
+        itemsList.add(item);
+        kd.setItems(itemsList);
         return kd;
     }
 
@@ -123,6 +125,7 @@ public class TestDataFactory {
                                                       double basePrice, long baseVolume) {
         KLineData kd = new KLineData();
         kd.setSymbol(symbol);
+        List<KLineIterator> itemsList = new ArrayList<>();
         for (int i = 0; i < dates.size(); i++) {
             LocalDate d = dates.get(i);
             long epochMillis = d.atStartOfDay(java.time.ZoneId.systemDefault())
@@ -130,8 +133,9 @@ public class TestDataFactory {
             KLineIterator item = new KLineIterator(symbol, epochMillis,
                     basePrice + i, basePrice + i + 1, basePrice + i - 1,
                     basePrice + i, baseVolume + i * 1000L, 0);
-            kd.addItem(item);
+            itemsList.add(item);
         }
+        kd.setItems(itemsList);
         return kd;
     }
 }

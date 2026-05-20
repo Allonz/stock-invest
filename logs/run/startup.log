@@ -1,8 +1,0 @@
-2026-05-20 00:09:16 [main] INFO  c.s.invest.StockInvestApplication:50 - Starting StockInvestApplication using Java 21.0.10 with PID 2361285 (/home/allon/application/stock-invest/target/stock-invest-1.0-SNAPSHOT.jar started by allon in /home/allon/application/stock-invest)
-2026-05-20 00:09:16 [main] INFO  c.s.invest.StockInvestApplication:660 - The following 1 profile is active: "twelvedata"
-2026-05-20 00:09:17 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:111 - Tomcat initialized with port 8091 (http)
-2026-05-20 00:09:17 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext:301 - Root WebApplicationContext: initialization completed in 1134 ms
-2026-05-20 00:09:19 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration:236 - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
-2026-05-20 00:09:20 [main] INFO  o.s.b.a.e.web.EndpointLinksResolver:60 - Exposing 1 endpoint beneath base path '/actuator'
-2026-05-20 00:09:20 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer:243 - Tomcat started on port 8091 (http) with context path '/'
-2026-05-20 00:09:20 [main] INFO  c.s.invest.StockInvestApplication:56 - Started StockInvestApplication in 3.886 seconds (process running for 4.184)

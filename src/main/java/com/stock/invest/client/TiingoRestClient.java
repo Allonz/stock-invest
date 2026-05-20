@@ -215,6 +215,10 @@ public class TiingoRestClient {
             if (!message.trim().isEmpty() && root.has("code")) {
                 throw new IllegalStateException("tiingo api error: " + message);
             }
+            String error = root.path("error").asText("");
+            if (!error.trim().isEmpty()) {
+                throw new IllegalStateException("tiingo api error: " + error);
+            }
         }
     }
 }

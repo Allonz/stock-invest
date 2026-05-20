@@ -61,7 +61,7 @@ class NotificationControllerTest {
         when(screeningMatchRepository.findByBatchIdAndWindowDaysOrderByIdAsc(batchId, 7))
                 .thenReturn(List.of(latest, match2));
 
-        mockMvc.perform(get("/api/notification/latest")
+        mockMvc.perform(get("/api/v1/notification/latest")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
@@ -77,7 +77,7 @@ class NotificationControllerTest {
         when(screeningMatchRepository.findTopByOrderByTradeDateDescIdDesc())
                 .thenReturn(Optional.empty());
 
-        mockMvc.perform(get("/api/notification/latest")
+        mockMvc.perform(get("/api/v1/notification/latest")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))

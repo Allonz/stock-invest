@@ -9,6 +9,7 @@ import com.stock.invest.repository.StockDailyBarRepository;
 import com.stock.invest.service.DataGapFillerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.stock.invest.config.GapFillProperties;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -43,7 +44,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
 
     private static final Logger log = LoggerFactory.getLogger(DataGapFillerServiceImpl.class);
 
-    private static final double MIN_PRICE_THRESHOLD = 1.00;
+
     private static final int MAX_SYMBOLS_PER_RUN = 200;
     private static final int MAX_LOOKBACK_DAYS = 30;
     private static final int MAX_MISSING_DATES_PER_SYMBOL = 5;
@@ -54,6 +55,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
     private final YFinanceStockServiceImpl yFinanceStockService;
     private final TwelveDataStockServiceImpl twelveDataStockService;
     private final TiingoDataSourceStrategy tiingoDataSourceStrategy;
+    private final GapFillProperties gapFillProperties;
 
     public DataGapFillerServiceImpl(
             StockDailyBarRepository stockDailyBarRepository,
@@ -61,13 +63,15 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
             @Qualifier("tigerStockService") TigerStockServiceImpl tigerStockService,
             @Qualifier("yFinanceStockService") YFinanceStockServiceImpl yFinanceStockService,
             TwelveDataStockServiceImpl twelveDataStockService,
-            TiingoDataSourceStrategy tiingoDataSourceStrategy) {
+            TiingoDataSourceStrategy tiingoDataSourceStrategy,
+            GapFillProperties gapFillProperties) {
         this.stockDailyBarRepository = stockDailyBarRepository;
         this.dataFillTaskRepository = dataFillTaskRepository;
         this.tigerStockService = tigerStockService;
         this.yFinanceStockService = yFinanceStockService;
         this.twelveDataStockService = twelveDataStockService;
         this.tiingoDataSourceStrategy = tiingoDataSourceStrategy;
+        this.gapFillProperties = gapFillProperties;
     }
 
     @Override
@@ -116,7 +120,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         Collections.reverse(bars);
 
         StockDailyBar latest = bars.get(bars.size() - 1);
-        if (latest.getClosePrice() != null && latest.getClosePrice() > MIN_PRICE_THRESHOLD) {
+        if (latest.getClosePrice() != null && latest.getClosePrice() > gapFillProperties.getMinPriceThreshold()) {
             return FillResult.empty();
         }
 
@@ -221,20 +225,24 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
     }
 
     private void createRetryTask(String symbol, LocalDate tradeDate, String error) {
+        LocalDate today = LocalDate.now();
         Optional<DataFillTask> existing = dataFillTaskRepository.findBySymbolAndTradeDate(symbol, tradeDate);
         if (existing.isPresent()) {
             DataFillTask task = existing.get();
             task.setRetryCount(task.getRetryCount() + 1);
-            task.setStatus("stopped");
+            task.setStatus("retrying");
             task.setLastError(error);
+            // dayCount 和 retryDate 保持不变，由 processRetryingTasks 在遍历时根据日期重置
             dataFillTaskRepository.save(task);
             return;
         }
         DataFillTask task = new DataFillTask();
         task.setSymbol(symbol);
         task.setTradeDate(tradeDate);
-        task.setStatus("pending");
+        task.setStatus("retrying");
         task.setRetryCount(1);
+        task.setRetryDate(today);
+        task.setDayCount(1);
         task.setLastError(error);
         dataFillTaskRepository.save(task);
     }
@@ -244,14 +252,47 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
     public void processRetryingTasks() {
         log.info("[DataGapFiller] processRetryingTasks: === BEGIN ===");
 
-        Instant cutoff = Instant.now().minus(7, ChronoUnit.DAYS);
-        List<DataFillTask> retryable = dataFillTaskRepository.findRetryableTasks(cutoff);
+        List<DataFillTask> retryable = dataFillTaskRepository.findRetryableTasks();
         log.info("[DataGapFiller] processRetryingTasks: found retryingTasks={}", retryable.size());
 
+        LocalDate today = LocalDate.now();
         int retried = 0;
         for (DataFillTask task : retryable) {
             String symbol = task.getSymbol();
             LocalDate tradeDate = task.getTradeDate();
+
+            // createdAt + 7天 <= now? → status = "stopped"，跳过
+            Instant weekAgo = Instant.now().minus(7, ChronoUnit.DAYS);
+            if (!task.getCreatedAt().isAfter(weekAgo)) {
+                task.setStatus("stopped");
+                dataFillTaskRepository.save(task);
+                log.info("[DataGapFiller] processRetryingTasks: task expired — taskId={}, symbol={}, date={}",
+                        task.getId(), symbol, tradeDate);
+                continue;
+            }
+
+            // retryDate = today 且 dayCount >= 5？ → 跳过（今天满了）
+            if (today.equals(task.getRetryDate()) && task.getDayCount() != null && task.getDayCount() >= 5) {
+                log.info("[DataGapFiller] processRetryingTasks: daily limit reached — taskId={}, symbol={}, date={}, dayCount={}",
+                        task.getId(), symbol, tradeDate, task.getDayCount());
+                continue;
+            }
+
+            // retryDate ≠ today → dayCount 重置为 0，retryDate = today
+            if (!today.equals(task.getRetryDate())) {
+                task.setDayCount(0);
+                task.setRetryDate(today);
+            }
+
+            // sameDay 且 updatedAt + 30分钟 > now？ → 跳过
+            if (task.getUpdatedAt() != null) {
+                Instant cooldownEnd = task.getUpdatedAt().plus(30, ChronoUnit.MINUTES);
+                if (cooldownEnd.isAfter(Instant.now())) {
+                    log.info("[DataGapFiller] processRetryingTasks: cooldown — taskId={}, symbol={}, date={}, updatedAt={}",
+                            task.getId(), symbol, tradeDate, task.getUpdatedAt());
+                    continue;
+                }
+            }
 
             log.info("[DataGapFiller] processRetryingTasks: retrying — taskId={}, symbol={}, date={}, attempt={}/{}",
                     task.getId(), symbol, tradeDate, task.getRetryCount() + 1, task.getMaxRetries());
@@ -264,21 +305,13 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
                         task.getId(), symbol, tradeDate);
                 retried++;
             } else {
-                int newCount = task.getRetryCount() + 1;
-                task.setRetryCount(newCount);
+                task.setRetryCount(task.getRetryCount() + 1);
+                task.setDayCount(task.getDayCount() + 1);
+                task.setStatus("retrying");
                 task.setLastError("retry attempt failed again");
-
-                if (newCount >= task.getMaxRetries() ||
-                        task.getCreatedAt().isBefore(Instant.now().minus(7, ChronoUnit.DAYS))) {
-                    task.setStatus("stopped");
-                    log.error("[DataGapFiller] processRetryingTasks: retry stopped — taskId={}, symbol={}, date={}, retryCount={}",
-                            task.getId(), symbol, tradeDate, newCount);
-                } else {
-                    task.setStatus("pending");
-                    log.warn("[DataGapFiller] processRetryingTasks: retry failed — taskId={}, symbol={}, date={}, retryCount={}",
-                            task.getId(), symbol, tradeDate, newCount);
-                }
                 dataFillTaskRepository.save(task);
+                log.warn("[DataGapFiller] processRetryingTasks: retry failed — taskId={}, symbol={}, date={}, retryCount={}, dayCount={}",
+                        task.getId(), symbol, tradeDate, task.getRetryCount(), task.getDayCount());
             }
         }
 

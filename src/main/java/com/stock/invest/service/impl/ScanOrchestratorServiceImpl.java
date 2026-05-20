@@ -92,7 +92,7 @@ public class ScanOrchestratorServiceImpl implements ScanOrchestratorService {
         AtomicInteger processed = new AtomicInteger(0);
         List<ScreeningMatch> matches = Collections.synchronizedList(new ArrayList<ScreeningMatch>());
         List<CompletableFuture<Void>> futures = candidates.stream()
-                .limit(Math.max(matchLimit, candidates.size()))
+                .limit(candidates.size())
                 .map(sym -> CompletableFuture.supplyAsync(() -> {
                     List<StockDailyBar> bars = priceVolumeCacheService.refreshBarsForSymbol(sym, "tigeropen", targetDate, days);
                     return new CandidateResult(sym, bars);
@@ -117,7 +117,6 @@ public class ScanOrchestratorServiceImpl implements ScanOrchestratorService {
                         if (matches.size() >= matchLimit) {
                             return;
                         }
-                        processed.incrementAndGet();
                         ScreeningMatch row = new ScreeningMatch();
                         row.setBatchId(batchId);
                         row.setDataSource(latest.getSource());
@@ -126,8 +125,10 @@ public class ScanOrchestratorServiceImpl implements ScanOrchestratorService {
                         row.setTradeDate(targetDate);
                         row.setPrice(latest.getClosePrice());
                         row.setRise(latest.getClosePrice() > latest.getOpenPrice());
+                        row.setWindowDays(days);
                         matches.add(row);
                     }
+                    processed.incrementAndGet();
                 }).exceptionally(ex -> {
                     log.warn("scan candidate failed symbol={}, error={}", sym, ex.getMessage());
                     return null;
