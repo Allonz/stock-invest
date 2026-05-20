@@ -1,5 +1,6 @@
 package com.stock.invest.service.impl;
 
+import com.stock.invest.constant.WindowConstants;
 import com.stock.invest.entity.StockDailyBar;
 import com.stock.invest.model.KLineData;
 import com.stock.invest.model.KLineIterator;
@@ -26,7 +27,6 @@ public class PriceVolumeCacheServiceImpl implements PriceVolumeCacheService {
     private static final Logger log = LoggerFactory.getLogger(PriceVolumeCacheServiceImpl.class);
     private static final ZoneId MARKET_ZONE = ZoneId.of("America/New_York");
     private static final int MIN_WINDOW_DAYS = 3;
-    private static final int MAX_WINDOW_DAYS = 7;
 
     private final StockDailyBarRepository stockDailyBarRepository;
     private final MarketDataSourceRouter marketDataSourceRouter;
@@ -43,7 +43,7 @@ public class PriceVolumeCacheServiceImpl implements PriceVolumeCacheService {
 
     @Override
     public List<StockDailyBar> getLatestSevenBars(String symbol) {
-        return getLatestBars(symbol, MAX_WINDOW_DAYS);
+        return getLatestBars(symbol, WindowConstants.MAX_WINDOW_DAYS);
     }
 
     @Override
@@ -54,7 +54,7 @@ public class PriceVolumeCacheServiceImpl implements PriceVolumeCacheService {
     @Override
     @Transactional
     public List<StockDailyBar> refreshBarsForSymbol(String symbol, String preferredSource, LocalDate tradeDate) {
-        return refreshBarsForSymbol(symbol, preferredSource, tradeDate, MAX_WINDOW_DAYS);
+        return refreshBarsForSymbol(symbol, preferredSource, tradeDate, WindowConstants.MAX_WINDOW_DAYS);
     }
 
     @Override
@@ -124,8 +124,8 @@ public class PriceVolumeCacheServiceImpl implements PriceVolumeCacheService {
         if (windowDays < MIN_WINDOW_DAYS) {
             return MIN_WINDOW_DAYS;
         }
-        if (windowDays > MAX_WINDOW_DAYS) {
-            return MAX_WINDOW_DAYS;
+        if (windowDays > WindowConstants.MAX_WINDOW_DAYS) {
+            return WindowConstants.MAX_WINDOW_DAYS;
         }
         return windowDays;
     }

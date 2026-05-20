@@ -1,6 +1,7 @@
 package com.stock.invest.service.impl;
 
 import com.stock.invest.config.ScannerProperties;
+import com.stock.invest.constant.WindowConstants;
 import com.stock.invest.entity.ScreeningMatch;
 import com.stock.invest.entity.StockDailyBar;
 import com.stock.invest.enums.dto.ScreenerRunResponseDto;
@@ -38,7 +39,6 @@ public class ScanOrchestratorServiceImpl implements ScanOrchestratorService {
 
     private static final Logger log = LoggerFactory.getLogger(ScanOrchestratorServiceImpl.class);
     private static final int MIN_WINDOW_DAYS = 3;
-    private static final int MAX_WINDOW_DAYS = 7;
 
     private final ScannerProperties scannerProperties;
     private final MarketDataSourceRouter marketDataSourceRouter;
@@ -69,13 +69,13 @@ public class ScanOrchestratorServiceImpl implements ScanOrchestratorService {
     }
 
     @Override
-    @Transactional
+    // 异步线程池操作 DB，不使用声明式事务
     public ScreenerRunResponseDto runDailyScan(LocalDate tradeDate, int limit) {
-        return runDailyScan(tradeDate, limit, MAX_WINDOW_DAYS);
+        return runDailyScan(tradeDate, limit, WindowConstants.MAX_WINDOW_DAYS);
     }
 
     @Override
-    @Transactional
+    // 异步线程池操作 DB，不使用声明式事务
     public ScreenerRunResponseDto runDailyScan(LocalDate tradeDate, int limit, int windowDays) {
         LocalDate targetDate = tradeDate == null ? LocalDate.now() : tradeDate;
         int target = Math.max(1, limit);
@@ -161,13 +161,13 @@ public class ScanOrchestratorServiceImpl implements ScanOrchestratorService {
     }
 
     @Override
-    @Transactional
+    // 异步线程池操作 DB，不使用声明式事务
     public ScreenerRunResponseDto runDailyScanFromSnapshotImport(LocalDate tradeDate, int limit) {
-        return runDailyScanFromSnapshotImport(tradeDate, limit, MAX_WINDOW_DAYS);
+        return runDailyScanFromSnapshotImport(tradeDate, limit, WindowConstants.MAX_WINDOW_DAYS);
     }
 
     @Override
-    @Transactional
+    // 异步线程池操作 DB，不使用声明式事务
     public ScreenerRunResponseDto runDailyScanFromSnapshotImport(LocalDate tradeDate, int limit, int windowDays) {
         LocalDate targetDate = tradeDate == null ? LocalDate.now() : tradeDate;
         int target = Math.max(1, limit);
@@ -278,8 +278,8 @@ public class ScanOrchestratorServiceImpl implements ScanOrchestratorService {
         if (windowDays < MIN_WINDOW_DAYS) {
             return MIN_WINDOW_DAYS;
         }
-        if (windowDays > MAX_WINDOW_DAYS) {
-            return MAX_WINDOW_DAYS;
+        if (windowDays > WindowConstants.MAX_WINDOW_DAYS) {
+            return WindowConstants.MAX_WINDOW_DAYS;
         }
         return windowDays;
     }

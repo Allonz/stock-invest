@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stock.invest.model.KLineData;
 import com.stock.invest.util.PythonScriptExecutor;
 import com.stock.invest.util.KLineDataUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -24,11 +23,8 @@ public class TigerOpenPythonBridge {
 
     private static final String SCRIPT_REL = "src/main/resources/python/tigeropen_channel.py";
 
-    @Autowired
-    private PythonScriptExecutor pythonScriptExecutor;
-
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final PythonScriptExecutor pythonScriptExecutor;
+    private final ObjectMapper objectMapper;
 
     @Value("${tiger.api.tiger_id:}")
     private String tigerId;
@@ -41,6 +37,11 @@ public class TigerOpenPythonBridge {
 
     @Value("${tiger.api.license:}")
     private String license;
+
+    public TigerOpenPythonBridge(PythonScriptExecutor pythonScriptExecutor, ObjectMapper objectMapper) {
+        this.pythonScriptExecutor = pythonScriptExecutor;
+        this.objectMapper = objectMapper;
+    }
 
     public boolean hasCredentials() {
         return tigerId != null && !tigerId.trim().isEmpty()

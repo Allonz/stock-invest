@@ -1,6 +1,7 @@
 package com.stock.invest.service.impl;
 
 import com.stock.invest.config.ScannerProperties;
+import com.stock.invest.constant.WindowConstants;
 import com.stock.invest.entity.ScreeningMatch;
 import com.stock.invest.entity.StockDailyBar;
 import com.stock.invest.repository.ScreeningMatchRepository;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -34,8 +36,6 @@ import java.util.UUID;
 public class ScreeningServiceImpl implements ScreeningService {
 
     private static final Logger log = LoggerFactory.getLogger(ScreeningServiceImpl.class);
-    private static final List<Integer> WINDOW_DAYS = List.of(2, 3, 4, 5, 6, 7);
-    private static final int MAX_SEARCH_DAYS = 9;
 
     private final StockDailyBarRepository stockDailyBarRepository;
     private final ScreeningMatchRepository screeningMatchRepository;
@@ -62,7 +62,7 @@ public class ScreeningServiceImpl implements ScreeningService {
         log.info("ScreeningServiceImpl: start batchId={}, date={}", batchId, targetDate);
 
         // 获取最近 MAX_SEARCH_DAYS 天的数据
-        LocalDate startDate = targetDate.minusDays(MAX_SEARCH_DAYS);
+        LocalDate startDate = targetDate.minusDays(WindowConstants.MAX_WINDOW_DAYS + 2);
         List<StockDailyBar> allBars = stockDailyBarRepository
                 .findByTradeDateBetweenOrderByTradeDateDesc(startDate, targetDate);
 
@@ -89,8 +89,8 @@ public class ScreeningServiceImpl implements ScreeningService {
             // 升序排列（PatternEvaluateService 要求 oldest-first）
             bars.sort(Comparator.comparing(StockDailyBar::getTradeDate));
 
-            // 至少需要 7 天数据才能评估所有窗口
-            if (bars.size() < 7) {
+            // 至少需要最小窗口天数数据才能评估
+            if (bars.size() < Collections.min(WindowConstants.ALL_WINDOW_DAYS)) {
                 continue;
             }
 
@@ -114,7 +114,7 @@ public class ScreeningServiceImpl implements ScreeningService {
             processed++;
 
             // 多窗口并行评估
-            for (int windowDays : WINDOW_DAYS) {
+            for (int windowDays : WindowConstants.ALL_WINDOW_DAYS) {
                 // 取对应窗口长度的数据
                 List<StockDailyBar> windowSlice = bars.subList(bars.size() - windowDays, bars.size());
 

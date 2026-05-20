@@ -10,7 +10,6 @@ import com.stock.invest.service.MarketDataSourceRouter;
 import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -26,27 +25,31 @@ public class MarketDataSourceRouterImpl implements MarketDataSourceRouter {
 
     private static final Logger log = LoggerFactory.getLogger(MarketDataSourceRouterImpl.class);
 
-    @Autowired
-    private TwelveDataRestClient twelveDataRestClient;
-
-    @Autowired
-    private YahooFinanceRestClient yahooFinanceRestClient;
-
-    @Autowired
-    private TiingoRestClient tiingoRestClient;
-
-    @Autowired
-    private TigerOpenPythonBridge tigerOpenPythonBridge;
-
-    @Autowired(required = false)
-    private TigerStockServiceImpl tigerStockService;
-
-    @Autowired
-    private DataSourceAvailabilityChecker availabilityChecker;
+    private final TwelveDataRestClient twelveDataRestClient;
+    private final YahooFinanceRestClient yahooFinanceRestClient;
+    private final TiingoRestClient tiingoRestClient;
+    private final TigerOpenPythonBridge tigerOpenPythonBridge;
+    private final Optional<TigerStockServiceImpl> tigerStockService;
+    private final DataSourceAvailabilityChecker availabilityChecker;
 
     private static final long DEFAULT_COOLDOWN_MS = 5 * 60 * 1000L;
     private final Map<String, Long> sourceBackoffUntil = new ConcurrentHashMap<>();
     private static final List<String> PRIORITY_ORDER = Arrays.asList("tiger", "tigeropen", "yfinance", "twelvedata", "tiingo");
+
+    public MarketDataSourceRouterImpl(
+            TwelveDataRestClient twelveDataRestClient,
+            YahooFinanceRestClient yahooFinanceRestClient,
+            TiingoRestClient tiingoRestClient,
+            TigerOpenPythonBridge tigerOpenPythonBridge,
+            Optional<TigerStockServiceImpl> tigerStockService,
+            DataSourceAvailabilityChecker availabilityChecker) {
+        this.twelveDataRestClient = twelveDataRestClient;
+        this.yahooFinanceRestClient = yahooFinanceRestClient;
+        this.tiingoRestClient = tiingoRestClient;
+        this.tigerOpenPythonBridge = tigerOpenPythonBridge;
+        this.tigerStockService = tigerStockService;
+        this.availabilityChecker = availabilityChecker;
+    }
 
     @Override
     public List<String> loadCandidates(int limit, double minPrice, double maxPrice) {
@@ -115,10 +118,10 @@ public class MarketDataSourceRouterImpl implements MarketDataSourceRouter {
                 return tigerOpenPythonBridge.listCandidates(Math.max(limit, 50), minPrice, maxPrice);
             }
             if ("tiger".equals(source)) {
-                if (tigerStockService == null) {
+                if (tigerStockService.isEmpty()) {
                     return Collections.emptyList();
                 }
-                return tigerStockService.scanStocks(Market.US, Math.max(limit, 50), minPrice, maxPrice);
+                return tigerStockService.get().scanStocks(Market.US, Math.max(limit, 50), minPrice, maxPrice);
             }
             if ("twelvedata".equals(source)) {
                 List<String> symbols = twelveDataRestClient.listUsStockSymbols(Math.max(limit * 5, 100));
@@ -179,8 +182,8 @@ public class MarketDataSourceRouterImpl implements MarketDataSourceRouter {
                     }
                 }
             }
-            if ("tiger".equals(source) && tigerStockService != null) {
-                KLineData data = tigerStockService.getDailyKLineDataAsObject(symbol);
+            if ("tiger".equals(source) && tigerStockService.isPresent()) {
+                KLineData data = tigerStockService.get().getDailyKLineDataAsObject(symbol);
                 if (data != null && data.getItems() != null && !data.getItems().isEmpty()) {
                     return Optional.of(data);
                 }

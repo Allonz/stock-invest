@@ -1,5 +1,6 @@
 package com.stock.invest.service.impl;
 
+import com.stock.invest.constant.WindowConstants;
 import com.stock.invest.entity.StockDailyBar;
 import com.stock.invest.model.KLineIterator;
 import com.stock.invest.service.PatternEvaluateService;
@@ -14,14 +15,11 @@ public class PatternEvaluateServiceImpl implements PatternEvaluateService {
 
     private static final Logger log = LoggerFactory.getLogger(PatternEvaluateServiceImpl.class);
 
-    private static final int MIN_WINDOW_DAYS = 2;
-    private static final int MAX_WINDOW_DAYS = 7;
-
     @Override
     public boolean matchesIncreasingVolumePattern(List<StockDailyBar> sevenBarsOldestFirst) {
         log.debug("[PatternEval] matchesIncreasingVolumePattern: begin — barCount={}",
                 sevenBarsOldestFirst != null ? sevenBarsOldestFirst.size() : 0);
-        boolean result = matchesIncreasingVolumePattern(sevenBarsOldestFirst, MAX_WINDOW_DAYS);
+        boolean result = matchesIncreasingVolumePattern(sevenBarsOldestFirst, WindowConstants.MAX_WINDOW_DAYS);
         log.debug("[PatternEval] matchesIncreasingVolumePattern: result={}", result);
         return result;
     }
@@ -31,7 +29,7 @@ public class PatternEvaluateServiceImpl implements PatternEvaluateService {
         log.debug("[PatternEval] matchesIncreasingVolumePattern: begin — barCount={}, windowDays={}",
                 barsOldestFirst != null ? barsOldestFirst.size() : 0, windowDays);
 
-        if (windowDays < MIN_WINDOW_DAYS || windowDays > MAX_WINDOW_DAYS) {
+        if (windowDays < WindowConstants.MIN_WINDOW_DAYS || windowDays > WindowConstants.MAX_WINDOW_DAYS) {
             log.debug("[PatternEval] matchesIncreasingVolumePattern: invalid windowDays={}", windowDays);
             return false;
         }
@@ -64,7 +62,7 @@ public class PatternEvaluateServiceImpl implements PatternEvaluateService {
         log.debug("[PatternEval] matchesIncreasingVolumePatternFromKLine: begin — barCount={}, windowDays={}",
                 barsOldestFirst != null ? barsOldestFirst.size() : 0, windowDays);
 
-        if (windowDays < MIN_WINDOW_DAYS || windowDays > MAX_WINDOW_DAYS) {
+        if (windowDays < WindowConstants.MIN_WINDOW_DAYS || windowDays > WindowConstants.MAX_WINDOW_DAYS) {
             log.debug("[PatternEval] matchesIncreasingVolumePatternFromKLine: invalid windowDays={}", windowDays);
             return false;
         }

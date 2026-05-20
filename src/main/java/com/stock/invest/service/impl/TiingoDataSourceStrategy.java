@@ -7,7 +7,6 @@ import com.stock.invest.service.DataSourceStrategy;
 import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
@@ -22,8 +21,11 @@ public class TiingoDataSourceStrategy implements DataSourceStrategy {
 
     private static final Logger log = LoggerFactory.getLogger(TiingoDataSourceStrategy.class);
 
-    @Autowired
-    private TiingoRestClient tiingoRestClient;
+    private final TiingoRestClient tiingoRestClient;
+
+    public TiingoDataSourceStrategy(TiingoRestClient tiingoRestClient) {
+        this.tiingoRestClient = tiingoRestClient;
+    }
 
     @Override
     public String getSourceName() {
