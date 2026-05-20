@@ -1,5 +1,6 @@
 package com.stock.invest.service.impl;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stock.invest.model.KLineData;
 import com.stock.invest.model.KLineIterator;
@@ -122,7 +123,7 @@ public class YFinanceStockServiceImpl {
                         period,
                         String.valueOf(count)
                     );
-                    List<KLineData> batchResults = objectMapper.readValue(result, List.class);
+                    List<KLineData> batchResults = objectMapper.readValue(result, new TypeReference<List<KLineData>>() {});
                     if (batchResults != null) {
                         klineDataList.addAll(batchResults);
                     }
@@ -167,11 +168,10 @@ public class YFinanceStockServiceImpl {
             return emptyInfo;
         }
     }
-    @SuppressWarnings({"unchecked"})
     public List<String> getStockList() {
         try {
             String result = pythonScriptExecutor.executeScript(getScriptName(), "get_stock_list");
-            return objectMapper.readValue(result, List.class);
+            return objectMapper.readValue(result, new TypeReference<List<String>>() {});
         } catch (Exception e) {
             log.warn("Failed to get stock list: {}", e.getMessage());
             return new ArrayList<>();
@@ -207,7 +207,6 @@ public class YFinanceStockServiceImpl {
             return new ArrayList<>();
         }
     }
-    @SuppressWarnings({"unchecked"})
     public List<String> scanStocks(String market, int limit, String minPrice, String maxPrice) {
         try {
             String result = pythonScriptExecutor.executeScript(
@@ -218,7 +217,7 @@ public class YFinanceStockServiceImpl {
                 minPrice, 
                 maxPrice
             );
-            return objectMapper.readValue(result, List.class);
+            return objectMapper.readValue(result, new TypeReference<List<String>>() {});
         } catch (Exception e) {
             log.warn("Failed to scan stocks: {}", e.getMessage());
             return new ArrayList<>();

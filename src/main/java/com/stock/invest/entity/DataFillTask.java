@@ -22,7 +22,7 @@ import java.time.LocalDate;
 @Table(
         name = "data_fill_task",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_data_fill_task_symbol_missing_date", columnNames = {"symbol", "tradeDate"})
+                @UniqueConstraint(name = "uk_data_fill_task_symbol_trade_date", columnNames = {"symbol", "tradeDate"})
         }
 )
 public class DataFillTask {

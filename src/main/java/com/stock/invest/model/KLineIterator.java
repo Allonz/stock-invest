@@ -55,6 +55,9 @@ public class KLineIterator {
             }
         } catch (NumberFormatException e) {
             this.time = 0L;
+            // 使用 java.lang.System.Logger（model 层不应依赖 SLF4J）
+            System.Logger logger = System.getLogger(KLineIterator.class.getName());
+            logger.log(System.Logger.Level.WARNING, "KLineIterator: failed to parse timeStr='" + timeStr + "'");
         }
     }
     
