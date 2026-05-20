@@ -15,6 +15,7 @@ import org.springframework.web.client.RestTemplate;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -47,6 +48,10 @@ public class ResilientHttpExecutor {
     }
 
     public String get(String url) {
+        return get(url, new java.util.HashMap<>());
+    }
+
+    public String get(String url, Map<String, String> headers) {
         log.debug("[ResilientHttp] get: begin — url={}", url);
         throttle();
         int attempts = 0;
@@ -55,10 +60,15 @@ public class ResilientHttpExecutor {
             attempts++;
             log.debug("[ResilientHttp] get: attempt — url={}, attempt={}/{}", url, attempts, max);
             try {
-                HttpHeaders headers = new HttpHeaders();
-                headers.add(HttpHeaders.USER_AGENT, nextUserAgent());
-                headers.add(HttpHeaders.ACCEPT, "*/*");
-                ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), String.class);
+                HttpHeaders httpHeaders = new HttpHeaders();
+                httpHeaders.add(HttpHeaders.USER_AGENT, nextUserAgent());
+                httpHeaders.add(HttpHeaders.ACCEPT, "*/*");
+                if (headers != null) {
+                    for (Map.Entry<String, String> entry : headers.entrySet()) {
+                        httpHeaders.add(entry.getKey(), entry.getValue());
+                    }
+                }
+                ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(httpHeaders), String.class);
                 log.debug("[ResilientHttp] get: success — url={}, status={}", url, response.getStatusCodeValue());
                 return response.getBody();
             } catch (HttpStatusCodeException ex) {
@@ -120,7 +130,7 @@ public class ResilientHttpExecutor {
         if (ra != null && !ra.isEmpty()) {
             try {
                 long seconds = Long.parseLong(ra.get(0).trim());
-                return Math.min(60_000, Math.max(1_000, seconds * 1000L));
+                return Math.min(300_000, Math.max(1_000, seconds * 1000L));
             } catch (NumberFormatException e) {
                 // ignore - field not applicable
             }

@@ -14,6 +14,7 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class TiingoRestClient {
@@ -28,10 +29,14 @@ public class TiingoRestClient {
         this.objectMapper = objectMapper;
     }
 
+    private Map<String, String> authHeaders() {
+        return Map.of("Authorization", "Token " + props.getToken().trim());
+    }
+
     public List<String> listUsSymbolsByPriceRange(int limit, double minPrice, double maxPrice) throws Exception {
         requireToken();
-        String url = baseUrl() + "/iex/?token=" + encode(props.getToken().trim());
-        String body = http.get(url);
+        String url = baseUrl() + "/iex/";
+        String body = http.get(url, authHeaders());
         JsonNode root = objectMapper.readTree(body);
         ensureNoApiError(root);
         if (!root.isArray()) {
@@ -65,9 +70,8 @@ public class TiingoRestClient {
         String url = baseUrl() + "/tiingo/daily/" + encode(symbol)
                 + "/prices?startDate=" + start
                 + "&endDate=" + end
-                + "&resampleFreq=daily"
-                + "&token=" + encode(props.getToken().trim());
-        String body = http.get(url);
+                + "&resampleFreq=daily";
+        String body = http.get(url, authHeaders());
         JsonNode root = objectMapper.readTree(body);
         ensureNoApiError(root);
         KLineData data = new KLineData();

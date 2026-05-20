@@ -16,6 +16,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.net.URLEncoder;
 
@@ -49,9 +50,11 @@ public class TwelveDataRestClient {
 
     private String buildUrl(String path, String queryWithoutKey) {
         String base = props.getBaseUrl() == null ? "https://api.twelvedata.com" : props.getBaseUrl().replaceAll("/$", "");
-        String key = nextApiKey();
-        String sep = queryWithoutKey.contains("?") ? "&" : "?";
-        return base + path + queryWithoutKey + sep + "apikey=" + key;
+        return base + path + queryWithoutKey;
+    }
+
+    private Map<String, String> authHeaders() {
+        return Map.of("Authorization", "apikey " + nextApiKey());
     }
 
     /**
@@ -59,7 +62,7 @@ public class TwelveDataRestClient {
      */
     public List<String> listUsStockSymbols(int maxSymbols) throws Exception {
         String url = buildUrl("/stocks", "?country=United%20States");
-        String body = http.get(url);
+        String body = http.get(url, authHeaders());
         JsonNode root = objectMapper.readTree(body);
         if (!root.path("code").asText().isEmpty() && !"200".equals(root.path("code").asText())) {
             log.warn("TwelveData /stocks error: {}", root.path("message").asText());
@@ -84,7 +87,7 @@ public class TwelveDataRestClient {
      */
     public Double fetchLastClose(String symbol) throws Exception {
         String url = buildUrl("/quote", "?symbol=" + URLEncoder.encode(symbol, "UTF-8"));
-        String body = http.get(url);
+        String body = http.get(url, authHeaders());
         JsonNode root = objectMapper.readTree(body);
         if (root.has("code") && root.path("status").asText().equalsIgnoreCase("error")) {
             return null;
@@ -105,7 +108,7 @@ public class TwelveDataRestClient {
                 "?symbol=" + URLEncoder.encode(symbol, "UTF-8")
                         + "&interval=1day&outputsize=" + outputSize + "&order=DESC"
         );
-        String body = http.get(url);
+        String body = http.get(url, authHeaders());
         JsonNode root = objectMapper.readTree(body);
         if (root.has("status") && "error".equalsIgnoreCase(root.path("status").asText())) {
             log.debug("TwelveData time_series error for {}: {}", symbol, root.path("message").asText());
