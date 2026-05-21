@@ -88,32 +88,23 @@ public class ScreeningServiceImpl implements ScreeningService {
             // 升序排列（PatternEvaluateService 要求 oldest-first）
             bars.sort(Comparator.comparing(StockDailyBar::getTradeDate));
 
-            // 至少需要最小窗口天数数据才能评估
-            if (bars.size() < WindowConstants.MAX_WINDOW_DAYS) {
-                continue;
-            }
-
-            // 取最近 7 天数据
-            List<StockDailyBar> window = bars.subList(bars.size() - 7, bars.size());
-            StockDailyBar latest = window.get(window.size() - 1);
+            StockDailyBar latest = bars.get(bars.size() - 1);
 
             // 只检查目标交易日的个股
             if (!targetDate.equals(latest.getTradeDate())) {
                 continue;
             }
-
-            // 价格过滤
             if (latest.getClosePrice() == null) {
-                continue;
-            }
-            if (latest.getClosePrice() < scannerProperties.getMinPrice() || latest.getClosePrice() > scannerProperties.getMaxPrice()) {
                 continue;
             }
 
             processed++;
 
-            // 多窗口并行评估
+            // 多窗口并行评估：数据够哪个窗口就评估哪个
             for (int windowDays : WindowConstants.ALL_WINDOW_DAYS) {
+                if (bars.size() < windowDays) {
+                    continue;
+                }
                 // 取对应窗口长度的数据
                 List<StockDailyBar> windowSlice = bars.subList(bars.size() - windowDays, bars.size());
 
