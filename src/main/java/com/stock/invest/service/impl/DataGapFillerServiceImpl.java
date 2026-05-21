@@ -44,6 +44,8 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
 
     private static final Logger log = LoggerFactory.getLogger(DataGapFillerServiceImpl.class);
 
+    private static final ZoneId AMERICA_NY = ZoneId.of("America/New_York");
+
 
     private static final int MAX_SYMBOLS_PER_RUN = 200;
     private static final int MAX_LOOKBACK_DAYS = 30;
@@ -321,7 +323,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
 
     private static LocalDate epochMillisToLocalDate(long epochMillis) {
         return Instant.ofEpochMilli(epochMillis)
-                .atZone(ZoneId.systemDefault())
+                .atZone(AMERICA_NY)
                 .toLocalDate();
     }
 

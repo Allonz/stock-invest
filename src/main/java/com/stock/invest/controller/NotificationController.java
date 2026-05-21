@@ -58,6 +58,7 @@ public class NotificationController {
      */
     @GetMapping("/latest")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getLatestNotification() {
+        try {
         Optional<ScreeningMatch> latest = screeningMatchRepository.findTopByOrderByTradeDateDescIdDesc();
         if (!latest.isPresent()) {
             return ResponseEntity.ok(ApiResponse.ok(Map.of("message", "no screening data available")));
@@ -97,5 +98,10 @@ public class NotificationController {
         log.info("NotificationController: latest batchId={}, screenDate={}, totalHits={}",
                 latestBatchId, screenDate, totalHits);
         return ResponseEntity.ok(ApiResponse.ok(payload));
+        } catch (Exception e) {
+            log.error("getLatestNotification failed", e);
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Failed to retrieve notification data"));
+        }
     }
 }

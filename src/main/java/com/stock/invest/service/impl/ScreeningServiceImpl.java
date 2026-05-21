@@ -15,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -90,7 +89,7 @@ public class ScreeningServiceImpl implements ScreeningService {
             bars.sort(Comparator.comparing(StockDailyBar::getTradeDate));
 
             // 至少需要最小窗口天数数据才能评估
-            if (bars.size() < Collections.min(WindowConstants.ALL_WINDOW_DAYS)) {
+            if (bars.size() < WindowConstants.MAX_WINDOW_DAYS) {
                 continue;
             }
 

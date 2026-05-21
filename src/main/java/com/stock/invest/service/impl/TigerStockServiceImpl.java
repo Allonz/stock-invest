@@ -201,7 +201,7 @@ public class TigerStockServiceImpl {
             StockInfo stockInfo = new StockInfo();
             stockInfo.setSymbol(symbol);
             stockInfo.setCurrentPrice(latest.getClose());
-            stockInfo.setVolume((int)latest.getVolume());
+            stockInfo.setVolume(latest.getVolume());
             stockInfo.setChange(latest.getClose() - latest.getOpen());
             stockInfo.setChangePercent((latest.getClose() - latest.getOpen()) / latest.getOpen() * 100);
             

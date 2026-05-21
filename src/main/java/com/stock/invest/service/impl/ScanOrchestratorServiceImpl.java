@@ -138,9 +138,7 @@ public class ScanOrchestratorServiceImpl implements ScanOrchestratorService {
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
                 .join();
 
-        for (ScreeningMatch match : matches) {
-            screeningMatchRepository.save(match);
-        }
+        screeningMatchRepository.saveAll(matches);
 
         log.info("daily scan done tradeDate={}, windowDays={}, candidates={}, processed={}, matched={}",
                 targetDate, days, candidates.size(), processed.get(), matches.size());

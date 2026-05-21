@@ -70,7 +70,7 @@ public class TiingoDataSourceStrategy implements DataSourceStrategy {
             info.setSymbol(symbol);
             info.setCurrentPrice(latest.getClose());
             info.setOpenPrice(latest.getOpen());
-            info.setVolume((int) latest.getVolume());
+            info.setVolume(latest.getVolume());
             info.setChange(latest.getClose() - latest.getOpen());
             if (latest.getOpen() != 0D) {
                 info.setChangePercent((latest.getClose() - latest.getOpen()) / latest.getOpen() * 100D);

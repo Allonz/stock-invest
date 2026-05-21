@@ -34,6 +34,7 @@ public class ScreeningController {
      */
     @GetMapping("/latest")
     public ResponseEntity<ApiResponse<Map<String, Object>>> latest() {
+        try {
         Optional<ScreeningMatch> top = screeningMatchRepository.findTopByOrderByTradeDateDescIdDesc();
         if (top.isEmpty()) {
             Map<String, Object> emptyResult = new HashMap<>();
@@ -53,6 +54,11 @@ public class ScreeningController {
         result.put("totalMatches", matches.size());
         result.put("matches", matches);
         return ResponseEntity.ok(ApiResponse.ok(result));
+        } catch (Exception e) {
+            log.error("screening latest failed", e);
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Failed to retrieve latest screening result"));
+        }
     }
 
     /**
@@ -60,6 +66,7 @@ public class ScreeningController {
      */
     @GetMapping("/history")
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> history() {
+        try {
         List<Object[]> batchSummaries = screeningMatchRepository.findBatchSummary();
         List<Map<String, Object>> history = new ArrayList<>();
 
@@ -71,6 +78,11 @@ public class ScreeningController {
             history.add(item);
         }
         return ResponseEntity.ok(ApiResponse.ok(history));
+        } catch (Exception e) {
+            log.error("screening history failed", e);
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Failed to retrieve screening history"));
+        }
     }
 
     /**
@@ -78,11 +90,17 @@ public class ScreeningController {
      */
     @GetMapping("/batch/{batchId}")
     public ResponseEntity<ApiResponse<Map<String, Object>>> batchDetail(@PathVariable String batchId) {
+        try {
         List<ScreeningMatch> matches = screeningMatchRepository.findByBatchIdOrderByIdAsc(batchId);
         Map<String, Object> result = new HashMap<>();
         result.put("batchId", batchId);
         result.put("totalMatches", matches.size());
         result.put("matches", matches);
         return ResponseEntity.ok(ApiResponse.ok(result));
+        } catch (Exception e) {
+            log.error("screening batchDetail failed batchId={}", batchId, e);
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Failed to retrieve batch detail for " + batchId));
+        }
     }
 }

@@ -111,7 +111,7 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <version>${spring-boot.version}</version>
-            <scope>runtime</scope>
+            <scope>test</scope>
         </dependency>
 
         <!-- H2 Database for testing -->
