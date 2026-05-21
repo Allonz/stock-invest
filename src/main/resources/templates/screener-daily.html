@@ -357,33 +357,7 @@
         </div>
     </div>
 
-    <!-- 右侧：原筛选表单与结果 -->
     <div class="panel">
-        <div class="card">
-            <h2>美股低价股筛选（按天）</h2>
-            <form method="post" th:action="@{/screener/run}" class="form-row">
-                <label>交易日:
-                    <input type="date" name="tradeDate" th:value="${tradeDate}">
-                </label>
-                <label>本次筛选数量:
-                    <input type="number" name="limit" value="20" min="1" max="500">
-                </label>
-                <label>周期天数:
-                    <select name="windowDays">
-                        <option value="3" th:selected="${windowDays == 3}">3天</option>
-                        <option value="4" th:selected="${windowDays == 4}">4天</option>
-                        <option value="5" th:selected="${windowDays == 5}">5天</option>
-                        <option value="6" th:selected="${windowDays == 6}">6天</option>
-                        <option value="7" th:selected="${windowDays == 7}">7天</option>
-                    </select>
-                </label>
-                <button type="submit">执行筛选</button>
-            </form>
-
-            <div th:if="${notice != null}" class="notice" th:text="${notice}">
-                已执行筛选
-            </div>
-        </div>
 
         <div class="card">
             <form method="get" th:action="@{/screener/daily}" class="form-row">

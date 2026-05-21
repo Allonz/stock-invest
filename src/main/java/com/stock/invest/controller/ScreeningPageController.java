@@ -90,7 +90,7 @@ public class ScreeningPageController {
     ) {
         LocalDate date = tradeDate == null || tradeDate.trim().isEmpty() ? LocalDate.now() : LocalDate.parse(tradeDate);
         int days = sanitizeWindowDays(windowDays);
-        ScreenerRunResponseDto runResult = scanOrchestratorService.runDailyScan(date, limit, days);
+        ScreenerRunResponseDto runResult = scanOrchestratorService.runDailyScanFromSnapshotImport(date, limit, days);
         String notice = "已执行筛选: processed="
                 + runResult.processedStocks()
                 + ", matched="
