@@ -105,7 +105,7 @@ public class ScreeningPageController {
         return "redirect:/screener/daily";
     }
 
-    private static int sanitizeWindowDays(Integer windowDays) {
+    static int sanitizeWindowDays(Integer windowDays) {
         if (windowDays == null) {
             return DEFAULT_WINDOW_DAYS;
         }
