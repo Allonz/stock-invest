@@ -151,27 +151,44 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         return new FillResult(1, missingDates.size(), filled, failed);
     }
 
+    /**
+     * 在 [max(oldestBar, today-30d), today(NY)] 范围内找出缺失的交易日（跳过周末）。
+     *
+     * <p>existingBars 按 tradeDate DESC 排序，方法内部自动处理方向。</p>
+     */
     static List<LocalDate> findMissingTradeDates(List<StockDailyBar> existingBars) {
         if (existingBars.isEmpty()) {
             return Collections.emptyList();
         }
-        LocalDate first = existingBars.get(0).getTradeDate();
-        LocalDate last = existingBars.get(existingBars.size() - 1).getTradeDate();
+
+        // bars 按 tradeDate DESC 排序
+        LocalDate newestInBars = existingBars.get(0).getTradeDate();
+        LocalDate oldestInBars = existingBars.get(existingBars.size() - 1).getTradeDate();
+
+        // 今天（美股市场时区）
+        LocalDate today = ZonedDateTime.now(AMERICA_NY).toLocalDate();
+
+        // 检测下界：不早于 today - MAX_LOOKBACK_DAYS，也不早于最老 bar 日
+        LocalDate lookbackLimit = today.minusDays(MAX_LOOKBACK_DAYS);
+        LocalDate rangeStart = oldestInBars.isAfter(lookbackLimit) ? oldestInBars : lookbackLimit;
+
+        // 检测上界：不早于今天（如果数据有未来日期则覆盖）
+        LocalDate rangeEnd = newestInBars.isAfter(today) ? newestInBars : today;
 
         Set<LocalDate> existingDates = existingBars.stream()
                 .map(StockDailyBar::getTradeDate)
-                .collect(Collectors.toCollection(HashSet::new));
+                .collect(Collectors.toSet());
 
         List<LocalDate> missing = new ArrayList<>();
-        LocalDate cursor = first;
-        while (!cursor.isAfter(last)) {
-            if (cursor.getDayOfWeek().getValue() <= 5) {
-                if (!existingDates.contains(cursor)) {
-                    missing.add(cursor);
-                }
+        LocalDate cursor = rangeStart;
+        while (!cursor.isAfter(rangeEnd)) {
+            if (cursor.getDayOfWeek().getValue() <= 5          // 跳过周末
+                    && !existingDates.contains(cursor)) {
+                missing.add(cursor);
             }
             cursor = cursor.plusDays(1);
         }
+
         if (missing.size() > MAX_MISSING_DATES_PER_SYMBOL) {
             return missing.subList(missing.size() - MAX_MISSING_DATES_PER_SYMBOL, missing.size());
         }
