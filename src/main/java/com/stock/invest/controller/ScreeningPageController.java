@@ -8,6 +8,7 @@ import com.stock.invest.repository.ScreeningMatchRepository;
 import com.stock.invest.service.ScanOrchestratorService;
 import com.stock.invest.service.TigerSnapshotGridService;
 import com.stock.invest.service.DataGapFillerService;
+import com.stock.invest.service.ScreeningService;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,16 +37,19 @@ public class ScreeningPageController {
     private final TigerSnapshotGridService tigerSnapshotGridService;
     private final DataGapFillerService dataGapFillerService;
     private final ScreeningMatchRepository screeningMatchRepository;
+    private final ScreeningService screeningService;
 
     public ScreeningPageController(
             ScanOrchestratorService scanOrchestratorService,
             TigerSnapshotGridService tigerSnapshotGridService,
             DataGapFillerService dataGapFillerService,
-            ScreeningMatchRepository screeningMatchRepository) {
+            ScreeningMatchRepository screeningMatchRepository,
+            ScreeningService screeningService) {
         this.scanOrchestratorService = scanOrchestratorService;
         this.tigerSnapshotGridService = tigerSnapshotGridService;
         this.dataGapFillerService = dataGapFillerService;
         this.screeningMatchRepository = screeningMatchRepository;
+        this.screeningService = screeningService;
     }
 
     @GetMapping("/")
@@ -89,18 +93,15 @@ public class ScreeningPageController {
             RedirectAttributes redirectAttributes
     ) {
         LocalDate date = tradeDate == null || tradeDate.trim().isEmpty() ? LocalDate.now() : LocalDate.parse(tradeDate);
-        int days = sanitizeWindowDays(windowDays);
-        ScreenerRunResponseDto runResult = scanOrchestratorService.runDailyScanFromSnapshotImport(date, limit, days);
-        String notice = "已执行筛选: processed="
-                + runResult.processedStocks()
-                + ", matched="
-                + runResult.matchedStocks()
-                + ", windowDays="
-                + days
-                + ", batchId="
-                + runResult.batchId();
+        String batchId = screeningService.runScreening(date);
+        List<ScreeningMatch> matches = screeningMatchRepository.findByBatchIdOrderByIdAsc(batchId);
+        String notice = "已执行筛选: batchId="
+                + batchId
+                + ", totalMatches="
+                + matches.size()
+                + ", windows=2d~7d";
         redirectAttributes.addAttribute("tradeDate", date.toString());
-        redirectAttributes.addAttribute("windowDays", days);
+        redirectAttributes.addAttribute("windowDays", "2-7");
         redirectAttributes.addAttribute("notice", notice);
         return "redirect:/screener/daily";
     }

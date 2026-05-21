@@ -1,10 +1,11 @@
 package com.stock.invest.controller;
 
-import com.stock.invest.enums.dto.ScreenerRunResponseDto;
+import com.stock.invest.entity.ScreeningMatch;
 import com.stock.invest.enums.dto.SnapshotGridViewDto;
 import com.stock.invest.repository.ScreeningMatchRepository;
 import com.stock.invest.service.DataGapFillerService;
 import com.stock.invest.service.ScanOrchestratorService;
+import com.stock.invest.service.ScreeningService;
 import com.stock.invest.service.TigerSnapshotGridService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,10 +15,9 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -39,6 +39,9 @@ class ScreeningPageControllerTest {
 
     @MockBean
     private DataGapFillerService dataGapFillerService;
+
+    @MockBean
+    private ScreeningService screeningService;
 
     // ======= TC01-TC04: sanitizeWindowDays =======
 
@@ -111,15 +114,13 @@ class ScreeningPageControllerTest {
                 .andExpect(view().name("screener-daily"));
     }
 
-    // ======= TC10-TC14: POST /screener/run =======
+    // ======= TC10-TC13: POST /screener/run (calls screeningService.runScreening) =======
 
     @Test
-    void run_withoutTradeDate_usesToday() throws Exception {
-        ScreenerRunResponseDto mockResult = new ScreenerRunResponseDto(
-                "batch-1", LocalDate.now(), 100, 10, 3);
-        when(scanOrchestratorService.runDailyScanFromSnapshotImport(
-                any(LocalDate.class), eq(20), eq(7)))
-                .thenReturn(mockResult);
+    void run_withoutTradeDate_callsRunScreening() throws Exception {
+        when(screeningService.runScreening(any(LocalDate.class))).thenReturn("batch-all-1");
+        when(screeningMatchRepository.findByBatchIdOrderByIdAsc("batch-all-1"))
+                .thenReturn(List.of());
 
         mockMvc.perform(post("/screener/run"))
                 .andExpect(status().is3xxRedirection())
@@ -127,60 +128,46 @@ class ScreeningPageControllerTest {
     }
 
     @Test
-    void run_withTradeDate_parsesAndRedirects() throws Exception {
-        ScreenerRunResponseDto mockResult = new ScreenerRunResponseDto(
-                "batch-2", LocalDate.of(2026, 5, 20), 100, 5, 1);
-        when(scanOrchestratorService.runDailyScanFromSnapshotImport(
-                eq(LocalDate.of(2026, 5, 20)), eq(20), eq(7)))
-                .thenReturn(mockResult);
+    void run_withTradeDate_usesParsedDate() throws Exception {
+        when(screeningService.runScreening(LocalDate.of(2026, 5, 20))).thenReturn("batch-all-2");
+        when(screeningMatchRepository.findByBatchIdOrderByIdAsc("batch-all-2"))
+                .thenReturn(List.of());
 
         mockMvc.perform(post("/screener/run")
                         .param("tradeDate", "2026-05-20"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrlPattern("/screener/daily**"))
                 .andExpect(redirectedUrlPattern("/screener/daily**"));
     }
 
     @Test
-    void run_withCustomLimit() throws Exception {
-        ScreenerRunResponseDto mockResult = new ScreenerRunResponseDto(
-                "batch-3", LocalDate.now(), 100, 10, 5);
-        when(scanOrchestratorService.runDailyScanFromSnapshotImport(
-                any(LocalDate.class), eq(50), eq(7)))
-                .thenReturn(mockResult);
+    void run_withMatches_includesCountInNotice() throws Exception {
+        ScreeningMatch m1 = new ScreeningMatch();
+        m1.setSymbol("AAPL"); m1.setBatchId("batch-3"); m1.setTradeDate(LocalDate.now());
+        ScreeningMatch m2 = new ScreeningMatch();
+        m2.setSymbol("MSFT"); m2.setBatchId("batch-3"); m2.setTradeDate(LocalDate.now());
+
+        when(screeningService.runScreening(any(LocalDate.class))).thenReturn("batch-3");
+        when(screeningMatchRepository.findByBatchIdOrderByIdAsc("batch-3"))
+                .thenReturn(List.of(m1, m2));
 
         mockMvc.perform(post("/screener/run")
-                        .param("limit", "50"))
-                .andExpect(status().is3xxRedirection());
+                        .param("limit", "5"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrlPattern("/screener/daily**notice**"));
     }
 
     @Test
-    void run_withWindowDays3_uses3() throws Exception {
-        ScreenerRunResponseDto mockResult = new ScreenerRunResponseDto(
-                "batch-4", LocalDate.now(), 100, 10, 2);
-        when(scanOrchestratorService.runDailyScanFromSnapshotImport(
-                any(LocalDate.class), eq(20), eq(3)))
-                .thenReturn(mockResult);
+    void run_noticeContainsWindows2to7() throws Exception {
+        when(screeningService.runScreening(any(LocalDate.class))).thenReturn("batch-4");
+        when(screeningMatchRepository.findByBatchIdOrderByIdAsc("batch-4"))
+                .thenReturn(List.of());
 
-        mockMvc.perform(post("/screener/run")
-                        .param("windowDays", "3"))
-                .andExpect(status().is3xxRedirection());
+        mockMvc.perform(post("/screener/run"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrlPattern("/screener/daily**2d**"));
     }
 
-    @Test
-    void run_withWindowDays1_sanitizesTo3() throws Exception {
-        ScreenerRunResponseDto mockResult = new ScreenerRunResponseDto(
-                "batch-5", LocalDate.now(), 100, 0, 0);
-        when(scanOrchestratorService.runDailyScanFromSnapshotImport(
-                any(LocalDate.class), eq(20), eq(3)))
-                .thenReturn(mockResult);
-
-        mockMvc.perform(post("/screener/run")
-                        .param("windowDays", "1"))
-                .andExpect(status().is3xxRedirection());
-    }
-
-    // ======= TC15: GET /page/screening =======
+    // ======= TC14: GET /page/screening =======
 
     @Test
     void screeningPage_returns200() throws Exception {
@@ -190,7 +177,7 @@ class ScreeningPageControllerTest {
                 .andExpect(view().name("screening"));
     }
 
-    // ======= TC16: POST /api/debug/trigger-data-fill =======
+    // ======= TC15: POST /api/debug/trigger-data-fill =======
 
     @Test
     void triggerDataFill_returnsOk() throws Exception {

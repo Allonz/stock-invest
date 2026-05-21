@@ -43,6 +43,13 @@ public interface StockDailyBarRepository extends JpaRepository<StockDailyBar, Lo
             @Param("minP") double minPrice,
             @Param("maxP") double maxPrice);
 
+    @Query("SELECT DISTINCT b.symbol FROM StockDailyBar b WHERE b.tradeDate = :td "
+            + "AND b.closePrice >= :minP AND b.closePrice <= :maxP")
+    List<String> findDistinctSymbolsByTradeDateAndClosePriceBetween(
+            @Param("td") LocalDate tradeDate,
+            @Param("minP") double minPrice,
+            @Param("maxP") double maxPrice);
+
     @Query("SELECT DISTINCT b.tradeDate FROM StockDailyBar b WHERE b.source = :src ORDER BY b.tradeDate ASC")
     List<LocalDate> findDistinctTradeDatesBySourceAsc(@Param("src") String src);
 

@@ -31,13 +31,6 @@ public class ScanOrchestratorServiceImplTest {
     @Mock(lenient = true)
     private ScannerProperties scannerProperties;
 
-    @Mock(lenient = true)
-    private MarketDataSourceRouter marketDataSourceRouter;
-
-    @Mock(lenient = true)
-    private PriceVolumeCacheService priceVolumeCacheService;
-
-    @Mock(lenient = true)
     private PatternEvaluateService patternEvaluateService;
 
     @Mock(lenient = true)
@@ -54,62 +47,16 @@ public class ScanOrchestratorServiceImplTest {
     @BeforeEach
     public void setUp() {
         // 使用立即执行任务的 Executor，使 CompletableFuture 可以正常完成
-        doAnswer(invocation -> {
-            Runnable task = invocation.getArgument(0);
-            task.run();
-            return null;
-        }).when(scanExecutor).execute(any(Runnable.class));
-
         service = new ScanOrchestratorServiceImpl(
                 scannerProperties,
-                marketDataSourceRouter,
-                priceVolumeCacheService,
                 patternEvaluateService,
                 screeningMatchRepository,
-                stockDailyBarRepository,
-                scanExecutor
-        );
+                stockDailyBarRepository);
 
         // 设置默认配置
         when(scannerProperties.getMinPrice()).thenReturn(0.05D);
         when(scannerProperties.getMaxPrice()).thenReturn(0.2D);
         when(scannerProperties.getMaxCandidates()).thenReturn(200);
-    }
-
-    @Test
-    public void testRunDailyScan_ShouldReturnEmptyWhenNoCandidates() {
-        when(marketDataSourceRouter.loadCandidates(anyInt(), anyDouble(), anyDouble()))
-                .thenReturn(Collections.emptyList());
-
-        ScreenerRunResponseDto result = service.runDailyScan(LocalDate.now(), 20);
-
-        assertNotNull(result);
-        assertEquals(0, result.totalCandidates());
-        assertEquals(0, result.processedStocks());
-        assertEquals(0, result.matchedStocks());
-    }
-
-    @Test
-    public void testRunDailyScan_ShouldReturnCorrectStatistics() {
-        // 准备测试数据
-        List<String> candidates = Arrays.asList("AAA");
-        when(marketDataSourceRouter.loadCandidates(anyInt(), anyDouble(), anyDouble()))
-                .thenReturn(candidates);
-
-        // 模拟K线数据
-        StockDailyBar bar = createBar("AAA", LocalDate.now(), 0.15, 100000L);
-        List<StockDailyBar> bars = Arrays.asList(bar);
-
-        when(priceVolumeCacheService.refreshBarsForSymbol(anyString(), anyString(), any(LocalDate.class), anyInt()))
-                .thenReturn(bars);
-
-        // 执行测试
-        ScreenerRunResponseDto result = service.runDailyScan(LocalDate.now(), 1);
-
-        // 验证结果
-        assertNotNull(result);
-        assertNotNull(result.batchId());
-        assertEquals(1, result.totalCandidates());
     }
 
     @Test
@@ -130,7 +77,6 @@ public class ScanOrchestratorServiceImplTest {
         assertNotNull(results);
         assertEquals(2, results.size());
     }
-
     @Test
     public void testQueryLatest_ShouldReturnEmptyWhenNoData() {
         when(screeningMatchRepository.findTopByOrderByTradeDateDescIdDesc())
