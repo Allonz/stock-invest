@@ -19,6 +19,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -227,7 +228,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
     }
 
     private void createRetryTask(String symbol, LocalDate tradeDate, String error) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = ZonedDateTime.now(AMERICA_NY).toLocalDate();
         Optional<DataFillTask> existing = dataFillTaskRepository.findBySymbolAndTradeDate(symbol, tradeDate);
         if (existing.isPresent()) {
             DataFillTask task = existing.get();
@@ -257,7 +258,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         List<DataFillTask> retryable = dataFillTaskRepository.findRetryableTasks();
         log.info("[DataGapFiller] processRetryingTasks: found retryingTasks={}", retryable.size());
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = ZonedDateTime.now(AMERICA_NY).toLocalDate();
         int retried = 0;
         for (DataFillTask task : retryable) {
             String symbol = task.getSymbol();

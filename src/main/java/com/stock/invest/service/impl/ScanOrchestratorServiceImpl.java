@@ -69,13 +69,17 @@ public class ScanOrchestratorServiceImpl implements ScanOrchestratorService {
     }
 
     @Override
-    // 异步线程池操作 DB，不使用声明式事务
+    // 不使用 @Transactional：runDailyScan 内部通过 CompletableFuture 在线程池中并行
+    // 处理，Spring 声明式事务基于 ThreadLocal，不跨线程传播，因此无法使用声明式事务。
+    // 如需保证 DB 一致性，由 saveAll 批量写入提供原子性保障。
     public ScreenerRunResponseDto runDailyScan(LocalDate tradeDate, int limit) {
         return runDailyScan(tradeDate, limit, WindowConstants.MAX_WINDOW_DAYS);
     }
 
     @Override
-    // 异步线程池操作 DB，不使用声明式事务
+    // 不使用 @Transactional：runDailyScan 内部通过 CompletableFuture 在线程池中并行
+    // 处理，Spring 声明式事务基于 ThreadLocal，不跨线程传播，因此无法使用声明式事务。
+    // 如需保证 DB 一致性，由 saveAll 批量写入提供原子性保障。
     public ScreenerRunResponseDto runDailyScan(LocalDate tradeDate, int limit, int windowDays) {
         LocalDate targetDate = tradeDate == null ? LocalDate.now() : tradeDate;
         int target = Math.max(1, limit);
@@ -159,13 +163,17 @@ public class ScanOrchestratorServiceImpl implements ScanOrchestratorService {
     }
 
     @Override
-    // 异步线程池操作 DB，不使用声明式事务
+    // 不使用 @Transactional：runDailyScan 内部通过 CompletableFuture 在线程池中并行
+    // 处理，Spring 声明式事务基于 ThreadLocal，不跨线程传播，因此无法使用声明式事务。
+    // 如需保证 DB 一致性，由 saveAll 批量写入提供原子性保障。
     public ScreenerRunResponseDto runDailyScanFromSnapshotImport(LocalDate tradeDate, int limit) {
         return runDailyScanFromSnapshotImport(tradeDate, limit, WindowConstants.MAX_WINDOW_DAYS);
     }
 
     @Override
-    // 异步线程池操作 DB，不使用声明式事务
+    // 不使用 @Transactional：runDailyScan 内部通过 CompletableFuture 在线程池中并行
+    // 处理，Spring 声明式事务基于 ThreadLocal，不跨线程传播，因此无法使用声明式事务。
+    // 如需保证 DB 一致性，由 saveAll 批量写入提供原子性保障。
     public ScreenerRunResponseDto runDailyScanFromSnapshotImport(LocalDate tradeDate, int limit, int windowDays) {
         LocalDate targetDate = tradeDate == null ? LocalDate.now() : tradeDate;
         int target = Math.max(1, limit);
