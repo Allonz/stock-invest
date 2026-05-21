@@ -99,7 +99,7 @@ def get_daily_kline(symbol: str) -> str:
         items = []
         for v in reversed(values):
             items.append({
-                "time": int(datetime.strptime(v["datetime"], "%Y-%m-%d").timestamp()),
+                "time": int(datetime.strptime(v["datetime"], "%Y-%m-%d").timestamp() * 1000),
                 "timeString": v["datetime"],
                 "open": float(v["open"]),
                 "high": float(v["high"]),

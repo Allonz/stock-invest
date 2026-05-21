@@ -133,7 +133,7 @@ def get_daily_kline(symbol: str) -> str:
         
         for index, row in hist.iterrows():
             item = {
-                "time": int(index.timestamp()),
+                "time": int(index.timestamp() * 1000),
                 "timeString": index.strftime("%Y-%m-%d"),
                 "open": float(row['Open']),
                 "high": float(row['High']),
