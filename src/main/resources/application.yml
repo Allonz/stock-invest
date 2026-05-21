@@ -52,6 +52,13 @@ server:
       force: true
       enabled: true
 
+twelvedata:
+  api:
+    api-key: dbad6e2929d54beca7083fbbf111b6be
+tiingo:
+  api:
+    token: e8d9f9e86a9e5a6261e9cefa7caa55c2e1080394
+
 logging:
   level:
     root: INFO
