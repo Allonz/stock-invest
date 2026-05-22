@@ -35,4 +35,20 @@ public interface ScreeningMatchRepository extends JpaRepository<ScreeningMatch, 
 
     @Query("SELECT sm.windowDays, COUNT(sm) FROM ScreeningMatch sm WHERE sm.batchId = :batchId GROUP BY sm.windowDays ORDER BY sm.windowDays")
     List<Object[]> countByBatchIdGroupByWindowDays(@Param("batchId") String batchId);
+
+    /**
+     * 按 batchId + algorithm 查询，返回各窗口命中数。
+     */
+    @Query("SELECT sm.windowDays, COUNT(sm) FROM ScreeningMatch sm "
+         + "WHERE sm.batchId = :batchId AND sm.algorithm = :algorithm "
+         + "GROUP BY sm.windowDays ORDER BY sm.windowDays")
+    List<Object[]> countByBatchIdAndAlgorithmGroupByWindowDays(
+            @Param("batchId") String batchId,
+            @Param("algorithm") String algorithm);
+
+    /**
+     * 按 batchId + windowDays + algorithm 查询匹配记录。
+     */
+    List<ScreeningMatch> findByBatchIdAndWindowDaysAndAlgorithmOrderByIdAsc(
+            String batchId, Integer windowDays, String algorithm);
 }

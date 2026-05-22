@@ -67,36 +67,44 @@ public class NotificationController {
         String latestBatchId = latest.get().getBatchId();
         LocalDate screenDate = latest.get().getTradeDate();
 
-        // 按 windowDays 分组查询
-        Map<String, List<Map<String, Object>>> groupedResults = new LinkedHashMap<>();
-        Map<String, Integer> totalHits = new LinkedHashMap<>();
+        // 按 algorithm + windowDays 分组查询
+        List<String> algorithms = List.of("increasing_volume", "volume_spike");
+        Map<String, Map<String, List<Map<String, Object>>>> resultsByAlgorithm = new LinkedHashMap<>();
+        Map<String, Map<String, Integer>> hitsByAlgorithm = new LinkedHashMap<>();
 
-        for (int wd : WINDOW_DAYS) {
-            String key = wd + "d";
-            List<ScreeningMatch> matches = screeningMatchRepository
-                    .findByBatchIdAndWindowDaysOrderByIdAsc(latestBatchId, wd);
+        for (String algo : algorithms) {
+            Map<String, List<Map<String, Object>>> windowResults = new LinkedHashMap<>();
+            Map<String, Integer> windowHits = new LinkedHashMap<>();
 
-            List<Map<String, Object>> items = new ArrayList<>();
-            for (ScreeningMatch match : matches) {
-                Map<String, Object> item = new LinkedHashMap<>();
-                item.put("symbol", match.getSymbol());
-                item.put("lastClose", match.getLastClose());
-                items.add(item);
+            for (int wd : WINDOW_DAYS) {
+                String key = wd + "d";
+                List<ScreeningMatch> matches = screeningMatchRepository
+                        .findByBatchIdAndWindowDaysAndAlgorithmOrderByIdAsc(latestBatchId, wd, algo);
+
+                List<Map<String, Object>> items = new ArrayList<>();
+                for (ScreeningMatch match : matches) {
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("symbol", match.getSymbol());
+                    item.put("lastClose", match.getLastClose());
+                    items.add(item);
+                }
+
+                windowResults.put(key, items);
+                windowHits.put(key, items.size());
             }
-
-            groupedResults.put(key, items);
-            totalHits.put(key, items.size());
+            resultsByAlgorithm.put(algo, windowResults);
+            hitsByAlgorithm.put(algo, windowHits);
         }
 
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("batchId", latestBatchId);
         payload.put("screenDate", screenDate != null ? screenDate.toString() : null);
-        payload.put("results", groupedResults);
-        payload.put("totalHits", totalHits);
+        payload.put("results", resultsByAlgorithm);
+        payload.put("totalHits", hitsByAlgorithm);
         payload.put("generatedAt", Instant.now().toString());
 
         log.info("NotificationController: latest batchId={}, screenDate={}, totalHits={}",
-                latestBatchId, screenDate, totalHits);
+                latestBatchId, screenDate, hitsByAlgorithm);
         return ResponseEntity.ok(ApiResponse.ok(payload));
         } catch (Exception e) {
             log.error("getLatestNotification failed", e);

@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -55,7 +57,7 @@ public class ScreeningServiceImpl implements ScreeningService {
     @Override
     @Transactional
     public String runScreening(LocalDate tradeDate) {
-        LocalDate targetDate = tradeDate == null ? LocalDate.now() : tradeDate;
+        LocalDate targetDate = tradeDate == null ? ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate() : tradeDate;
         String batchId = UUID.randomUUID().toString();
 
         log.info("ScreeningServiceImpl: start batchId={}, date={}", batchId, targetDate);
@@ -108,21 +110,19 @@ public class ScreeningServiceImpl implements ScreeningService {
                 // 取对应窗口长度的数据
                 List<StockDailyBar> windowSlice = bars.subList(bars.size() - windowDays, bars.size());
 
-                if (!patternEvaluateService.matchesIncreasingVolumePattern(windowSlice, windowDays)) {
-                    continue;
+                // 算法1: 递增成交量
+                if (patternEvaluateService.matchesIncreasingVolumePattern(windowSlice, windowDays)) {
+                    ScreeningMatch row = buildMatch(batchId, latest, symbol, targetDate, windowDays, "increasing_volume");
+                    allRows.add(row);
+                    totalMatchedRows++;
                 }
 
-                ScreeningMatch row = new ScreeningMatch();
-                row.setBatchId(batchId);
-                row.setDataSource(latest.getSource());
-                row.setSymbol(symbol);
-                row.setLastClose(latest.getClosePrice());
-                row.setTradeDate(targetDate);
-                row.setPrice(latest.getClosePrice());
-                row.setRise(latest.getClosePrice() > latest.getOpenPrice());
-                row.setWindowDays(windowDays);
-                allRows.add(row);
-                totalMatchedRows++;
+                // 算法2: 放量突破
+                if (patternEvaluateService.matchesVolumeSpikePattern(windowSlice, windowDays)) {
+                    ScreeningMatch row = buildMatch(batchId, latest, symbol, targetDate, windowDays, "volume_spike");
+                    allRows.add(row);
+                    totalMatchedRows++;
+                }
             }
         }
 
@@ -134,5 +134,21 @@ public class ScreeningServiceImpl implements ScreeningService {
         log.info("ScreeningServiceImpl: done batchId={}, tradeDate={}, symbols={}, processed={}, matchedRows={}",
                 batchId, targetDate, barsBySymbol.size(), processed, totalMatchedRows);
         return batchId;
+    }
+
+    private ScreeningMatch buildMatch(String batchId, StockDailyBar latest,
+                                      String symbol, LocalDate targetDate,
+                                      int windowDays, String algorithm) {
+        ScreeningMatch row = new ScreeningMatch();
+        row.setBatchId(batchId);
+        row.setDataSource(latest.getSource());
+        row.setSymbol(symbol);
+        row.setLastClose(latest.getClosePrice());
+        row.setTradeDate(targetDate);
+        row.setPrice(latest.getClosePrice());
+        row.setRise(latest.getClosePrice() > latest.getOpenPrice());
+        row.setWindowDays(windowDays);
+        row.setAlgorithm(algorithm);
+        return row;
     }
 }

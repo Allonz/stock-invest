@@ -118,5 +118,44 @@ public class PatternEvaluateServiceImpl implements PatternEvaluateService {
         return result;
     }
 
+    @Override
+    public boolean matchesVolumeSpikePattern(List<StockDailyBar> barsOldestFirst, int windowDays) {
+        log.debug("[PatternEval] matchesVolumeSpikePattern: begin - barCount={}, windowDays={}",
+                barsOldestFirst != null ? barsOldestFirst.size() : 0, windowDays);
+
+        if (windowDays < WindowConstants.MIN_WINDOW_DAYS
+                || windowDays > WindowConstants.MAX_WINDOW_DAYS) {
+            log.debug("[PatternEval] matchesVolumeSpikePattern: invalid windowDays={}", windowDays);
+            return false;
+        }
+        if (barsOldestFirst == null || barsOldestFirst.size() < windowDays) {
+            log.debug("[PatternEval] matchesVolumeSpikePattern: insufficient data - size={}, required={}",
+                    barsOldestFirst != null ? barsOldestFirst.size() : 0, windowDays);
+            return false;
+        }
+
+        int start = barsOldestFirst.size() - windowDays;
+        long[] vol = new long[windowDays];
+        for (int i = 0; i < windowDays; i++) {
+            StockDailyBar bar = barsOldestFirst.get(start + i);
+            if (bar == null || bar.getVolume() == null || bar.getVolume() == 0L) {
+                log.debug("[PatternEval] matchesVolumeSpikePattern: null bar at index={}", i);
+                return false;
+            }
+            vol[i] = bar.getVolume();
+        }
+
+        long sum = 0;
+        for (int i = 0; i < windowDays - 1; i++) {
+            sum += vol[i];
+        }
+        double avgBeforeLast = (double) sum / (windowDays - 1);
+        double lastVol = vol[windowDays - 1];
+        boolean result = avgBeforeLast * 5.0 < lastVol;
+
+        log.debug("[PatternEval] matchesVolumeSpikePattern: result={}, avgBeforeLast={}, lastVol={}, windowDays={}",
+                result, String.format("%.2f", avgBeforeLast), lastVol, windowDays);
+        return result;
+    }
 
 }

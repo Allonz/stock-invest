@@ -61,6 +61,14 @@ public class ScreeningMatch {
     @Column(name = "window_days", nullable = false)
     private Integer windowDays;
 
+    /**
+     * 筛选算法标识。
+     * "increasing_volume" — 递增成交量算法
+     * "volume_spike"       — 放量突破算法
+     */
+    @Column(name = "algorithm", nullable = false, length = 32)
+    private String algorithm = "increasing_volume";
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private Instant createdAt;

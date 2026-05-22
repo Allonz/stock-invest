@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -71,7 +73,7 @@ public class ScreeningPageController {
             @RequestParam(value = "notice", required = false) String notice,
             Model model
     ) {
-        LocalDate date = tradeDate == null || tradeDate.trim().isEmpty() ? LocalDate.now() : LocalDate.parse(tradeDate);
+        LocalDate date = tradeDate == null || tradeDate.trim().isEmpty() ? ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate() : LocalDate.parse(tradeDate);
         List<ScreeningResultDto> rows = scanOrchestratorService.queryByDate(date, minPrice, maxPrice);
         int days = sanitizeWindowDays(windowDays);
         model.addAttribute("tradeDate", date.toString());
@@ -92,7 +94,7 @@ public class ScreeningPageController {
             @RequestParam(value = "windowDays", required = false, defaultValue = "7") Integer windowDays,
             RedirectAttributes redirectAttributes
     ) {
-        LocalDate date = tradeDate == null || tradeDate.trim().isEmpty() ? LocalDate.now() : LocalDate.parse(tradeDate);
+        LocalDate date = tradeDate == null || tradeDate.trim().isEmpty() ? ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate() : LocalDate.parse(tradeDate);
         String batchId = screeningService.runScreening(date);
         List<ScreeningMatch> matches = screeningMatchRepository.findByBatchIdOrderByIdAsc(batchId);
         String notice = "已执行筛选: batchId="
