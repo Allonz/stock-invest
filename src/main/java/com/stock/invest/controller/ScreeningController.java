@@ -3,6 +3,7 @@ package com.stock.invest.controller;
 import com.stock.invest.entity.ScreeningMatch;
 import com.stock.invest.enums.dto.ApiResponse;
 import com.stock.invest.repository.ScreeningMatchRepository;
+import com.stock.invest.repository.StockDailyBarRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -24,9 +25,11 @@ public class ScreeningController {
     private static final Logger log = LoggerFactory.getLogger(ScreeningController.class);
 
     private final ScreeningMatchRepository screeningMatchRepository;
+    private final StockDailyBarRepository stockDailyBarRepository;
 
-    public ScreeningController(ScreeningMatchRepository screeningMatchRepository) {
+    public ScreeningController(ScreeningMatchRepository screeningMatchRepository, StockDailyBarRepository stockDailyBarRepository) {
         this.screeningMatchRepository = screeningMatchRepository;
+        this.stockDailyBarRepository = stockDailyBarRepository;
     }
 
     /**
@@ -52,7 +55,29 @@ public class ScreeningController {
         result.put("batchId", batchId);
         result.put("tradeDate", latest.getTradeDate().toString());
         result.put("totalMatches", matches.size());
-        result.put("matches", matches);
+        // 批量查询 stock name
+        var symbols = matches.stream().map(ScreeningMatch::getSymbol).distinct().toList();
+        var nameMap = stockDailyBarRepository.findBySymbolInAndNameIsNotNull(symbols)
+                .stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        bar -> bar.getSymbol(),
+                        bar -> bar.getName(),
+                        (a, b) -> a
+                ));
+
+        var matchesWithName = matches.stream().map(m -> {
+            var item = new java.util.LinkedHashMap<String, Object>();
+            item.put("id", m.getId());
+            item.put("symbol", m.getSymbol());
+            item.put("name", nameMap.getOrDefault(m.getSymbol(), ""));
+            item.put("lastClose", m.getLastClose());
+            item.put("rise", m.getRise());
+            item.put("windowDays", m.getWindowDays());
+            item.put("algorithm", m.getAlgorithm());
+            return item;
+        }).toList();
+
+        result.put("matches", matchesWithName);
         return ResponseEntity.ok(ApiResponse.ok(result));
         } catch (Exception e) {
             log.error("screening latest failed", e);
@@ -95,7 +120,29 @@ public class ScreeningController {
         Map<String, Object> result = new HashMap<>();
         result.put("batchId", batchId);
         result.put("totalMatches", matches.size());
-        result.put("matches", matches);
+        // 批量查询 stock name
+        var symbols = matches.stream().map(ScreeningMatch::getSymbol).distinct().toList();
+        var nameMap = stockDailyBarRepository.findBySymbolInAndNameIsNotNull(symbols)
+                .stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        bar -> bar.getSymbol(),
+                        bar -> bar.getName(),
+                        (a, b) -> a
+                ));
+
+        var matchesWithName = matches.stream().map(m -> {
+            var item = new java.util.LinkedHashMap<String, Object>();
+            item.put("id", m.getId());
+            item.put("symbol", m.getSymbol());
+            item.put("name", nameMap.getOrDefault(m.getSymbol(), ""));
+            item.put("lastClose", m.getLastClose());
+            item.put("rise", m.getRise());
+            item.put("windowDays", m.getWindowDays());
+            item.put("algorithm", m.getAlgorithm());
+            return item;
+        }).toList();
+
+        result.put("matches", matchesWithName);
         return ResponseEntity.ok(ApiResponse.ok(result));
         } catch (Exception e) {
             log.error("screening batchDetail failed batchId={}", batchId, e);

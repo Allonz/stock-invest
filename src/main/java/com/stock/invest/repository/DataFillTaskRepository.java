@@ -1,6 +1,8 @@
 package com.stock.invest.repository;
 
 import com.stock.invest.entity.DataFillTask;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -23,6 +25,8 @@ public interface DataFillTaskRepository extends JpaRepository<DataFillTask, Long
     List<DataFillTask> findAllByOrderByCreatedAtDesc();
 
     long countByStatus(String status);
+
+    Page<DataFillTask> findByStatus(String status, Pageable pageable);
 
     @Query("SELECT t FROM DataFillTask t WHERE t.status = 'retrying' ORDER BY t.createdAt ASC")
     List<DataFillTask> findRetryableTasks();

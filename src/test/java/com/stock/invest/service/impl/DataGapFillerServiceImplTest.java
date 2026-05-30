@@ -112,12 +112,18 @@ class DataGapFillerServiceImplTest {
 
     @Test
     void shouldFindGapsInMultiBarData() {
-        LocalDate mon = LocalDate.of(2026, 5, 18);
-        LocalDate wed = LocalDate.of(2026, 5, 20);
-        List<StockDailyBar> bars = barsOf(wed, mon);
-        List<LocalDate> missing = DataGapFillerServiceImpl.findMissingTradeDates(bars);
-        assertTrue(missing.contains(LocalDate.of(2026, 5, 19)),
-                "should detect Tue 5/19, actual: " + missing);
+        // Use dynamic dates relative to today so the test doesn't age out
+        LocalDate today = ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate();
+        LocalDate mon = today.minusDays(today.getDayOfWeek().getValue() - DayOfWeek.MONDAY.getValue());
+        if (mon.isAfter(today)) mon = mon.minusDays(7);
+        LocalDate wed = mon.plusDays(2);
+        LocalDate tue = mon.plusDays(1);
+        if (!tue.isAfter(today)) {
+            List<StockDailyBar> bars = barsOf(wed, mon);
+            List<LocalDate> missing = DataGapFillerServiceImpl.findMissingTradeDates(bars);
+            assertTrue(missing.contains(tue),
+                    "should detect " + tue + ", actual: " + missing);
+        }
     }
 
     @Test

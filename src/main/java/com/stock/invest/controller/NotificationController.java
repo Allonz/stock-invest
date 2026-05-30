@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -19,15 +20,13 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * 通知相关接口。
+ * 通知查询控制器
  */
 @RestController
-@RequestMapping("/api/v1/notification")
+@RequestMapping("/api/notification")
 public class NotificationController {
 
     private static final Logger log = LoggerFactory.getLogger(NotificationController.class);
-
-    private static final List<Integer> WINDOW_DAYS = List.of(2, 3, 4, 5, 6, 7);
 
     private final ScreeningMatchRepository screeningMatchRepository;
 
@@ -36,80 +35,85 @@ public class NotificationController {
     }
 
     /**
-     * 查询最新一批筛选结果（按窗口天数分组）。
-     * <p>
-     * 返回格式：
-     * <pre>
-     * {
-     *   "data": {
-     *     "batchId": "screen-20260518-xxxx",
-     *     "screenDate": "2026-05-18",
-     *     "results": {
-     *       "2d": [...],
-     *       "3d": [...],
-     *       ...
-     *       "7d": [...]
-     *     },
-     *     "totalHits": {"2d":3,"3d":5,...},
-     *     "generatedAt": "2026-05-18T05:00:00"
-     *   }
-     * }
-     * </pre>
+     * GET /api/notification/latest — 最新筛选结果通知
      */
     @GetMapping("/latest")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getLatestNotification() {
         try {
-        Optional<ScreeningMatch> latest = screeningMatchRepository.findTopByOrderByTradeDateDescIdDesc();
-        if (!latest.isPresent()) {
-            return ResponseEntity.ok(ApiResponse.ok(Map.of("message", "no screening data available")));
-        }
-
-        String latestBatchId = latest.get().getBatchId();
-        LocalDate screenDate = latest.get().getTradeDate();
-
-        // 按 algorithm + windowDays 分组查询
-        List<String> algorithms = List.of("increasing_volume", "volume_spike");
-        Map<String, Map<String, List<Map<String, Object>>>> resultsByAlgorithm = new LinkedHashMap<>();
-        Map<String, Map<String, Integer>> hitsByAlgorithm = new LinkedHashMap<>();
-
-        for (String algo : algorithms) {
-            Map<String, List<Map<String, Object>>> windowResults = new LinkedHashMap<>();
-            Map<String, Integer> windowHits = new LinkedHashMap<>();
-
-            for (int wd : WINDOW_DAYS) {
-                String key = wd + "d";
-                List<ScreeningMatch> matches = screeningMatchRepository
-                        .findByBatchIdAndWindowDaysAndAlgorithmOrderByIdAsc(latestBatchId, wd, algo);
-
-                List<Map<String, Object>> items = new ArrayList<>();
-                for (ScreeningMatch match : matches) {
-                    Map<String, Object> item = new LinkedHashMap<>();
-                    item.put("symbol", match.getSymbol());
-                    item.put("lastClose", match.getLastClose());
-                    items.add(item);
-                }
-
-                windowResults.put(key, items);
-                windowHits.put(key, items.size());
+            Optional<ScreeningMatch> latest = screeningMatchRepository.findTopByOrderByTradeDateDescIdDesc();
+            if (!latest.isPresent()) {
+                return ResponseEntity.ok(ApiResponse.ok(Map.of("message", "暂无筛选数据")));
             }
-            resultsByAlgorithm.put(algo, windowResults);
-            hitsByAlgorithm.put(algo, windowHits);
-        }
 
-        Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("batchId", latestBatchId);
-        payload.put("screenDate", screenDate != null ? screenDate.toString() : null);
-        payload.put("results", resultsByAlgorithm);
-        payload.put("totalHits", hitsByAlgorithm);
-        payload.put("generatedAt", Instant.now().toString());
+            String latestBatchId = latest.get().getBatchId();
+            LocalDate screenDate = latest.get().getTradeDate();
 
-        log.info("NotificationController: latest batchId={}, screenDate={}, totalHits={}",
-                latestBatchId, screenDate, hitsByAlgorithm);
-        return ResponseEntity.ok(ApiResponse.ok(payload));
+            // 按 batchId 查询所有匹配记录，按 algorithm + windowDays 分组统计
+            List<ScreeningMatch> allMatches = screeningMatchRepository
+                    .findByBatchIdOrderByIdAsc(latestBatchId);
+            Map<String, Map<String, Long>> hitsByAlgorithm = new LinkedHashMap<>();
+            for (ScreeningMatch m : allMatches) {
+                String algo = m.getAlgorithm();
+                int wd = m.getWindowDays();
+                hitsByAlgorithm
+                        .computeIfAbsent(algo, k -> new LinkedHashMap<>())
+                        .merge(wd + "d", 1L, Long::sum);
+            }
+
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("batchId", latestBatchId);
+            payload.put("screenDate", screenDate.toString());
+            payload.put("results", hitsByAlgorithm);
+
+            log.info("[Notification] latest: batchId={}, screenDate={}, totalHits={}",
+                    latestBatchId, screenDate, hitsByAlgorithm);
+            return ResponseEntity.ok(ApiResponse.ok(payload));
         } catch (Exception e) {
             log.error("getLatestNotification failed", e);
             return ResponseEntity.internalServerError()
                     .body(ApiResponse.error("Failed to retrieve notification data"));
+        }
+    }
+
+    /**
+     * GET /api/notification/history — 历史通知批次列表
+     */
+    @GetMapping("/history")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> history() {
+        try {
+            List<Object[]> batchSummaries = screeningMatchRepository.findBatchSummary();
+            List<Map<String, Object>> history = new ArrayList<>();
+            for (Object[] row : batchSummaries) {
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("batchId", row[0]);
+                item.put("screenDate", row[2] != null ? row[2].toString() : null);
+                item.put("matchCount", row[1]);
+                history.add(item);
+            }
+            return ResponseEntity.ok(ApiResponse.ok(history));
+        } catch (Exception e) {
+            log.error("notification history failed", e);
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Failed to retrieve notification history"));
+        }
+    }
+
+    /**
+     * GET /api/notification/batch/{batchId} — 某批次通知详情
+     */
+    @GetMapping("/batch/{batchId}")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> batchDetail(@PathVariable String batchId) {
+        try {
+            List<ScreeningMatch> matches = screeningMatchRepository.findByBatchIdOrderByIdAsc(batchId);
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("batchId", batchId);
+            result.put("totalMatches", matches.size());
+            result.put("matches", matches);
+            return ResponseEntity.ok(ApiResponse.ok(result));
+        } catch (Exception e) {
+            log.error("notification batchDetail failed batchId={}", batchId, e);
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Failed to retrieve batch detail for " + batchId));
         }
     }
 }

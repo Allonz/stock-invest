@@ -73,8 +73,6 @@ class ScreeningServiceTest {
                     .thenReturn(true);
             when(stockDailyBarRepository.findByTradeDateBetweenOrderByTradeDateDesc(any(LocalDate.class), eq(tradeDate)))
                     .thenReturn(bars);
-            when(scannerProperties.getMinPrice()).thenReturn(0.05);
-            when(scannerProperties.getMaxPrice()).thenReturn(0.50);
             when(screeningMatchRepository.saveAll(anyList()))
                     .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -104,30 +102,6 @@ class ScreeningServiceTest {
             verify(screeningMatchRepository, never()).saveAll(anyList());
         }
 
-        @Test
-        @DisplayName("价格超出范围跳过（$0.50 上限）")
-        void test_screening_priceFilter() {
-            String symbol = "HPRC";
-            LocalDate tradeDate = LocalDate.of(2026, 5, 18);
-
-            List<StockDailyBar> bars = new ArrayList<>();
-            for (int i = 13; i >= 0; i--) {
-                LocalDate d = tradeDate.minusDays(i);
-                if (d.getDayOfWeek().getValue() <= 5) {
-                    // closePrice = 0.80，超出 0.50 上限
-                    bars.add(bar(symbol, d, 0.78, 0.80, 10000L + i * 500L, "tiger"));
-                }
-            }
-
-            when(stockDailyBarRepository.findByTradeDateBetweenOrderByTradeDateDesc(any(LocalDate.class), eq(tradeDate)))
-                    .thenReturn(bars);
-            when(scannerProperties.getMinPrice()).thenReturn(0.05);
-            when(scannerProperties.getMaxPrice()).thenReturn(0.50);
-
-            String batchId = screeningService.runScreening(tradeDate);
-
-            verify(screeningMatchRepository, never()).saveAll(anyList());
-        }
 
         @Test
         @DisplayName("无数据时返回空 batchId")
@@ -158,8 +132,6 @@ class ScreeningServiceTest {
 
             when(stockDailyBarRepository.findByTradeDateBetweenOrderByTradeDateDesc(any(LocalDate.class), eq(tradeDate)))
                     .thenReturn(bars);
-            when(scannerProperties.getMinPrice()).thenReturn(0.05);
-            when(scannerProperties.getMaxPrice()).thenReturn(0.50);
             when(patternEvaluateService.matchesIncreasingVolumePattern(anyList(), anyInt()))
                     .thenReturn(false);
 

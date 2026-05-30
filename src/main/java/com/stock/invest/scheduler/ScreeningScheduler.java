@@ -1,12 +1,12 @@
 package com.stock.invest.scheduler;
-
 import com.stock.invest.service.ScreeningService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-
 import java.time.Duration;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.Instant;
 import java.time.LocalDate;
 
@@ -27,7 +27,7 @@ public class ScreeningScheduler {
     @Scheduled(cron = "0 30 9 * * ?", zone = "Asia/Shanghai")
     public void runScreening() {
         Instant start = Instant.now();
-        LocalDate today = LocalDate.now();
+        LocalDate today = ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate();
         log.info("[ScreeningScheduler] runDailyScreening: === SCHEDULER START === date={}", today);
         try {
             String batchId = screeningService.runScreening(today);

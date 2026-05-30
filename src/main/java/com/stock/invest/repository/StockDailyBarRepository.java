@@ -67,6 +67,12 @@ public interface StockDailyBarRepository extends JpaRepository<StockDailyBar, Lo
     @Query("SELECT DISTINCT b.symbol FROM StockDailyBar b ORDER BY b.symbol ASC")
     List<String> findAllSymbols();
 
+    @Query("SELECT DISTINCT b.tradeDate FROM StockDailyBar b ORDER BY b.tradeDate ASC")
+    List<LocalDate> findDistinctTradeDatesAsc();
+
+    @Query("SELECT b FROM StockDailyBar b WHERE b.tradeDate IN :dates ORDER BY b.symbol ASC, b.tradeDate ASC")
+    List<StockDailyBar> findByTradeDateInOrderBySymbolAscTradeDateAsc(@Param("dates") Collection<LocalDate> dates);
+
     @Query("SELECT COUNT(DISTINCT b.symbol) FROM StockDailyBar b")
     long countDistinctSymbols();
 
@@ -86,4 +92,11 @@ public interface StockDailyBarRepository extends JpaRepository<StockDailyBar, Lo
 
     @Query("SELECT b FROM StockDailyBar b WHERE b.source = :source ORDER BY b.tradeDate DESC")
     List<StockDailyBar> findBySourceOrderByTradeDateDesc(@Param("source") String source);
+
+    /**
+     * 根据 symbol 列表查询有 name 的记录（取每个 symbol 最新的一条）
+     */
+    @Query("SELECT b FROM StockDailyBar b WHERE b.symbol IN :symbols AND b.name IS NOT NULL ORDER BY b.tradeDate DESC")
+    List<StockDailyBar> findBySymbolInAndNameIsNotNull(@Param("symbols") List<String> symbols);
+
 }

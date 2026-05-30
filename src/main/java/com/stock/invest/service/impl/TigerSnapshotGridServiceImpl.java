@@ -37,14 +37,13 @@ public class TigerSnapshotGridServiceImpl implements TigerSnapshotGridService {
     @Transactional(readOnly = true)
     public SnapshotGridViewDto buildGrid(int maxDateColumns) {
         int cap = maxDateColumns > 0 ? maxDateColumns : DEFAULT_MAX_DATES;
-        String src = TigerWatchlistIngestService.SNAPSHOT_SOURCE;
-        List<LocalDate> allDates = stockDailyBarRepository.findDistinctTradeDatesBySourceAsc(src);
+        List<LocalDate> allDates = stockDailyBarRepository.findDistinctTradeDatesAsc();
         if (allDates.isEmpty()) {
             return new SnapshotGridViewDto(Collections.emptyList(), Collections.emptyList());
         }
         int from = Math.max(0, allDates.size() - cap);
         List<LocalDate> dates = new ArrayList<>(allDates.subList(from, allDates.size()));
-        List<StockDailyBar> bars = stockDailyBarRepository.findBySourceAndTradeDateInOrderBySymbolAscTradeDateAsc(src, dates);
+        List<StockDailyBar> bars = stockDailyBarRepository.findByTradeDateInOrderBySymbolAscTradeDateAsc(dates);
 
         Map<String, TreeMap<LocalDate, StockDailyBar>> bySymbol = new LinkedHashMap<>();
         for (StockDailyBar b : bars) {

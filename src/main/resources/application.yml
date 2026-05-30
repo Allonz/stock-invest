@@ -20,11 +20,6 @@ spring:
         connection:
           characterEncoding: utf8
           useUnicode: true
-  # 设置Thymeleaf编码
-  thymeleaf:
-    encoding: UTF-8
-    cache: false
-
 # 股票服务默认配置
 stock:
   service:

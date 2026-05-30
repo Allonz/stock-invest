@@ -20,6 +20,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -69,8 +71,8 @@ public class TigerStockServiceImpl {
             QuoteKlineRequest request = QuoteKlineRequest.newRequest(
                 Collections.singletonList(symbol),
                 KType.day, 
-                LocalDate.now().minusDays(30).format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
-                LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))
+                ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate().minusDays(30).format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
+                ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))
                 .withLimit(30);
             
             // 发送请求
@@ -98,8 +100,8 @@ public class TigerStockServiceImpl {
             QuoteKlineRequest request = QuoteKlineRequest.newRequest(
                 Collections.singletonList(symbol),
                 KType.day,
-                LocalDate.now().minusDays(30).format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
-                LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))
+                ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate().minusDays(30).format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
+                ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))
                 .withLimit(30);
             
             // 发送请求
@@ -340,8 +342,8 @@ public class TigerStockServiceImpl {
                 QuoteKlineRequest request = QuoteKlineRequest.newRequest(
                     Collections.singletonList(symbol),
                     kType,
-                    LocalDate.now().minusDays(count).format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
-                    LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))
+                    ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate().minusDays(count).format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
+                    ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))
                     .withLimit(count);
                 
                 // 发送请求

@@ -104,13 +104,13 @@ class StockInvestE2ETest {
     }
 
     // ──────────────────────────────────────────────
-    // GET /api/v1/notification/latest -> 200
+    // GET /api/notification/latest -> 200
     // ──────────────────────────────────────────────
     @Test
-    @DisplayName("GET /api/v1/notification/latest -> 200")
+    @DisplayName("GET /api/notification/latest -> 200")
     void getNotification_returns200() {
         ResponseEntity<ApiResponse> resp = rest.getForEntity(
-                url("/api/v1/notification/latest"),
+                url("/api/notification/latest"),
                 ApiResponse.class
         );
 
@@ -120,14 +120,14 @@ class StockInvestE2ETest {
     }
 
     // ──────────────────────────────────────────────
-    // GET /api/v1/notification/latest -> 200 + "no screening data available"
+    // GET /api/notification/latest -> 200 + "no screening data available"
     // ──────────────────────────────────────────────
     @Test
-    @DisplayName("GET /api/v1/notification/latest -> 200 with no-data message")
+    @DisplayName("GET /api/notification/latest -> 200 with no-data message")
     void getNotification_noData_returns200() {
         // H2 is empty so should return "no screening data available"
         ResponseEntity<ApiResponse> resp = rest.getForEntity(
-                url("/api/v1/notification/latest"),
+                url("/api/notification/latest"),
                 ApiResponse.class
         );
 

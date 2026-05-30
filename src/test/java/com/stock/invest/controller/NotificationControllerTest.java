@@ -8,20 +8,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(NotificationController.class)
-@ActiveProfiles("test")
-@DisplayName("NotificationController — 通知接口测试")
 class NotificationControllerTest {
 
     @Autowired
@@ -36,39 +33,32 @@ class NotificationControllerTest {
         String batchId = "screen-20260518-abc123";
         LocalDate tradeDate = LocalDate.of(2026, 5, 18);
 
-        ScreeningMatch latest = new ScreeningMatch();
-        latest.setBatchId(batchId);
-        latest.setTradeDate(tradeDate);
-        latest.setSymbol("AAPL");
-        latest.setLastClose(0.15);
-        latest.setPrice(0.15);
-        latest.setRise(true);
-        latest.setDataSource("tiger");
-        latest.setWindowDays(7);
+        ScreeningMatch m1 = new ScreeningMatch();
+        m1.setBatchId(batchId);
+        m1.setTradeDate(tradeDate);
+        m1.setSymbol("AAPL");
+        m1.setWindowDays(7);
+        m1.setAlgorithm("increasing_volume");
 
-        ScreeningMatch match2 = new ScreeningMatch();
-        match2.setBatchId(batchId);
-        match2.setTradeDate(tradeDate);
-        match2.setSymbol("MSFT");
-        match2.setLastClose(0.20);
-        match2.setPrice(0.20);
-        match2.setRise(false);
-        match2.setDataSource("tiger");
-        match2.setWindowDays(7);
+        ScreeningMatch m2 = new ScreeningMatch();
+        m2.setBatchId(batchId);
+        m2.setTradeDate(tradeDate);
+        m2.setSymbol("MSFT");
+        m2.setWindowDays(7);
+        m2.setAlgorithm("increasing_volume");
 
         when(screeningMatchRepository.findTopByOrderByTradeDateDescIdDesc())
-                .thenReturn(Optional.of(latest));
-        when(screeningMatchRepository.findByBatchIdAndWindowDaysOrderByIdAsc(batchId, 7))
-                .thenReturn(List.of(latest, match2));
+                .thenReturn(Optional.of(m1));
+        when(screeningMatchRepository.findByBatchIdOrderByIdAsc(batchId))
+                .thenReturn(List.of(m1, m2));
 
-        mockMvc.perform(get("/api/v1/notification/latest")
+        mockMvc.perform(get("/api/notification/latest")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.batchId").value(batchId))
-                .andExpect(jsonPath("$.data.totalHits.7d").value(2))
-                .andExpect(jsonPath("$.data.results.7d[0].symbol").value("AAPL"))
-                .andExpect(jsonPath("$.data.results.7d[1].symbol").value("MSFT"));
+                .andExpect(jsonPath("$.data.screenDate").value("2026-05-18"))
+                .andExpect(jsonPath("$.data.results.increasing_volume['7d']").value(2));
     }
 
     @Test
@@ -77,10 +67,10 @@ class NotificationControllerTest {
         when(screeningMatchRepository.findTopByOrderByTradeDateDescIdDesc())
                 .thenReturn(Optional.empty());
 
-        mockMvc.perform(get("/api/v1/notification/latest")
+        mockMvc.perform(get("/api/notification/latest")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.message").value("no screening data available"));
+                .andExpect(jsonPath("$.data.message").value("暂无筛选数据"));
     }
 }

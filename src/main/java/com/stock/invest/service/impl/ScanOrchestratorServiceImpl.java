@@ -19,6 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -52,7 +54,7 @@ public class ScanOrchestratorServiceImpl implements ScanOrchestratorService {
 
     @Override
     public List<ScreeningResultDto> queryByDate(LocalDate tradeDate, Double minPrice, Double maxPrice) {
-        LocalDate date = tradeDate == null ? LocalDate.now() : tradeDate;
+        LocalDate date = tradeDate == null ? ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate() : tradeDate;
         double min = minPrice == null ? scannerProperties.getMinPrice() : minPrice;
         double max = maxPrice == null ? scannerProperties.getMaxPrice() : maxPrice;
         List<ScreeningMatchProjection> rows = screeningMatchRepository.findProjectedByTradeDateAndPriceBetweenOrderByPriceDesc(date, min, max);
