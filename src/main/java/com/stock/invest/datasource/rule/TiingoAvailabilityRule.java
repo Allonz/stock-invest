@@ -2,8 +2,11 @@ package com.stock.invest.datasource.rule;
 
 import com.stock.invest.config.TiingoProperties;
 import com.stock.invest.datasource.AvailabilityRule;
+import com.stock.invest.datasource.DataSourceCapability;
 import com.stock.invest.datasource.SourceRequirement;
 import org.springframework.stereotype.Component;
+
+import java.util.Set;
 
 @Component
 public class TiingoAvailabilityRule implements AvailabilityRule {
@@ -35,5 +38,10 @@ public class TiingoAvailabilityRule implements AvailabilityRule {
             return "已配置 Tiingo API Token";
         }
         return "缺失 Tiingo API Token";
+    }
+
+    @Override
+    public Set<DataSourceCapability> capabilities() {
+        return Set.of(DataSourceCapability.STOCK_QUOTE);
     }
 }

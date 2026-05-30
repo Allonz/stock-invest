@@ -76,7 +76,7 @@ import { ref, computed, onMounted, h } from 'vue'
 import { NSpin, NButton, NDataTable, NCard, NTag, NIcon, useNotification } from 'naive-ui'
 import { CheckmarkCircle, CloseCircle, AlertCircle } from '@vicons/ionicons5'
 import StatCard from '../components/StatCard.vue'
-import { fetchDataSourceStatus, fetchDataSourceHealth } from '../api/datasource'
+import { fetchDataSourceStatus, fetchDataSourceHealth, formatCapabilities, capabilityTagType } from '../api/datasource'
 import type { DataSource, DataSourceHealth } from '../api/datasource'
 
 const notification = useNotification()
@@ -98,13 +98,29 @@ const columns = [
   {
     title: '数据源名称',
     key: 'name',
-    width: 150,
+    width: 130,
     render: (row: DataSource) => h('span', { style: 'font-weight: 600;' }, row.name)
+  },
+  {
+    title: '用途',
+    key: 'capabilities',
+    width: 130,
+    render: (row: DataSource) => {
+      const caps = row.capabilities || []
+      if (caps.length === 0) return null
+      const label = formatCapabilities(caps)
+      const type = capabilityTagType(caps)
+      return h(NTag, {
+        type: type as any,
+        size: 'small',
+        bordered: false
+      }, { default: () => label })
+    }
   },
   {
     title: '运行状态',
     key: 'available',
-    width: 120,
+    width: 100,
     render: (row: DataSource) => h(NTag, {
       type: row.available ? 'success' : 'error',
       size: 'small',
@@ -116,7 +132,7 @@ const columns = [
   {
     title: 'API Key',
     key: 'hasApiKey',
-    width: 120,
+    width: 110,
     render: (row: DataSource) => h(NTag, {
       type: row.hasApiKey ? 'success' : 'warning',
       size: 'small',

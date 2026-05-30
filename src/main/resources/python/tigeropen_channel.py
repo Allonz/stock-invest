@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Tiger OpenAPI (tigeropen) CLI for Java: market scanner + daily bars.
+Tiger OpenAPI (tigeropen) CLI for Java: market scanner + daily bars + calendar.
 Credentials: TIGEROPEN_TIGER_ID, TIGEROPEN_ACCOUNT, TIGEROPEN_PRIVATE_KEY, TIGEROPEN_LICENSE (optional).
 """
 from __future__ import annotations
@@ -77,9 +77,48 @@ def _cmd_bars(client, symbol: str, lim: int):
     print(json.dumps({"symbol": symbol, "items": items}))
 
 
+def _cmd_calendar(client, market: str, date_str: str):
+    """查询指定日期是否为交易日。"""
+    from datetime import datetime, timedelta
+
+    from tigeropen.common.consts import Market
+
+    begin = date_str
+    end = (datetime.strptime(date_str, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
+
+    calendars = client.get_trading_calendar(
+        market=getattr(Market, market.upper()),
+        begin_date=begin,
+        end_date=end,
+    )
+    if not calendars:
+        print(
+            json.dumps(
+                {
+                    "tradingDay": False,
+                    "source": "tigeropen",
+                    "type": "HOLIDAY",
+                    "date": date_str,
+                }
+            )
+        )
+        return
+    cal = calendars[0]
+    print(
+        json.dumps(
+            {
+                "tradingDay": cal["type"] == "TRADING",
+                "source": "tigeropen",
+                "type": cal.get("type", ""),
+                "date": date_str,
+            }
+        )
+    )
+
+
 def main():
     if len(sys.argv) < 2:
-        print(json.dumps({"error": "usage: tigeropen_channel.py scan|bars ..."}))
+        print(json.dumps({"error": "usage: tigeropen_channel.py scan|bars|calendar ..."}))
         sys.exit(2)
     cmd = sys.argv[1]
     client = _client()
@@ -93,6 +132,11 @@ def main():
             print(json.dumps({"error": "bars needs symbol limit"}))
             sys.exit(2)
         _cmd_bars(client, sys.argv[2], int(sys.argv[3]))
+    elif cmd == "calendar":
+        if len(sys.argv) < 4:
+            print(json.dumps({"error": "calendar needs market date (e.g. US 2026-06-01)"}))
+            sys.exit(2)
+        _cmd_calendar(client, sys.argv[2], sys.argv[3])
     else:
         print(json.dumps({"error": "unknown command"}))
         sys.exit(2)

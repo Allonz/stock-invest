@@ -1,6 +1,7 @@
 package com.stock.invest.controller;
 
 import com.stock.invest.datasource.DataSourceAvailabilityChecker;
+import com.stock.invest.datasource.DataSourceCapability;
 import com.stock.invest.datasource.SourceStatus;
 import com.stock.invest.enums.dto.ApiResponse;
 import org.slf4j.Logger;
@@ -28,7 +29,7 @@ public class DataSourceStatusApiController {
     }
 
     /**
-     * 获取数据源状态
+     * 获取数据源状态（含能力标识）
      */
     @GetMapping("/status")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getStatus() {
@@ -41,6 +42,7 @@ public class DataSourceStatusApiController {
             item.put("available", status.isAvailable());
             item.put("reason", status.getReason());
             item.put("hasApiKey", status.isHasApiKey());
+            item.put("capabilities", capabilityStrings(status.getCapabilities()));
             sources.add(item);
         }
 
@@ -67,6 +69,7 @@ public class DataSourceStatusApiController {
                 m.put("hasApiKey", s.isHasApiKey());
                 m.put("reason", s.getReason());
                 m.put("healthy", s.isAvailable() && s.isHasApiKey());
+                m.put("capabilities", capabilityStrings(s.getCapabilities()));
                 return m;
             }).toList();
 
@@ -84,4 +87,9 @@ public class DataSourceStatusApiController {
         }
     }
 
+    /** 将 capabilities 枚举转为字符串列表 */
+    private List<String> capabilityStrings(Set<DataSourceCapability> caps) {
+        if (caps == null || caps.isEmpty()) return Collections.emptyList();
+        return caps.stream().map(Enum::name).toList();
+    }
 }

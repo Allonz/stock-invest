@@ -65,3 +65,13 @@ logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36}:%line - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36}:%line - %msg%n"
+
+# ============================================================
+# Alpaca Markets 配置（仅用于交易日历查询）
+# 注册：https://alpaca.markets → Dashboard → API Keys
+# 数据范围：1970-01-01 ～ 2029-12-31
+# ============================================================
+alpaca:
+  api:
+    key-id: ""          # API Key ID（不配则跳过该数据源）
+    secret-key: ""      # Secret Key（不配则跳过该数据源）

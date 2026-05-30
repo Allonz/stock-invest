@@ -1,12 +1,14 @@
 package com.stock.invest.datasource.rule;
 
 import com.stock.invest.datasource.AvailabilityRule;
+import com.stock.invest.datasource.DataSourceCapability;
 import com.stock.invest.datasource.SourceRequirement;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
 import java.io.InputStream;
 import java.util.Properties;
+import java.util.Set;
 
 @Component
 public class TigerAvailabilityRule implements AvailabilityRule {
@@ -32,6 +34,11 @@ public class TigerAvailabilityRule implements AvailabilityRule {
             return "已配置 tiger_openapi_config.properties";
         }
         return "缺失 tiger_openapi_config.properties 或凭证不完整";
+    }
+
+    @Override
+    public Set<DataSourceCapability> capabilities() {
+        return Set.of(DataSourceCapability.STOCK_QUOTE, DataSourceCapability.TRADING_CALENDAR);
     }
 
     private boolean checkTigerConfig() {

@@ -42,16 +42,15 @@ public class DataSourceAvailabilityChecker {
             boolean available = rule.check();
             String detail = rule.getDetail();
             SourceRequirement req = rule.getRequirement();
-            // 对于 REQUIRED 类型且 check 返回 false，hasApiKey 为 false
+            Set<DataSourceCapability> capabilities = rule.capabilities();
             boolean hasKey = available || (req == SourceRequirement.OPTIONAL && !"缺失 API Key / 凭证".equals(detail));
             if (req == SourceRequirement.REQUIRED) {
-                // REQUIRED 类型：available 时才有 key
                 hasKey = available;
             }
-            SourceStatus status = new SourceStatus(name, available, available ? null : detail, req, hasKey);
+            SourceStatus status = new SourceStatus(name, available, available ? null : detail, req, hasKey, capabilities);
             statusMap.put(name, status);
-            log.info("[DataSourceAvailabilityChecker] {}: available={} (req={}, detail={})",
-                    name, available, req, detail);
+            log.info("[DataSourceAvailabilityChecker] {}: available={} (req={}, capabilities={}, detail={})",
+                    name, available, req, capabilities, detail);
         }
         log.info("[DataSourceAvailabilityChecker] Available sources: {}", getAvailableSourceNames());
     }
