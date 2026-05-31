@@ -9,6 +9,7 @@ import com.stock.invest.service.impl.TradingCalendarFallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -61,6 +62,7 @@ public class TradingCalendarController {
      * ④ 全部不可用 → 默认 true（OpenClaw 截图导入不遗漏）
      */
     @GetMapping("/is-open")
+    @Transactional
     public ResponseEntity<ApiResponse<Map<String, Object>>> isOpen(
             @RequestParam(value = "date", required = false) String dateParam,
             @RequestParam(value = "exchange", required = false, defaultValue = "XNYS") String exchange) {
