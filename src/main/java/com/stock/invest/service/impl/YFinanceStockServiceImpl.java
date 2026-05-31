@@ -5,11 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stock.invest.model.KLineData;
 import com.stock.invest.model.KLineIterator;
 import com.stock.invest.model.StockInfo;
+import com.stock.invest.service.DataSourceStrategy;
 import com.stock.invest.util.PythonScriptExecutor;
 import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -21,26 +21,33 @@ import java.util.Map;
  * StockService接口的Yahoo Finance实现
  */
 @Service("yFinanceStockService")
-public class YFinanceStockServiceImpl {
+public class YFinanceStockServiceImpl implements DataSourceStrategy {
 
     private static final Logger log = LoggerFactory.getLogger(YFinanceStockServiceImpl.class);
 
     private final ObjectMapper objectMapper;
     private final PythonScriptExecutor pythonScriptExecutor;
-    private final String implementation;
+
+    @Override
+    public String getSourceName() {
+        return "yfinance";
+    }
+
+    @Override
+    public boolean isAvailable() {
+        return true;
+    }
 
     public YFinanceStockServiceImpl(
             ObjectMapper objectMapper,
-            PythonScriptExecutor pythonScriptExecutor,
-            @Value("${stock.service.implementation:yfinance}") String implementation) {
+            PythonScriptExecutor pythonScriptExecutor) {
         log.info("YFinanceStockServiceImpl : Service initialized");
         this.objectMapper = objectMapper;
         this.pythonScriptExecutor = pythonScriptExecutor;
-        this.implementation = implementation;
     }
 
     private String getScriptName() {
-        return "stock_info_" + implementation + ".py";
+        return "stock_info_yfinance.py";
     }
     public String getDailyKLineData(String symbol) {
         return getDailyKLineData(symbol, 30); // 默认获取30天的数据

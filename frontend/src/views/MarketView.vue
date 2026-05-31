@@ -174,11 +174,22 @@ const pagination = reactive({
 
 /** 创建表格列定义 */
 const tableColumns = computed(() => [
-  { title: '代码', key: 'symbol', width: 100, sorter: true, render: (row: ScreeningMatch) => h('span', { class: 'symbol-cell' }, row.symbol) },
-  { title: '名称', key: 'name', width: 180, render: (row: ScreeningMatch) => row.name || '—' },
-  { title: '最新价', key: 'lastClose', width: 120, sorter: true, render: (row: ScreeningMatch) => h('span', { class: 'price-cell' }, `$${row.lastClose.toFixed(4)}`) },
+  { title: '代码', key: 'symbol', width: 120, align: 'center' as const, sorter: true, render: (row: ScreeningMatch) => {
+        const copied = copiedSymbol.value === row.symbol
+        return [
+          h('span', { class: 'symbol-cell' }, row.symbol),
+          copied
+            ? h('span', { style: 'color:#52c41a;font-size:12px;margin-left:24px' }, '✓ 复制成功')
+            : h('a', {
+                style: 'margin-left:24px;cursor:pointer;color:#1890ff;font-size:12px',
+                onClick: () => { copySymbol(row.symbol); return false; }
+              }, '复制')
+        ]
+      } },
+  { title: '名称', key: 'name', width: 180, align: 'center' as const, render: (row: ScreeningMatch) => row.name || '—' },
+  { title: '最新价', key: 'lastClose', width: 120, align: 'center' as const, sorter: true, render: (row: ScreeningMatch) => h('span', { class: 'price-cell' }, `$${row.lastClose.toFixed(4)}`) },
   {
-    title: '涨幅', key: 'rise', width: 100,
+    title: '涨幅', key: 'rise', width: 100, align: 'center' as const,
     render: (row: ScreeningMatch) => {
       return h(NTag, {
         type: row.rise ? 'error' : 'success',
@@ -187,7 +198,7 @@ const tableColumns = computed(() => [
       }, { default: () => row.rise ? '↑ 上涨' : '↓ 下跌' })
     }
   },
-  { title: '算法', key: 'algorithm', width: 150,
+  { title: '算法', key: 'algorithm', width: 150, align: 'center' as const,
     render: (row: ScreeningMatch) => {
       return h(NTag, {
         color: { color: '#f9f0ff', textColor: '#722ed1' },
@@ -196,10 +207,18 @@ const tableColumns = computed(() => [
       }, { default: () => row.algorithm === 'increasing_volume' ? '📈 放量上涨' : '⚡ 量能异动' })
     }
   },
-  { title: '窗口', key: 'windowDays', width: 80,
+  { title: '窗口', key: 'windowDays', width: 80, align: 'center' as const,
     render: (row: ScreeningMatch) => `${row.windowDays}天`
   }
 ])
+
+// ============ 复制反馈 ============
+const copiedSymbol = ref<string | null>(null)
+function copySymbol(sym: string) {
+  navigator.clipboard.writeText(sym)
+  copiedSymbol.value = sym
+  setTimeout(() => { copiedSymbol.value = null }, 1000)
+}
 
 // ============ 数据加载 ============
 /** 加载所有数据 */

@@ -5,6 +5,7 @@ import com.stock.invest.client.TwelveDataRestClient;
 import com.stock.invest.config.ScannerProperties;
 import com.stock.invest.model.KLineData;
 import com.stock.invest.model.StockInfo;
+import com.stock.invest.service.DataSourceStrategy;
 import com.stock.invest.util.PythonScriptExecutor;
 import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
 import org.slf4j.Logger;
@@ -18,8 +19,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@Service
-public class TwelveDataStockServiceImpl {
+@Service("twelveDataStockService")
+public class TwelveDataStockServiceImpl implements DataSourceStrategy {
     private static final Logger log = LoggerFactory.getLogger(TwelveDataStockServiceImpl.class);
     private static final DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -28,6 +29,16 @@ public class TwelveDataStockServiceImpl {
     
     private final ScannerProperties scannerProperties;
     private final ObjectMapper objectMapper;
+
+    @Override
+    public String getSourceName() {
+        return "twelvedata";
+    }
+
+    @Override
+    public boolean isAvailable() {
+        return twelveDataRestClient.hasApiKey();
+    }
 
     /**
      * 统一使用构造函数注入 - 符合 Spring 最佳实践

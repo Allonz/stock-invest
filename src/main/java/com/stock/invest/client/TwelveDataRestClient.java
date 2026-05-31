@@ -33,6 +33,10 @@ public class TwelveDataRestClient {
     private final ObjectMapper objectMapper;
     private final AtomicInteger keyRoundRobin = new AtomicInteger();
 
+    public boolean hasApiKey() {
+        return !props.resolvedKeys().isEmpty();
+    }
+
     public TwelveDataRestClient(ResilientHttpExecutor http, TwelveDataProperties props, ObjectMapper objectMapper) {
         this.http = http;
         this.props = props;

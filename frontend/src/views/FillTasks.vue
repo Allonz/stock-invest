@@ -82,15 +82,36 @@
     <n-card title="补缺任务列表" size="small">
       <n-space vertical>
         <n-space justify="space-between" align="center">
-          <n-select
-            v-model:value="filterStatus"
-            :options="statusOptions"
-            placeholder="全部状态"
-            style="width: 160px;"
-            size="small"
-            clearable
-            @update:value="handleStatusChange"
-          />
+          <n-space>
+            <n-input
+              v-model:value="filterSymbol"
+              placeholder="代码"
+              style="width: 130px;"
+              size="small"
+              clearable
+              @keyup.enter="applyFilters"
+              @clear="applyFilters"
+            />
+            <n-date-picker
+              v-model:value="filterTradeDateTs"
+              type="date"
+              placeholder="交易日期"
+              style="width: 150px;"
+              size="small"
+              clearable
+              @update:value="applyFilters"
+            />
+            <n-select
+              v-model:value="filterStatus"
+              :options="statusOptions"
+              placeholder="全部状态"
+              style="width: 130px;"
+              size="small"
+              clearable
+              @update:value="applyFilters"
+            />
+            <n-button size="small" type="primary" @click="applyFilters">搜索</n-button>
+          </n-space>
           <n-button size="tiny" @click="handleRefresh">刷新</n-button>
         </n-space>
 
@@ -101,6 +122,8 @@
           :single-line="false"
           size="small"
           :loading="tableLoading"
+          :sort-state="sortState"
+          @update:sorter="handleSorterChange"
         />
         <n-space justify="end" style="margin-top: 12px">
           <n-pagination
@@ -119,11 +142,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted, h } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, h, nextTick } from 'vue'
 import {
   NButton, NDataTable, NTag, NProgress,
   NCard, NSpace, NGrid, NGi, NStatistic, NSelect, NEmpty,
-  NPagination,
+  NPagination, NInput, NDatePicker,
   useNotification
 } from 'naive-ui'
 import { triggerDataFill, fetchDataFillProgress, fetchFillTasks, fetchFillTaskCount } from '../api/admin'
@@ -240,6 +263,16 @@ interface TaskRecord {
 
 const taskList = ref<TaskRecord[]>([])
 
+const filterSymbol = ref<string>('')
+const filterTradeDateTs = ref<number | null>(null)
+const sortBy = ref<string | null>(null)
+const sortOrder = ref<'asc' | 'desc'>('desc')
+
+const sortState = computed(() => {
+  if (!sortBy.value) return null
+  return [{ columnKey: sortBy.value, order: sortOrder.value }]
+})
+
 const pagination = reactive({
   page: 1,
   pageSize: 20,
@@ -258,11 +291,22 @@ function onPageSizeChange(size: number) {
 }
 
 const columns = [
-  { title: 'ID', key: 'id', width: 70 },
-  { title: '代码', key: 'symbol', width: 90, render: (row: TaskRecord) => h('span', { class: 'symbol-text' }, row.symbol) },
-  { title: '交易日', key: 'tradeDate', width: 110 },
+  { title: 'ID', key: 'id', width: 70, align: 'center' as const },
+  { title: '代码', key: 'symbol', width: 120, align: 'center' as const, sorter: 'default' as const, render: (row: TaskRecord) => {
+        const copied = copiedSymbol.value === row.symbol
+        return [
+          h('span', { class: 'symbol-text' }, row.symbol),
+          copied
+            ? h('span', { style: 'color:#52c41a;font-size:12px;margin-left:24px' }, '✓ 复制成功')
+            : h('a', {
+          style: 'margin-left:24px;cursor:pointer;color:#1890ff;font-size:12px',
+          onClick: () => { copySymbol(row.symbol); return false; }
+        }, '复制')
+        ]
+      } },
+  { title: '交易日', key: 'tradeDate', width: 110, align: 'center' as const, sorter: 'default' as const },
   {
-    title: '状态', key: 'status', width: 90,
+    title: '状态', key: 'status', width: 90, align: 'center' as const,
     render: (row: TaskRecord) => {
       const map: Record<string, { type: string; label: string }> = {
         retrying: { type: 'warning', label: '重试中' },
@@ -274,14 +318,22 @@ const columns = [
       return h(NTag, { type: s.type as any, size: 'small', bordered: false }, { default: () => s.label })
     }
   },
-  { title: '重试次数', key: 'retryCount', width: 90 },
-  { title: '最大重试', key: 'maxRetries', width: 90 },
+  { title: '重试次数', key: 'retryCount', width: 90, align: 'center' as const },
+  { title: '最大重试', key: 'maxRetries', width: 90, align: 'center' as const },
   {
-    title: '错误信息', key: 'lastError', width: 200,
+    title: '错误信息', key: 'lastError', width: 200, align: 'center' as const,
     ellipsis: { tooltip: true }
   },
-  { title: '创建时间', key: 'createdAt', width: 170 }
+  { title: '创建时间', key: 'createdAt', width: 170, align: 'center' as const }
 ]
+
+// ============ 复制反馈 ============
+const copiedSymbol = ref<string | null>(null)
+function copySymbol(sym: string) {
+  navigator.clipboard.writeText(sym)
+  copiedSymbol.value = sym
+  setTimeout(() => { copiedSymbol.value = null }, 1000)
+}
 
 // ============ 数据加载 ============
 async function loadTaskCount() {
@@ -307,6 +359,17 @@ async function loadTasks() {
     }
     if (filterStatus.value) {
       params.status = filterStatus.value
+    }
+    if (filterSymbol.value) {
+      params.symbol = filterSymbol.value
+    }
+    if (filterTradeDateTs.value) {
+      const d = new Date(filterTradeDateTs.value)
+      params.tradeDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+    }
+    if (sortBy.value) {
+      params.sortBy = sortBy.value
+      params.sortOrder = sortOrder.value
     }
     const res = await fetchFillTasks(params)
     if (res.data.success && res.data.data) {
@@ -360,9 +423,25 @@ async function handleTriggerFill() {
   }
 }
 
-function handleStatusChange() {
+function handleSorterChange(sorter: any) {
+  if (sorter && sorter.columnKey && sorter.order) {
+    sortBy.value = sorter.columnKey
+    sortOrder.value = sorter.order
+  } else {
+    sortBy.value = null
+    sortOrder.value = 'desc'
+  }
   pagination.page = 1
   loadTasks()
+}
+
+// 统一触发筛选：重置分页+排序，重新加载
+function applyFilters() {
+  console.log('[FillTasks] applyFilters symbol=' + filterSymbol.value + ' date=' + filterTradeDateTs.value + ' status=' + filterStatus.value)
+  pagination.page = 1
+  sortBy.value = null
+  sortOrder.value = 'desc'
+  nextTick(() => { loadTasks() })
 }
 
 function handleRefresh() {

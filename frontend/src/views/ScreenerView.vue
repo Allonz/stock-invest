@@ -407,6 +407,14 @@ async function handleAdvancedScreening() {
 }
 
 // ===================== 筛选历史 =====================
+// ============ 复制反馈 ============
+const copiedSymbol = ref<string | null>(null)
+function copySymbol(sym: string) {
+  navigator.clipboard.writeText(sym)
+  copiedSymbol.value = sym
+  setTimeout(() => { copiedSymbol.value = null }, 1000)
+}
+
 /** 加载筛选历史 */
 async function loadHistory() {
   loading.value = true
@@ -487,19 +495,30 @@ async function toggleNotifBatch(batchId: string) {
 
 // ===================== 表格列定义 =====================
 const detailColumns = [
-  { title: '代码', key: 'symbol', width: 90, render: (row: ScreeningMatch) => h('span', { class: 'symbol-text' }, row.symbol) },
-  { title: '收盘价', key: 'lastClose', width: 110, render: (row: ScreeningMatch) => `${row.lastClose.toFixed(4)}` },
-  { title: '涨跌', key: 'rise', width: 80, render: (row: ScreeningMatch) => h(NTag, {
+  { title: '代码', key: 'symbol', width: 120, align: 'center' as const, render: (row: ScreeningMatch) => {
+        const copied = copiedSymbol.value === row.symbol
+        return [
+          h('span', { class: 'symbol-text' }, row.symbol),
+          copied
+            ? h('span', { style: 'color:#52c41a;font-size:12px;margin-left:24px' }, '✓ 复制成功')
+            : h('a', {
+          style: 'margin-left:24px;cursor:pointer;color:#1890ff;font-size:12px',
+          onClick: () => { copySymbol(row.symbol); return false; }
+        }, '复制')
+        ]
+      } },
+  { title: '收盘价', key: 'lastClose', width: 110, align: 'center' as const, render: (row: ScreeningMatch) => `${row.lastClose.toFixed(4)}` },
+  { title: '涨跌', key: 'rise', width: 80, align: 'center' as const, render: (row: ScreeningMatch) => h(NTag, {
     type: row.rise ? 'error' : 'success',
     size: 'small',
     bordered: false
   }, { default: () => row.rise ? '上涨' : '下跌' }) },
-  { title: '算法', key: 'algorithm', width: 140, render: (row: ScreeningMatch) => h(NTag, {
+  { title: '算法', key: 'algorithm', width: 140, align: 'center' as const, render: (row: ScreeningMatch) => h(NTag, {
     color: { color: '#f9f0ff', textColor: '#722ed1' },
     size: 'small',
     bordered: false
   }, { default: () => row.algorithm }) },
-  { title: '窗口', key: 'windowDays', width: 70, render: (row: ScreeningMatch) => `${row.windowDays}天` }
+  { title: '窗口', key: 'windowDays', width: 70, align: 'center' as const, render: (row: ScreeningMatch) => `${row.windowDays}天` }
 ]
 
 // ===================== 初始化 =====================

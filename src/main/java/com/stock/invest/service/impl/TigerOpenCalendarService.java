@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stock.invest.client.TigerOpenPythonBridge;
 import com.stock.invest.model.TradingCalendarResult;
 import com.stock.invest.service.TradingCalendarService;
-import com.stock.invest.util.PythonScriptExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -13,7 +12,6 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.*;
 
@@ -26,18 +24,14 @@ import java.util.concurrent.*;
 public class TigerOpenCalendarService implements TradingCalendarService {
 
     private static final Logger log = LoggerFactory.getLogger(TigerOpenCalendarService.class);
-    private static final String SCRIPT_NAME = "tigeropen_channel.py";
     private static final Duration TIMEOUT = Duration.ofSeconds(60);
 
-    private final PythonScriptExecutor pythonExecutor;
     private final ObjectMapper objectMapper;
     private final TigerOpenPythonBridge bridge;
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
-    public TigerOpenCalendarService(PythonScriptExecutor pythonExecutor,
-                                    ObjectMapper objectMapper,
+    public TigerOpenCalendarService(ObjectMapper objectMapper,
                                     TigerOpenPythonBridge bridge) {
-        this.pythonExecutor = pythonExecutor;
         this.objectMapper = objectMapper;
         this.bridge = bridge;
     }
@@ -75,11 +69,7 @@ public class TigerOpenCalendarService implements TradingCalendarService {
         try {
             String dateStr = date.format(DateTimeFormatter.ISO_LOCAL_DATE);
 
-            // 通过环境变量传递 Tiger 凭证
-            Map<String, String> env = buildEnv();
-
-            String json = pythonExecutor.executeScriptWithEnvironment(
-                    env, SCRIPT_NAME, "calendar", marketCode, dateStr);
+            String json = bridge.executePythonScript("calendar", marketCode, dateStr);
 
             Map<String, Object> result = objectMapper.readValue(json.trim(),
                     new TypeReference<Map<String, Object>>() {});
@@ -96,18 +86,5 @@ public class TigerOpenCalendarService implements TradingCalendarService {
             log.warn("[tigeropen] 日历查询异常: {}", e.getMessage());
             return null;
         }
-    }
-
-    private Map<String, String> buildEnv() {
-        Map<String, String> env = new HashMap<>();
-        String tigerId = System.getenv("TIGEROPEN_TIGER_ID");
-        String account = System.getenv("TIGEROPEN_ACCOUNT");
-        String privateKey = System.getenv("TIGEROPEN_PRIVATE_KEY");
-        String license = System.getenv("TIGEROPEN_LICENSE");
-        if (tigerId != null) env.put("TIGEROPEN_TIGER_ID", tigerId);
-        if (account != null) env.put("TIGEROPEN_ACCOUNT", account);
-        if (privateKey != null) env.put("TIGEROPEN_PRIVATE_KEY", privateKey);
-        if (license != null) env.put("TIGEROPEN_LICENSE", license);
-        return env;
     }
 }

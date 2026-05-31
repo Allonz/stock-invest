@@ -72,8 +72,12 @@ export function fetchDataFillProgress() {
 /** 获取补缺任务列表 */
 export function fetchFillTasks(params: {
   status?: string
+  symbol?: string
+  tradeDate?: string
   page?: number
   size?: number
+  sortBy?: string
+  sortOrder?: string
 }) {
   return request.get<ApiResponse<{
     total: number

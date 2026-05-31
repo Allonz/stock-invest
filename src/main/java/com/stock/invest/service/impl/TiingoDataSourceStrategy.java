@@ -25,6 +25,7 @@ public class TiingoDataSourceStrategy implements DataSourceStrategy {
 
     public TiingoDataSourceStrategy(TiingoRestClient tiingoRestClient) {
         this.tiingoRestClient = tiingoRestClient;
+        log.info("TiingoDataSourceStrategy: Service initialized");
     }
 
     @Override

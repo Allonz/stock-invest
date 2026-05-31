@@ -31,7 +31,7 @@ public class TigerCalendarService implements TradingCalendarService {
     private final TigerHttpClient client;
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
-    public TigerCalendarService(@Autowired(required = false) TigerHttpClient client) {
+    public TigerCalendarService(@Autowired(required = true) TigerHttpClient client) {
         this.client = client;
     }
 
@@ -42,16 +42,11 @@ public class TigerCalendarService implements TradingCalendarService {
 
     @Override
     public boolean isAvailable() {
-        return client != null;
+        return true;
     }
 
     @Override
     public TradingCalendarResult isTradingDay(String market, LocalDate date) {
-        if (!isAvailable()) {
-            log.debug("[tiger] 日历查询跳过：TigerHttpClient bean 不存在");
-            return null;
-        }
-
         try {
             return executor.submit(() -> doQuery(market, date))
                     .get(TIMEOUT.getSeconds(), TimeUnit.SECONDS);

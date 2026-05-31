@@ -7,151 +7,134 @@ import com.tigerbrokers.stock.openapi.client.struct.enums.License;
 import com.tigerbrokers.stock.openapi.client.util.ApiLogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.InputStream;
 import java.util.Properties;
 
 /**
  * Tiger API 配置类
+ * <p>
+ * 所有 API 凭证（tiger_id, private_key, account, license, env）统一从
+ * {@code tiger_openapi_config.properties} 读取，经 {@link TigerCredentials} record 返回。
+ * 配置文件路径由 application.yml 中 {@code tiger.api.configFilePath} 指定。
+ * </p>
  */
 @Configuration
-@Profile("tiger")
 public class TigerApiConfig {
 
     private static final Logger logger = LoggerFactory.getLogger(TigerApiConfig.class);
 
-    @Value("${tiger.api.configFilePath:}")
+    @Value("${tiger.api.configFilePath}")
     private String configFilePath;
 
-    @Value("${tiger.api.tiger_id:}")
-    private String tigerId;
-
-    @Value("${tiger.api.private_key:}")
-    private String privateKey;
+    @Autowired
+    private ResourceLoader resourceLoader;
 
     @Value("${tiger.api.log_path:logs/tiger}")
     private String logPath;
 
-    @Value("${tiger.api.account:}")
-    private String account;
-
-    @Value("${tiger.api.license:TBNZ}")
-    private String license;
-
-    @Value("${tiger.api.env:PROD}")
-    private String env;
-
-    @Value("${tiger.api.private_key_pk1:}")
-    private String privateKeyPk1;
-
-    @Value("${tiger.api.private_key_pk8:}")
-    private String privateKeyPk8;
+    private volatile TigerCredentials cachedCredentials;
 
     /**
      * 创建并配置 TigerHttpClient 实例
-     * @return TigerHttpClient 实例
      */
     @Bean
     public TigerHttpClient tigerHttpClient() {
-        logger.info("Initializing TigerHttpClient with config:");
-        logger.info("configFilePath: {}", configFilePath);
-        logger.info("privateKey length: {}", privateKey != null ? privateKey.length() : 0);
-        logger.info("logPath: {}", logPath);
+        logger.info("Initializing TigerHttpClient");
 
         ClientConfig clientConfig = new ClientConfig();
         ApiLogger.setEnabled(true, logPath);
 
         try {
-            // 所有配置在内存中完成，不向磁盘写入私钥
             clientConfig.isSslSocket = true;
             clientConfig.isAutoGrabPermission = true;
             clientConfig.failRetryCounts = 2;
 
-            // 直接设置 env/license/account，无需经过文件
-            if (env != null && !env.isEmpty()) {
-                clientConfig.setEnv(Env.valueOf(env));
+            TigerCredentials creds = resolveCredentials();
+            clientConfig.tigerId = creds.tigerId();
+            clientConfig.privateKey = creds.privateKey();
+            if (!creds.account().isEmpty()) {
+                clientConfig.defaultAccount = creds.account();
             }
-            if (license != null && !license.isEmpty()) {
-                clientConfig.license = License.valueOf(license);
+            if (!creds.license().isEmpty()) {
+                clientConfig.license = License.valueOf(creds.license());
             }
-            if (account != null && !account.isEmpty()) {
-                clientConfig.defaultAccount = account;
+            if (!creds.env().isEmpty()) {
+                clientConfig.setEnv(Env.valueOf(creds.env()));
             }
-
-            resolveTigerId(clientConfig);
-            resolvePrivateKey(clientConfig);
 
             TigerHttpClient client = TigerHttpClient.getInstance().clientConfig(clientConfig);
             logger.info("TigerHttpClient initialized successfully");
             return client;
         } catch (Exception e) {
-            String errorMsg = "Failed to initialize TigerHttpClient: " + e.getMessage();
-            logger.error(errorMsg, e);
-            throw new RuntimeException(errorMsg, e);
+            String msg = "[TigerApiConfig] TigerHttpClient 初始化失败: " + e.getMessage();
+            logger.error(msg);
+            throw new RuntimeException(msg, e);
         }
     }
 
     /**
-     * 解析 tigerId：优先从 application.yml 取值，其次从外部配置文件读取
+     * 解析凭证：从 {@code tiger_openapi_config.properties} 读取所有 Tiger API 凭证字段。
      */
-    private void resolveTigerId(ClientConfig clientConfig) throws IOException {
-        if (tigerId != null && !tigerId.isEmpty()) {
-            clientConfig.tigerId = tigerId;
-            logger.debug("Using tigerId from application.yml");
-        } else if (configFilePath != null && !configFilePath.isEmpty()) {
-            Properties props = loadConfigProperties(configFilePath);
-            String configTigerId = props.getProperty("tiger_id");
-            if (configTigerId != null && !configTigerId.isEmpty()) {
-                clientConfig.tigerId = configTigerId;
-                logger.info("Using tigerId from config file: {}", configTigerId);
-            } else {
-                throw new IllegalArgumentException("tigerId is required but not configured");
-            }
-        } else {
-            throw new IllegalArgumentException("tigerId is required but not configured; set tiger.api.tiger_id or tiger.api.configFilePath");
+    private TigerCredentials resolveCredentials() throws IOException {
+        Properties props = loadConfigProperties(configFilePath);
+
+        String tigerId = props.getProperty("tiger_id");
+        String account = props.getProperty("account");
+        String license = props.getProperty("license");
+        String env = props.getProperty("env", "PROD");
+        // 优先使用 pk8，没有则回退 pk1
+        String privateKey = props.getProperty("private_key_pk8");
+        if (privateKey == null || privateKey.isEmpty()) {
+            privateKey = props.getProperty("private_key");
         }
+        if (privateKey == null || privateKey.isEmpty()) {
+            privateKey = props.getProperty("private_key_pk1");
+        }
+
+        if (tigerId == null || tigerId.isEmpty()) {
+            throw new IllegalArgumentException("tiger_id is required but not configured in tiger_openapi_config.properties");
+        }
+        if (privateKey == null || privateKey.isEmpty()) {
+            throw new IllegalArgumentException("private_key is required but not configured in tiger_openapi_config.properties");
+        }
+
+        return new TigerCredentials(
+            tigerId.trim(),
+            cleanPrivateKey(privateKey),
+            account != null ? account.trim() : "",
+            license != null ? license.trim() : "",
+            env != null ? env.trim() : "PROD"
+        );
     }
 
     /**
-     * 解析私钥：优先从 application.yml 的 private_key/private_key_pk8 取值，
-     * 其次从外部配置文件读取。写入方式从磁盘文件改为内存直接赋值。
+     * 公开方法：获取缓存的 Tiger 凭证。懒加载，双重检查锁。
      */
-    private void resolvePrivateKey(ClientConfig clientConfig) throws IOException {
-        String finalPrivateKey = privateKey;
-        if (finalPrivateKey == null || finalPrivateKey.isEmpty()) {
-            if (privateKeyPk8 != null && !privateKeyPk8.isEmpty()) {
-                finalPrivateKey = privateKeyPk8;
-            } else if (privateKeyPk1 != null && !privateKeyPk1.isEmpty()) {
-                finalPrivateKey = privateKeyPk1;
-            } else if (configFilePath != null && !configFilePath.isEmpty()) {
-                Properties props = loadConfigProperties(configFilePath);
-                finalPrivateKey = props.getProperty("private_key_pk8");
-                if (finalPrivateKey == null || finalPrivateKey.isEmpty()) {
-                    finalPrivateKey = props.getProperty("private_key");
+    public TigerCredentials getCredentials() {
+        if (cachedCredentials == null) {
+            synchronized (this) {
+                if (cachedCredentials == null) {
+                    try {
+                        cachedCredentials = resolveCredentials();
+                    } catch (IOException e) {
+                        throw new RuntimeException("Failed to load tiger credentials from tiger_openapi_config.properties", e);
+                    }
                 }
             }
         }
-        if (finalPrivateKey != null && !finalPrivateKey.isEmpty()) {
-            clientConfig.privateKey = cleanPrivateKey(finalPrivateKey);
-            logger.info("Using privateKey from configuration");
-        } else {
-            throw new IllegalArgumentException("privateKey is required but not configured; set tiger.api.private_key or tiger.api.configFilePath");
-        }
+        return cachedCredentials;
     }
 
     /**
-     * 清理 PEM 私钥：
-     * 1. 先移除 PEM 头尾标记（如 -----BEGIN RSA PRIVATE KEY-----）
-     * 2. 再移除所有空白字符（换行、空格、制表符）
-     * 顺序不可颠倒，否则先清空白会破坏 PEM 格式标记
+     * 清理 PEM 私钥：移除头尾标记及所有空白字符。
      */
     private String cleanPrivateKey(String rawKey) {
         // Step 1: 移除 PEM 头尾标记
@@ -164,21 +147,42 @@ public class TigerApiConfig {
     }
 
     /**
-     * 从外部配置文件加载属性（只读，不写入敏感信息）
-     * @param filePath 配置文件路径
-     * @return 配置属性对象
+     * 从 classpath 加载 .properties 文件。
      */
     private Properties loadConfigProperties(String filePath) throws IOException {
         Properties properties = new Properties();
-        Path path = Paths.get(filePath);
-        if (Files.exists(path) && Files.size(path) > 0) {
-            try (FileInputStream fis = new FileInputStream(path.toFile())) {
-                properties.load(fis);
+        Resource resource = resourceLoader.getResource(filePath);
+        if (resource.exists()) {
+            try (InputStream is = resource.getInputStream()) {
+                properties.load(is);
                 logger.info("Loaded {} properties from config file: {}", properties.size(), filePath);
             }
         } else {
-            logger.warn("Config file not found or empty: {}", filePath);
+            logger.warn("Config file not found: {}", filePath);
         }
         return properties;
+    }
+
+    /**
+     * Tiger API 凭证记录。
+     *
+     * @param tigerId    Tiger ID（必填）
+     * @param privateKey 私钥（已清理，必填）
+     * @param account    账号（必填）
+     * @param license    许可证（可选，默认空）
+     * @param env        环境（可选，默认 PROD）
+     */
+    public record TigerCredentials(
+            String tigerId,
+            String privateKey,
+            String account,
+            String license,
+            String env
+    ) {
+        public boolean isValid() {
+            return tigerId != null && !tigerId.isEmpty()
+                    && privateKey != null && !privateKey.isEmpty()
+                    && account != null && !account.isEmpty();
+        }
     }
 }

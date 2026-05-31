@@ -8,10 +8,10 @@ import com.stock.invest.repository.DataFillTaskRepository;
 import com.stock.invest.repository.StockDailyBarRepository;
 import com.stock.invest.service.DataFillProgressService;
 import com.stock.invest.service.DataGapFillerService;
+import com.stock.invest.service.DataSourceStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.stock.invest.config.GapFillProperties;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,8 +24,10 @@ import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -33,12 +35,9 @@ import java.util.stream.Collectors;
 /**
  * 数据补缺服务 —— 通过 fallback 链补全缺失的日 K 线数据。
  * <p>
- * Fallback 链优先级：
- * Tiger Java SDK ({@link TigerStockServiceImpl}) ->
- * Tiger Python Bridge (PythonScriptExecutor) ->
- * YFinance ({@link YFinanceStockServiceImpl}) ->
- * TwelveData ({@link TwelveDataStockServiceImpl}) ->
- * Tiingo ({@link TiingoDataSourceStrategy})
+ * Fallback 链通过自动收集所有 {@link com.stock.invest.service.DataSourceStrategy} bean 构建，
+ * 按优先级（tiger -> tigeropen -> yfinance -> twelvedata -> tiingo）排序，
+ * 过滤掉不可用的数据源。
  * </p>
  */
 @Service
@@ -55,28 +54,19 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
 
     private final StockDailyBarRepository stockDailyBarRepository;
     private final DataFillTaskRepository dataFillTaskRepository;
-    private final TigerStockServiceImpl tigerStockService;
-    private final YFinanceStockServiceImpl yFinanceStockService;
-    private final TwelveDataStockServiceImpl twelveDataStockService;
-    private final TiingoDataSourceStrategy tiingoDataSourceStrategy;
+    private final List<DataSourceStrategy> dataSources;
     private final GapFillProperties gapFillProperties;
     private final DataFillProgressService dataFillProgressService;
 
     public DataGapFillerServiceImpl(
             StockDailyBarRepository stockDailyBarRepository,
             DataFillTaskRepository dataFillTaskRepository,
-            @Qualifier("tigerStockService") TigerStockServiceImpl tigerStockService,
-            @Qualifier("yFinanceStockService") YFinanceStockServiceImpl yFinanceStockService,
-            TwelveDataStockServiceImpl twelveDataStockService,
-            TiingoDataSourceStrategy tiingoDataSourceStrategy,
+            List<DataSourceStrategy> dataSources,
             GapFillProperties gapFillProperties,
             DataFillProgressService dataFillProgressService) {
         this.stockDailyBarRepository = stockDailyBarRepository;
         this.dataFillTaskRepository = dataFillTaskRepository;
-        this.tigerStockService = tigerStockService;
-        this.yFinanceStockService = yFinanceStockService;
-        this.twelveDataStockService = twelveDataStockService;
-        this.tiingoDataSourceStrategy = tiingoDataSourceStrategy;
+        this.dataSources = dataSources;
         this.gapFillProperties = gapFillProperties;
         this.dataFillProgressService = dataFillProgressService;
     }
@@ -392,28 +382,16 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
     private record FallbackSource(String name, KLineFetcher fetcher) {}
 
     private List<FallbackSource> buildFallbackChain() {
-        List<FallbackSource> chain = new ArrayList<>();
-        chain.add(new FallbackSource("tiger_java", symbol -> {
-            try { return tigerStockService.getDailyKLineDataAsObject(symbol); }
-            catch (Exception e) { log.warn("[DataGapFiller] fallback tiger_java failed for {}: {}", symbol, e.getMessage()); return null; }
-        }));
-        chain.add(new FallbackSource("tiger_python", symbol -> {
-            try { return tigerStockService.getDailyKLine(symbol); }
-            catch (Exception e) { log.warn("[DataGapFiller] fallback tiger_python failed for {}: {}", symbol, e.getMessage()); return null; }
-        }));
-        chain.add(new FallbackSource("yfinance", symbol -> {
-            try { return yFinanceStockService.getDailyKLine(symbol); }
-            catch (Exception e) { log.warn("[DataGapFiller] fallback yfinance failed for {}: {}", symbol, e.getMessage()); return null; }
-        }));
-        chain.add(new FallbackSource("twelvedata", symbol -> {
-            try { return twelveDataStockService.getDailyKLineDataAsObject(symbol); }
-            catch (Exception e) { log.warn("[DataGapFiller] fallback twelvedata failed for {}: {}", symbol, e.getMessage()); return null; }
-        }));
-        chain.add(new FallbackSource("tiingo", symbol -> {
-            try { return tiingoDataSourceStrategy.getDailyKLine(symbol); }
-            catch (Exception e) { log.warn("[DataGapFiller] fallback tiingo failed for {}: {}", symbol, e.getMessage()); return null; }
-        }));
-        return chain;
+        Map<String, Integer> priority = Map.of(
+                "tiger", 1, "tigeropen", 2, "yfinance", 3,
+                "twelvedata", 4, "tiingo", 5
+        );
+        return dataSources.stream()
+                .filter(DataSourceStrategy::isAvailable)
+                .sorted(Comparator.comparingInt(s -> priority.getOrDefault(s.getSourceName(), 99)))
+                .map(ds -> new FallbackSource(ds.getSourceName(),
+                        symbol -> ds.getDailyKLineDataAsObject(symbol)))
+                .collect(Collectors.toList());
     }
 
     // ---- Internal result holder ----

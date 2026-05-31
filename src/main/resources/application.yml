@@ -20,15 +20,6 @@ spring:
         connection:
           characterEncoding: utf8
           useUnicode: true
-# 股票服务默认配置
-stock:
-  service:
-    # 默认实现，将由激活的配置文件覆盖
-    implementation: ${STOCK_SERVICE_IMPLEMENTATION:yfinance}
-  data:
-    # 默认数据源，将由激活的配置文件覆盖
-    source: ${STOCK_DATA_SOURCE:twelvedata}
-
 # 选股器相关配置
 scanner:
   defaultLimit: 20 # 默认返回结果数量
@@ -46,6 +37,13 @@ server:
       charset: UTF-8
       force: true
       enabled: true
+# ============================================================
+# Tiger 证券 API 配置（行情、交易、日历）
+# 配置文件路径：classpath:tiger_openapi_config.properties
+# ============================================================
+tiger:
+  api:
+    configFilePath: classpath:tiger_openapi_config.properties
 
 twelvedata:
   api:
@@ -53,6 +51,15 @@ twelvedata:
 tiingo:
   api:
     token: e8d9f9e86a9e5a6261e9cefa7caa55c2e1080394
+    # ============================================================
+# Alpaca Markets 配置（仅用于交易日历查询）
+# 注册：https://alpaca.markets → Dashboard → API Keys
+# 数据范围：1970-01-01 ～ 2029-12-31
+# ============================================================
+alpaca:
+  api:
+    key-id: "" # API Key ID（不配则跳过该数据源）
+    secret-key: "" # Secret Key（不配则跳过该数据源）
 
 logging:
   level:
@@ -65,13 +72,3 @@ logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36}:%line - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36}:%line - %msg%n"
-
-# ============================================================
-# Alpaca Markets 配置（仅用于交易日历查询）
-# 注册：https://alpaca.markets → Dashboard → API Keys
-# 数据范围：1970-01-01 ～ 2029-12-31
-# ============================================================
-alpaca:
-  api:
-    key-id: ""          # API Key ID（不配则跳过该数据源）
-    secret-key: ""      # Secret Key（不配则跳过该数据源）

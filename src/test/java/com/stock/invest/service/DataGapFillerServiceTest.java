@@ -5,21 +5,21 @@ import com.stock.invest.entity.DataFillTask;
 import com.stock.invest.repository.DataFillTaskRepository;
 import com.stock.invest.repository.StockDailyBarRepository;
 import com.stock.invest.service.impl.DataGapFillerServiceImpl;
-import com.stock.invest.service.impl.TigerStockServiceImpl;
-import com.stock.invest.service.impl.YFinanceStockServiceImpl;
-import com.stock.invest.service.impl.TwelveDataStockServiceImpl;
-import com.stock.invest.service.impl.TiingoDataSourceStrategy;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
@@ -28,29 +28,53 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("DataGapFillerService - data fill task retry logic")
 class DataGapFillerServiceTest {
+
+    private static final ZoneId AMERICA_NY = ZoneId.of("America/New_York");
 
     @Mock
     private StockDailyBarRepository stockDailyBarRepository;
     @Mock
     private DataFillTaskRepository dataFillTaskRepository;
     @Mock
-    private TigerStockServiceImpl tigerStockService;
+    private DataSourceStrategy tigerDataSource;
     @Mock
-    private YFinanceStockServiceImpl yFinanceStockService;
+    private DataSourceStrategy yfinanceDataSource;
     @Mock
-    private TwelveDataStockServiceImpl twelveDataStockService;
+    private DataSourceStrategy twelvedataDataSource;
     @Mock
-    private TiingoDataSourceStrategy tiingoDataSourceStrategy;
+    private DataSourceStrategy tiingoDataSource;
     @Mock
     private GapFillProperties gapFillProperties;
+    @Mock
+    private DataFillProgressService dataFillProgressService;
 
-    @InjectMocks
     private DataGapFillerServiceImpl service;
 
     @Captor
     private ArgumentCaptor<DataFillTask> taskCaptor;
+
+    @BeforeEach
+    void setUp() {
+        when(tigerDataSource.getSourceName()).thenReturn("tiger");
+        when(tigerDataSource.isAvailable()).thenReturn(true);
+        when(yfinanceDataSource.getSourceName()).thenReturn("yfinance");
+        when(yfinanceDataSource.isAvailable()).thenReturn(true);
+        when(twelvedataDataSource.getSourceName()).thenReturn("twelvedata");
+        when(twelvedataDataSource.isAvailable()).thenReturn(true);
+        when(tiingoDataSource.getSourceName()).thenReturn("tiingo");
+        when(tiingoDataSource.isAvailable()).thenReturn(true);
+
+        List<DataSourceStrategy> dataSources = List.of(tigerDataSource, yfinanceDataSource, twelvedataDataSource, tiingoDataSource);
+        service = new DataGapFillerServiceImpl(
+                stockDailyBarRepository,
+                dataFillTaskRepository,
+                dataSources,
+                gapFillProperties,
+                dataFillProgressService);
+    }
 
     private DataFillTask createTask(String symbol, LocalDate tradeDate,
                                     Integer dayCount, LocalDate retryDate,
@@ -69,11 +93,15 @@ class DataGapFillerServiceTest {
         return task;
     }
 
+    private LocalDate nyToday() {
+        return ZonedDateTime.now(AMERICA_NY).toLocalDate();
+    }
+
     // T-1
     @Test
     @DisplayName("T-1: dayCount=5 and retryDate=today -> skip retry, no save")
     void test_skipWhenDayLimitReached() {
-        LocalDate today = LocalDate.now();
+        LocalDate today = nyToday();
         DataFillTask task = createTask(
                 "AAPL", today.minusDays(1),
                 5, today,
@@ -90,7 +118,7 @@ class DataGapFillerServiceTest {
     @Test
     @DisplayName("T-2: retryDate!=today -> dayCount reset to 0, then retry")
     void test_resetDayCountWhenRetryDateNotToday() {
-        LocalDate today = LocalDate.now();
+        LocalDate today = nyToday();
         LocalDate yesterday = today.minusDays(1);
         DataFillTask task = createTask(
                 "AAPL", yesterday,
@@ -98,14 +126,13 @@ class DataGapFillerServiceTest {
                 Instant.now(), Instant.now().minus(2, ChronoUnit.HOURS)
         );
         when(dataFillTaskRepository.findRetryableTasks()).thenReturn(List.of(task));
-        when(tigerStockService.getDailyKLineDataAsObject(anyString())).thenReturn(null);
+        when(tigerDataSource.getDailyKLineDataAsObject(anyString())).thenReturn(null);
 
         service.processRetryingTasks();
 
         verify(dataFillTaskRepository).save(taskCaptor.capture());
         DataFillTask saved = taskCaptor.getValue();
 
-        // dayCount reset to 0, then +1 for failure = 1
         assertEquals(1, saved.getDayCount());
         assertEquals(today, saved.getRetryDate());
         assertEquals(4, saved.getRetryCount());
@@ -117,7 +144,7 @@ class DataGapFillerServiceTest {
     @DisplayName("T-3: createdAt+7d <= now -> status=stopped")
     void test_stopWhenExpired() {
         Instant weekAgo = Instant.now().minus(8, ChronoUnit.DAYS);
-        LocalDate today = LocalDate.now();
+        LocalDate today = nyToday();
         DataFillTask task = createTask(
                 "AAPL", today.minusDays(1),
                 1, today,
@@ -152,7 +179,7 @@ class DataGapFillerServiceTest {
     @Test
     @DisplayName("T-5: retry failure -> dayCount++, retryCount++")
     void test_retryFailedIncrementsCounters() {
-        LocalDate today = LocalDate.now();
+        LocalDate today = nyToday();
         Instant recent = Instant.now();
         DataFillTask task = createTask(
                 "AAPL", today.minusDays(1),
@@ -160,7 +187,7 @@ class DataGapFillerServiceTest {
                 recent, Instant.now().minus(40, ChronoUnit.MINUTES)
         );
         when(dataFillTaskRepository.findRetryableTasks()).thenReturn(List.of(task));
-        when(tigerStockService.getDailyKLineDataAsObject(anyString())).thenReturn(null);
+        when(tigerDataSource.getDailyKLineDataAsObject(anyString())).thenReturn(null);
 
         service.processRetryingTasks();
 

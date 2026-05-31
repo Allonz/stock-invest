@@ -57,7 +57,8 @@ public class PythonScriptExecutor {
             command.addAll(Arrays.asList(args));
 
             ProcessBuilder processBuilder = new ProcessBuilder(command);
-            processBuilder.redirectErrorStream(true);
+            // 不合并 stderr — 单独读取，避免库日志/调试输出污染 stdout 的 JSON 解析
+            processBuilder.redirectErrorStream(false);
             processBuilder.directory(new File(System.getProperty("user.dir")));
             if (extraEnv != null && !extraEnv.isEmpty()) {
                 Map<String, String> env = processBuilder.environment();
@@ -70,6 +71,7 @@ public class PythonScriptExecutor {
 
             Process process = processBuilder.start();
             try {
+                // 单独读取 stdout（结果输出）
                 StringBuilder output = new StringBuilder();
                 try (BufferedReader reader = new BufferedReader(
                         new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
@@ -77,6 +79,20 @@ public class PythonScriptExecutor {
                     while ((line = reader.readLine()) != null) {
                         output.append(line).append("\n");
                     }
+                }
+
+                // 单独读取 stderr（库日志/调试信息），仅 debug 级别记录，不影响结果解析
+                StringBuilder errOutput = new StringBuilder();
+                try (BufferedReader errReader = new BufferedReader(
+                        new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8))) {
+                    String line;
+                    while ((line = errReader.readLine()) != null) {
+                        errOutput.append(line).append("\n");
+                    }
+                }
+                String stderr = errOutput.toString().trim();
+                if (!stderr.isEmpty()) {
+                    log.debug("Python脚本 stderr (script={}): {}", scriptName, stderr);
                 }
 
                 boolean completed = process.waitFor(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
@@ -88,9 +104,8 @@ public class PythonScriptExecutor {
 
                 int exitCode = process.exitValue();
                 if (exitCode != 0) {
-                    log.warn("Python脚本执行失败，退出码: {}", exitCode);
-                    log.warn("错误输出: {}", output.toString());
-                    throw new IOException("Python脚本执行失败，退出码: " + exitCode);
+                    log.warn("Python脚本执行失败，退出码: {}, stderr: {}", exitCode, stderr.isEmpty() ? output.toString().trim() : stderr);
+                    throw new IOException("Python脚本执行失败，退出码: " + exitCode + (stderr.isEmpty() ? "" : ", stderr: " + stderr));
                 }
 
                 return output.toString();

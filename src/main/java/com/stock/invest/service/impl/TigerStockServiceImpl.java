@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.stock.invest.service.DataSourceStrategy;
 import com.stock.invest.service.PatternEvaluateService;
 
 /**
@@ -40,7 +41,7 @@ import com.stock.invest.service.PatternEvaluateService;
  * @see <a href="https://quant.itigerup.com/openapi/zh/java/operation/quotation/stock.html">老虎证券API文档</a>
  */
 @Service("tigerStockService")
-public class TigerStockServiceImpl {
+public class TigerStockServiceImpl implements DataSourceStrategy {
     
     private static final Logger log = LoggerFactory.getLogger(TigerStockServiceImpl.class);
 
@@ -49,22 +50,28 @@ public class TigerStockServiceImpl {
     private final PatternEvaluateService patternEvaluateService;
 
     public TigerStockServiceImpl(ObjectMapper objectMapper,
-                                 @Autowired(required = false) TigerHttpClient client,
+                                 @Autowired(required = true) TigerHttpClient client,
                                  PatternEvaluateService patternEvaluateService) {
         log.info("TigerStockServiceImpl: Service initialized");
-        this.objectMapper = objectMapper;
         this.client = client;
+        this.objectMapper = objectMapper;
         this.patternEvaluateService = patternEvaluateService;
     }
 
-    public boolean isClientAvailable() {
+    @Override
+    public String getSourceName() {
+        return "tiger";
+    }
+
+    @Override
+    public boolean isAvailable() {
         return client != null;
     }
+
+    public boolean isClientAvailable() {
+        return true;
+    }
     public String getDailyKLineData(String symbol) {
-        if (client == null) {
-            log.debug("TigerHttpClient not available, skipping getDailyKLineData for {}", symbol);
-            return "{}";
-        }
         try {
             
             // 创建K线请求
@@ -90,10 +97,6 @@ public class TigerStockServiceImpl {
         }
     }
     public KLineData getDailyKLineDataAsObject(String symbol) {
-        if (client == null) {
-            log.debug("TigerHttpClient not available, skipping getDailyKLineDataAsObject for {}", symbol);
-            return new KLineData();
-        }
         try {
             
             // 创建K线请求
@@ -252,10 +255,6 @@ public class TigerStockServiceImpl {
      */
     private List<String> getStocksFromTigerApi(Market market,
                                                int limit, Double minPrice, Double maxPrice) {
-        if (client == null) {
-            log.debug("TigerHttpClient not available, skipping getStocksFromTigerApi");
-            return getFallbackStockList(market, limit);
-        }
         try {
             
             // 创建市场扫描请求
@@ -318,10 +317,6 @@ public class TigerStockServiceImpl {
         }
     }
     public List<KLineData> getBatchKline(List<String> symbols, String period, int count) {
-        if (client == null) {
-            log.debug("TigerHttpClient not available, skipping getBatchKline");
-            return Collections.emptyList();
-        }
         try {
             
             // 创建结果列表

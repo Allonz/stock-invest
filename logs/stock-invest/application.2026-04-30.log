@@ -1,2 +1,0 @@
-2026-04-30 16:08:22 [scheduling-1] INFO  c.s.i.s.i.ScanOrchestratorServiceImpl:169 - snapshot-import scan done tradeDate=2026-04-30, windowDays=7, candidates=0, processed=0, matched=0
-2026-04-30 16:08:22 [scheduling-1] INFO  c.s.i.s.impl.DailyScanScheduler:34 - scheduled scan done: mode=snapshot, batchId=788029a8-aa3e-4423-a19f-ba7464698162, tradeDate=2026-04-30, matched=0

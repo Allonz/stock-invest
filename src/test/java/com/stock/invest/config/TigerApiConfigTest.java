@@ -73,7 +73,7 @@ class TigerApiConfigTest {
     }
 
     @Test
-    @DisplayName("prepareConfigFiles removed, replaced by resolvePrivateKey in memory")
+    @DisplayName("prepareConfigFiles removed, replaced by resolveCredentials in memory")
     void prepareConfigFiles_noLongerWritesToDisk() {
         boolean hasOld = false;
         boolean hasNew = false;
@@ -82,11 +82,11 @@ class TigerApiConfigTest {
             if ("prepareConfigFiles".equals(name) || "prepareConfigDirectory".equals(name)) {
                 hasOld = true;
             }
-            if ("resolvePrivateKey".equals(name)) {
+            if ("resolveCredentials".equals(name)) {
                 hasNew = true;
             }
         }
         assertFalse(hasOld, "prepareConfigFiles/prepareConfigDirectory should be removed");
-        assertTrue(hasNew, "resolvePrivateKey should exist as replacement");
+        assertTrue(hasNew, "resolveCredentials should exist as replacement");
     }
 }

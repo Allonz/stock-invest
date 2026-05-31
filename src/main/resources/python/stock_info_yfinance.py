@@ -10,6 +10,12 @@ import numpy as np
 from typing import List, Dict, Any, Optional
 import backoff
 import random
+import logging
+
+# 抑制 urllib3/requests/yfinance 的 HTTP 调试日志，避免污染 stdout
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("requests").setLevel(logging.WARNING)
+logging.getLogger("yfinance").setLevel(logging.WARNING)
 
 # 全局变量用于请求限制
 last_request_time = 0

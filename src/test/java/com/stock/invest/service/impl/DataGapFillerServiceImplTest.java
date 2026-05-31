@@ -5,14 +5,18 @@ import com.stock.invest.entity.DataFillTask;
 import com.stock.invest.entity.StockDailyBar;
 import com.stock.invest.repository.DataFillTaskRepository;
 import com.stock.invest.repository.StockDailyBarRepository;
+import com.stock.invest.service.DataFillProgressService;
+import com.stock.invest.service.DataSourceStrategy;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.time.*;
 import java.time.temporal.ChronoUnit;
@@ -24,28 +28,57 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class DataGapFillerServiceImplTest {
+
+    private static final ZoneId AMERICA_NY = ZoneId.of("America/New_York");
 
     @Mock
     private StockDailyBarRepository stockDailyBarRepository;
     @Mock
     private DataFillTaskRepository dataFillTaskRepository;
     @Mock
-    private TigerStockServiceImpl tigerStockService;
+    private DataSourceStrategy tigerDataSource;
     @Mock
-    private YFinanceStockServiceImpl yFinanceStockService;
+    private DataSourceStrategy yfinanceDataSource;
     @Mock
-    private TwelveDataStockServiceImpl twelveDataStockService;
+    private DataSourceStrategy twelvedataDataSource;
     @Mock
-    private TiingoDataSourceStrategy tiingoDataSourceStrategy;
+    private DataSourceStrategy tiingoDataSource;
     @Mock
     private GapFillProperties gapFillProperties;
+    @Mock
+    private DataFillProgressService dataFillProgressService;
 
-    @InjectMocks
     private DataGapFillerServiceImpl service;
 
     @Captor
     private ArgumentCaptor<DataFillTask> taskCaptor;
+
+    @BeforeEach
+    void setUp() {
+        when(tigerDataSource.getSourceName()).thenReturn("tiger");
+        when(tigerDataSource.isAvailable()).thenReturn(true);
+        when(yfinanceDataSource.getSourceName()).thenReturn("yfinance");
+        when(yfinanceDataSource.isAvailable()).thenReturn(true);
+        when(twelvedataDataSource.getSourceName()).thenReturn("twelvedata");
+        when(twelvedataDataSource.isAvailable()).thenReturn(true);
+        when(tiingoDataSource.getSourceName()).thenReturn("tiingo");
+        when(tiingoDataSource.isAvailable()).thenReturn(true);
+
+        List<DataSourceStrategy> dataSources = List.of(
+                tigerDataSource, yfinanceDataSource, twelvedataDataSource, tiingoDataSource);
+        service = new DataGapFillerServiceImpl(
+                stockDailyBarRepository,
+                dataFillTaskRepository,
+                dataSources,
+                gapFillProperties,
+                dataFillProgressService);
+    }
+
+    private LocalDate nyToday() {
+        return ZonedDateTime.now(AMERICA_NY).toLocalDate();
+    }
 
     // ========== findMissingTradeDates static method tests ==========
 
@@ -63,7 +96,7 @@ class DataGapFillerServiceImplTest {
 
     @Test
     void shouldFindMissingWhenDataStopsDaysAgo() {
-        LocalDate today = ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate();
+        LocalDate today = nyToday();
         LocalDate stopDate = today.minusDays(5);
         List<StockDailyBar> bars = barsOf(stopDate);
         List<LocalDate> missing = DataGapFillerServiceImpl.findMissingTradeDates(bars);
@@ -76,7 +109,7 @@ class DataGapFillerServiceImplTest {
 
     @Test
     void shouldNotLookbackBeyond30Days() {
-        LocalDate today = ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate();
+        LocalDate today = nyToday();
         LocalDate veryOld = today.minusDays(60);
         List<StockDailyBar> bars = barsOf(veryOld);
         List<LocalDate> missing = DataGapFillerServiceImpl.findMissingTradeDates(bars);
@@ -89,7 +122,7 @@ class DataGapFillerServiceImplTest {
 
     @Test
     void shouldReturnEmptyWhenOnlyTodayData() {
-        LocalDate today = ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate();
+        LocalDate today = nyToday();
         List<StockDailyBar> bars = barsOf(today);
         List<LocalDate> missing = DataGapFillerServiceImpl.findMissingTradeDates(bars);
         assertTrue(missing.isEmpty(), "no gaps when only today data");
@@ -103,7 +136,7 @@ class DataGapFillerServiceImplTest {
 
     @Test
     void shouldLimitMaxMissingDates() {
-        LocalDate today = ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate();
+        LocalDate today = nyToday();
         LocalDate stopDate = today.minusDays(20);
         List<StockDailyBar> bars = barsOf(stopDate);
         List<LocalDate> missing = DataGapFillerServiceImpl.findMissingTradeDates(bars);
@@ -112,8 +145,7 @@ class DataGapFillerServiceImplTest {
 
     @Test
     void shouldFindGapsInMultiBarData() {
-        // Use dynamic dates relative to today so the test doesn't age out
-        LocalDate today = ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate();
+        LocalDate today = nyToday();
         LocalDate mon = today.minusDays(today.getDayOfWeek().getValue() - DayOfWeek.MONDAY.getValue());
         if (mon.isAfter(today)) mon = mon.minusDays(7);
         LocalDate wed = mon.plusDays(2);
@@ -128,7 +160,7 @@ class DataGapFillerServiceImplTest {
 
     @Test
     void shouldSkipWeekends() {
-        LocalDate today = ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate();
+        LocalDate today = nyToday();
         LocalDate friday = today;
         while (friday.getDayOfWeek() != DayOfWeek.FRIDAY) {
             friday = friday.minusDays(1);
@@ -143,20 +175,19 @@ class DataGapFillerServiceImplTest {
 
     @Test
     void shouldHandleFutureDataGracefully() {
-        LocalDate today = ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate();
+        LocalDate today = nyToday();
         LocalDate future = today.plusDays(3);
         List<StockDailyBar> bars = barsOf(future);
         List<LocalDate> missing = DataGapFillerServiceImpl.findMissingTradeDates(bars);
         assertNotNull(missing, "future data should not cause NPE");
     }
 
-    // ========== Retry task logic tests (Test-4) ==========
+    // ========== Retry task logic tests ==========
 
     @Test
     @DisplayName("retryTask sets status to retrying, increments retryCount")
     void retryTask_setsStatusToRetrying() {
-        // Arrange: simulate a retry failing through processRetryingTasks
-        LocalDate today = LocalDate.now();
+        LocalDate today = nyToday();
         Instant recent = Instant.now().minus(40, ChronoUnit.MINUTES);
         DataFillTask task = new DataFillTask();
         task.setId(1L);
@@ -171,13 +202,10 @@ class DataGapFillerServiceImplTest {
         task.setUpdatedAt(recent);
 
         when(dataFillTaskRepository.findRetryableTasks()).thenReturn(List.of(task));
-        // All fallbacks return null → retry fails
-        when(tigerStockService.getDailyKLineDataAsObject(anyString())).thenReturn(null);
+        when(tigerDataSource.getDailyKLineDataAsObject(anyString())).thenReturn(null);
 
-        // Act
         service.processRetryingTasks();
 
-        // Assert
         verify(dataFillTaskRepository).save(taskCaptor.capture());
         DataFillTask saved = taskCaptor.getValue();
 
@@ -189,8 +217,7 @@ class DataGapFillerServiceImplTest {
     @Test
     @DisplayName("processRetryingTasks finds retryable tasks")
     void processRetryingTasks_findsRetryableTasks() {
-        // Arrange
-        LocalDate today = LocalDate.now();
+        LocalDate today = nyToday();
         Instant recent = Instant.now().minus(40, ChronoUnit.MINUTES);
         DataFillTask task = new DataFillTask();
         task.setId(1L);
@@ -206,10 +233,8 @@ class DataGapFillerServiceImplTest {
 
         when(dataFillTaskRepository.findRetryableTasks()).thenReturn(List.of(task));
 
-        // Act
         service.processRetryingTasks();
 
-        // Assert: verify findRetryableTasks was called exactly once
         verify(dataFillTaskRepository, times(1)).findRetryableTasks();
     }
 }

@@ -236,21 +236,50 @@ public class AdminController {
     @GetMapping("/fill-tasks")
     public ResponseEntity<ApiResponse> getFillTasks(
             @RequestParam(value = "status", required = false) String status,
+            @RequestParam(value = "symbol", required = false) String symbol,
+            @RequestParam(value = "tradeDate", required = false) String tradeDateStr,
             @RequestParam(value = "page", defaultValue = "1") int page,
-            @RequestParam(value = "size", defaultValue = "20") int size) {
+            @RequestParam(value = "size", defaultValue = "20") int size,
+            @RequestParam(value = "sortBy", required = false) String sortBy,
+            @RequestParam(value = "sortOrder", defaultValue = "desc") String sortOrder) {
 
+        LocalDate tradeDate = null;
+        if (tradeDateStr != null && !tradeDateStr.trim().isEmpty()) {
+            try {
+                tradeDate = LocalDate.parse(tradeDateStr.trim());
+            } catch (Exception e) {
+                tradeDate = null;
+            }
+        }
+
+        // 白名单校验，只允许按已知字段排序
+        String sortField = "createdAt";
+        if (sortBy != null) {
+            switch (sortBy) {
+                case "symbol":
+                case "tradeDate":
+                case "status":
+                case "retryCount":
+                case "id":
+                    sortField = sortBy;
+                    break;
+                default:
+                    sortField = "createdAt";
+            }
+        }
+
+        Sort.Direction direction = "asc".equalsIgnoreCase(sortOrder) ? Sort.Direction.ASC : Sort.Direction.DESC;
         PageRequest pageRequest = PageRequest.of(
                 Math.max(0, page - 1),
                 size,
-                Sort.by(Sort.Direction.DESC, "createdAt")
+                Sort.by(direction, sortField)
         );
 
-        Page<DataFillTask> taskPage;
-        if (status != null && !status.trim().isEmpty()) {
-            taskPage = dataFillTaskRepository.findByStatus(status, pageRequest);
-        } else {
-            taskPage = dataFillTaskRepository.findAll(pageRequest);
-        }
+        Page<DataFillTask> taskPage = dataFillTaskRepository.findByFilters(
+                symbol,
+                tradeDate,
+                status,
+                pageRequest);
 
         var data = taskPage.getContent().stream().map(t -> {
             Map<String, Object> m = new LinkedHashMap<>();
