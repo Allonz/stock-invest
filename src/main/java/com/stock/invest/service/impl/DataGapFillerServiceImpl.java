@@ -9,6 +9,7 @@ import com.stock.invest.repository.StockDailyBarRepository;
 import com.stock.invest.service.DataFillProgressService;
 import com.stock.invest.service.DataGapFillerService;
 import com.stock.invest.service.DataSourceStrategy;
+import com.stock.invest.service.TradingCalendarDbService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.stock.invest.config.GapFillProperties;
@@ -39,6 +40,10 @@ import java.util.stream.Collectors;
  * 按优先级（tiger -> tigeropen -> yfinance -> twelvedata -> tiingo）排序，
  * 过滤掉不可用的数据源。
  * </p>
+ * <p>
+ * 在查找缺失日期时会通过 {@link TradingCalendarDbService} 查询交易日历，
+ * 跳过非开盘日（节假日、周末），避免不必要的 API 调用。
+ * </p>
  */
 @Service
 public class DataGapFillerServiceImpl implements DataGapFillerService {
@@ -57,18 +62,21 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
     private final List<DataSourceStrategy> dataSources;
     private final GapFillProperties gapFillProperties;
     private final DataFillProgressService dataFillProgressService;
+    private final TradingCalendarDbService tradingCalendarDbService;
 
     public DataGapFillerServiceImpl(
             StockDailyBarRepository stockDailyBarRepository,
             DataFillTaskRepository dataFillTaskRepository,
             List<DataSourceStrategy> dataSources,
             GapFillProperties gapFillProperties,
-            DataFillProgressService dataFillProgressService) {
+            DataFillProgressService dataFillProgressService,
+            TradingCalendarDbService tradingCalendarDbService) {
         this.stockDailyBarRepository = stockDailyBarRepository;
         this.dataFillTaskRepository = dataFillTaskRepository;
         this.dataSources = dataSources;
         this.gapFillProperties = gapFillProperties;
         this.dataFillProgressService = dataFillProgressService;
+        this.tradingCalendarDbService = tradingCalendarDbService;
     }
 
     @Override
@@ -149,7 +157,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
             return FillResult.empty();
         }
 
-        List<LocalDate> missingDates = findMissingTradeDates(bars);
+        List<LocalDate> missingDates = findMissingTradeDates(bars, tradingCalendarDbService);
         if (missingDates.isEmpty()) {
             return FillResult.empty();
         }
@@ -182,8 +190,10 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
     /**
      * 计算 [max(oldestBar, today-30d), today(NY)] 范围内的缺失交易日。
      * <p>existingBars 按 tradeDate DESC 排序传入。</p>
+     * <p>通过 TradingCalendarDbService 查询交易日历，跳过非开盘日（节假日）。</p>
      */
-    static List<LocalDate> findMissingTradeDates(List<StockDailyBar> existingBars) {
+    static List<LocalDate> findMissingTradeDates(List<StockDailyBar> existingBars,
+                                                  TradingCalendarDbService calendarDbService) {
         if (existingBars.isEmpty()) {
             return Collections.emptyList();
         }
@@ -209,9 +219,19 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         List<LocalDate> missing = new ArrayList<>();
         LocalDate cursor = rangeStart;
         while (!cursor.isAfter(rangeEnd)) {
-            if (cursor.getDayOfWeek().getValue() <= 5          // 周一到周五
-                    && !existingDates.contains(cursor)) {
-                missing.add(cursor);
+            if (cursor.getDayOfWeek().getValue() <= 5) {         // 周一到周五
+                // 查交易日历 → 非开盘日跳过（节假日）
+                if (calendarDbService != null) {
+                    Boolean isOpen = calendarDbService.isTradingDay("US", cursor);
+                    if (Boolean.FALSE.equals(isOpen)) {
+                        log.debug("[DataGapFiller] skip non-trading day: {}", cursor);
+                        cursor = cursor.plusDays(1);
+                        continue;
+                    }
+                }
+                if (!existingDates.contains(cursor)) {
+                    missing.add(cursor);
+                }
             }
             cursor = cursor.plusDays(1);
         }

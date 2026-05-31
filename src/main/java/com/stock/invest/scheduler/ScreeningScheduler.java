@@ -11,7 +11,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 /**
- * 模式筛选定时调度：每天 9:30 Asia/Shanghai 执行一次。
+ * 模式筛选定时调度：每天 21:30 美东时间执行一次。
  */
 @Component
 public class ScreeningScheduler {
@@ -24,7 +24,7 @@ public class ScreeningScheduler {
         this.screeningService = screeningService;
     }
 
-    @Scheduled(cron = "0 30 9 * * ?", zone = "Asia/Shanghai")
+    @Scheduled(cron = "0 30 21 * * ?", zone = "America/New_York")
     public void runScreening() {
         Instant start = Instant.now();
         LocalDate today = ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate();

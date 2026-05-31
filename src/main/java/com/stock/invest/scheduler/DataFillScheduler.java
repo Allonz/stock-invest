@@ -11,7 +11,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 
 /**
- * 数据补全定时调度：每天 6:00 Asia/Shanghai 执行一次。
+ * 数据补全定时调度：每天 18:00 美东时间执行一次。
  */
 @Component
 public class DataFillScheduler {
@@ -24,7 +24,7 @@ public class DataFillScheduler {
         this.dataGapFillerService = dataGapFillerService;
     }
 
-    @Scheduled(cron = "0 0 6 * * ?", zone = "Asia/Shanghai")
+    @Scheduled(cron = "0 0 18 * * ?", zone = "America/New_York")
     public void runDataFill() {
         Instant schedulerStart = Instant.now();
         log.info("[DataFillScheduler] fillGaps: === SCHEDULER START === at {}", LocalDateTime.now());

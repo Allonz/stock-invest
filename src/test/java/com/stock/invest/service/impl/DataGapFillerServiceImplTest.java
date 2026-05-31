@@ -99,7 +99,7 @@ class DataGapFillerServiceImplTest {
         LocalDate today = nyToday();
         LocalDate stopDate = today.minusDays(5);
         List<StockDailyBar> bars = barsOf(stopDate);
-        List<LocalDate> missing = DataGapFillerServiceImpl.findMissingTradeDates(bars);
+        List<LocalDate> missing = DataGapFillerServiceImpl.findMissingTradeDates(bars, null);
         assertFalse(missing.isEmpty(), "should have missing dates");
         for (LocalDate d : missing) {
             assertFalse(d.isBefore(stopDate), d + " should not be before stopDate");
@@ -112,7 +112,7 @@ class DataGapFillerServiceImplTest {
         LocalDate today = nyToday();
         LocalDate veryOld = today.minusDays(60);
         List<StockDailyBar> bars = barsOf(veryOld);
-        List<LocalDate> missing = DataGapFillerServiceImpl.findMissingTradeDates(bars);
+        List<LocalDate> missing = DataGapFillerServiceImpl.findMissingTradeDates(bars, null);
         LocalDate lookbackLimit = today.minusDays(30);
         for (LocalDate d : missing) {
             assertFalse(d.isBefore(lookbackLimit),
@@ -124,13 +124,13 @@ class DataGapFillerServiceImplTest {
     void shouldReturnEmptyWhenOnlyTodayData() {
         LocalDate today = nyToday();
         List<StockDailyBar> bars = barsOf(today);
-        List<LocalDate> missing = DataGapFillerServiceImpl.findMissingTradeDates(bars);
+        List<LocalDate> missing = DataGapFillerServiceImpl.findMissingTradeDates(bars, null);
         assertTrue(missing.isEmpty(), "no gaps when only today data");
     }
 
     @Test
     void shouldReturnEmptyWhenEmptyBars() {
-        List<LocalDate> missing = DataGapFillerServiceImpl.findMissingTradeDates(Collections.emptyList());
+        List<LocalDate> missing = DataGapFillerServiceImpl.findMissingTradeDates(Collections.emptyList(), null);
         assertTrue(missing.isEmpty());
     }
 
@@ -139,7 +139,7 @@ class DataGapFillerServiceImplTest {
         LocalDate today = nyToday();
         LocalDate stopDate = today.minusDays(20);
         List<StockDailyBar> bars = barsOf(stopDate);
-        List<LocalDate> missing = DataGapFillerServiceImpl.findMissingTradeDates(bars);
+        List<LocalDate> missing = DataGapFillerServiceImpl.findMissingTradeDates(bars, null);
         assertTrue(missing.size() <= 5, "max 5, actual " + missing.size());
     }
 
@@ -152,7 +152,7 @@ class DataGapFillerServiceImplTest {
         LocalDate tue = mon.plusDays(1);
         if (!tue.isAfter(today)) {
             List<StockDailyBar> bars = barsOf(wed, mon);
-            List<LocalDate> missing = DataGapFillerServiceImpl.findMissingTradeDates(bars);
+            List<LocalDate> missing = DataGapFillerServiceImpl.findMissingTradeDates(bars, null);
             assertTrue(missing.contains(tue),
                     "should detect " + tue + ", actual: " + missing);
         }
@@ -166,7 +166,7 @@ class DataGapFillerServiceImplTest {
             friday = friday.minusDays(1);
         }
         List<StockDailyBar> bars = barsOf(friday);
-        List<LocalDate> missing = DataGapFillerServiceImpl.findMissingTradeDates(bars);
+        List<LocalDate> missing = DataGapFillerServiceImpl.findMissingTradeDates(bars, null);
         for (LocalDate d : missing) {
             assertNotEquals(DayOfWeek.SATURDAY, d.getDayOfWeek(), d + " is Saturday");
             assertNotEquals(DayOfWeek.SUNDAY, d.getDayOfWeek(), d + " is Sunday");
@@ -178,7 +178,7 @@ class DataGapFillerServiceImplTest {
         LocalDate today = nyToday();
         LocalDate future = today.plusDays(3);
         List<StockDailyBar> bars = barsOf(future);
-        List<LocalDate> missing = DataGapFillerServiceImpl.findMissingTradeDates(bars);
+        List<LocalDate> missing = DataGapFillerServiceImpl.findMissingTradeDates(bars, null);
         assertNotNull(missing, "future data should not cause NPE");
     }
 

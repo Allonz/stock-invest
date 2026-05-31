@@ -1,7 +1,10 @@
 package com.stock.invest.controller;
 
+import com.stock.invest.entity.TradingCalendarEntity;
 import com.stock.invest.enums.dto.ApiResponse;
 import com.stock.invest.model.TradingCalendarResult;
+import com.stock.invest.repository.TradingCalendarRepository;
+import com.stock.invest.service.TradingCalendarDbService;
 import com.stock.invest.service.impl.TradingCalendarFallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,15 +12,22 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.Year;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 交易日历 API 控制器。
- * 使用 TradingCalendarFallback 实现多数据源自动切换。
+ *
+ * 端点：
+ * - GET  /api/v1/trading-calendar/is-open           — 查单日是否开盘
+ * - POST /api/v1/trading-calendar/fetch-full-year    — 手动触发全年日历查询入库
+ * - GET  /api/v1/trading-calendar/list               — 返回整年日历列表
+ * - POST /api/v1/trading-calendar/cache/clear        — 清空 fallback 缓存
+ *
+ * is-open 策略：DB 优先 → fallback 链实时查 → 全部不可用时默认 true
  */
 @RestController
 @RequestMapping("/api/v1/trading-calendar")
@@ -27,20 +37,28 @@ public class TradingCalendarController {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final ZoneId NY_ZONE = ZoneId.of("America/New_York");
+    private static final String DEFAULT_MARKET = "US";
 
+    private final TradingCalendarDbService dbService;
+    private final TradingCalendarRepository repository;
     private final TradingCalendarFallback fallback;
 
-    public TradingCalendarController(TradingCalendarFallback fallback) {
+    public TradingCalendarController(TradingCalendarDbService dbService,
+                                     TradingCalendarRepository repository,
+                                     TradingCalendarFallback fallback) {
+        this.dbService = dbService;
+        this.repository = repository;
         this.fallback = fallback;
     }
 
     /**
      * 查询指定日期是否为交易日。
-     * 走 fallback 链：Tiger → TigerOpen → Alpaca → 默认 true。
      *
-     * @param dateParam 日期，可选，默认今天（美东）
-     * @param exchange  交易所（历史兼容，实际取市场代码）
-     * @return isOpen + 来源信息
+     * 策略（DB 优先，跨年自动补全，默认 true）：
+     * ① 查 trading_calendar 表 → 有记录直接返回
+     * ② DB 无记录 → fallback 链实时查（Tiger → TigerOpen → Alpaca）
+     * ③ 数据源有结果 → upsert 入库 + 返回
+     * ④ 全部不可用 → 默认 true（OpenClaw 截图导入不遗漏）
      */
     @GetMapping("/is-open")
     public ResponseEntity<ApiResponse<Map<String, Object>>> isOpen(
@@ -56,15 +74,44 @@ public class TradingCalendarController {
             }
 
             String market = resolveMarket(exchange);
-            TradingCalendarResult result = fallback.isTradingDay(market, queryDate);
+            Boolean isOpen;
+            String source;
+            String sourceDetail;
+
+            // ① 查 DB
+            Optional<TradingCalendarEntity> entity = repository.findByMarketAndTradeDate(market, queryDate);
+            if (entity.isPresent()) {
+                isOpen = entity.get().getIsOpen();
+                source = "db:" + entity.get().getSource();
+                sourceDetail = entity.get().getDetail();
+                log.debug("[is-open] DB 命中: date={}, isOpen={}", queryDate, isOpen);
+            } else {
+                // ② DB 无记录 → fallback 链实时查（含跨年日期自动补全）
+                log.info("[is-open] DB 无记录, 走 fallback: date={}, market={}", queryDate, market);
+                TradingCalendarResult result = fallback.isTradingDay(market, queryDate);
+                if (result != null) {
+                    isOpen = result.isTradingDay();
+                    source = result.getSource();
+                    sourceDetail = result.getDetail();
+                    // ③ 结果 upsert 入库
+                    repository.upsert(market, queryDate, isOpen, source, result.getType(), sourceDetail);
+                    log.info("[is-open] fallback 结果已入库: date={}, isOpen={}, source={}", queryDate, isOpen, source);
+                } else {
+                    // ④ 全部不可用 → 默认 true（宁可重复，不遗漏）
+                    log.warn("[is-open] 所有数据源不可用, 默认 true: date={}", queryDate);
+                    isOpen = true;
+                    source = "default";
+                    sourceDetail = "all sources unavailable, default true";
+                }
+            }
 
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("date", queryDate.format(DATE_FMT));
-            data.put("isOpen", result.isTradingDay());
+            data.put("isOpen", isOpen);
             data.put("exchange", exchange);
             data.put("timezone", "America/New_York");
-            data.put("source", result.getSource());
-            data.put("sourceDetail", result.getDetail());
+            data.put("source", source);
+            data.put("sourceDetail", sourceDetail);
             data.put("market", market);
 
             return ResponseEntity.ok(ApiResponse.ok(data));
@@ -80,7 +127,74 @@ public class TradingCalendarController {
     }
 
     /**
-     * 清除日历缓存。
+     * 手动触发全年日历查询入库。
+     *
+     * @param year   年份，默认当年（美东）
+     * @param market 市场代码，默认 US
+     */
+    @PostMapping("/fetch-full-year")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> fetchFullYear(
+            @RequestParam(value = "year", required = false) Integer year,
+            @RequestParam(value = "market", required = false, defaultValue = DEFAULT_MARKET) String market) {
+
+        try {
+            int targetYear = (year != null) ? year : Year.now(NY_ZONE).getValue();
+            log.info("[TradingCalendarController] fetchFullYear: market={}, year={}", market, targetYear);
+
+            int fetched = dbService.fetchAndStoreFullYear(market, targetYear);
+
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("fetched", fetched);
+            data.put("market", market);
+            data.put("year", targetYear);
+
+            return ResponseEntity.ok(ApiResponse.ok(data));
+
+        } catch (Exception e) {
+            log.error("[TradingCalendarController] fetchFullYear failed", e);
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Fetch failed: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 获取整年日历列表。
+     *
+     * @param year   年份，默认当年（美东）
+     * @param market 市场代码，默认 US
+     */
+    @GetMapping("/list")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> list(
+            @RequestParam(value = "year", required = false) Integer year,
+            @RequestParam(value = "market", required = false, defaultValue = DEFAULT_MARKET) String market) {
+
+        try {
+            int targetYear = (year != null) ? year : Year.now(NY_ZONE).getValue();
+            List<TradingCalendarEntity> entities = dbService.getYearCalendar(market, targetYear);
+
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (TradingCalendarEntity entity : entities) {
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("tradeDate", entity.getTradeDate().format(DATE_FMT));
+                item.put("isOpen", entity.getIsOpen());
+                item.put("market", entity.getMarket());
+                item.put("source", entity.getSource());
+                item.put("type", entity.getType());
+                item.put("detail", entity.getDetail());
+                result.add(item);
+            }
+
+            return ResponseEntity.ok(ApiResponse.ok(result));
+
+        } catch (Exception e) {
+            log.error("[TradingCalendarController] list failed", e);
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("List failed: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 清空 fallback 缓存（不影响 DB 数据）。
      */
     @PostMapping("/cache/clear")
     public ResponseEntity<ApiResponse<Map<String, Object>>> clearCache() {
@@ -93,11 +207,11 @@ public class TradingCalendarController {
 
     /** 交易所 MIC → 市场代码映射 */
     private static String resolveMarket(String exchange) {
-        if (exchange == null) return "US";
+        if (exchange == null) return DEFAULT_MARKET;
         String upper = exchange.toUpperCase();
         if (upper.startsWith("XNYS") || upper.startsWith("XNAS")
                 || upper.equals("US") || upper.startsWith("ARCX")) {
-            return "US";
+            return DEFAULT_MARKET;
         }
         if (upper.startsWith("XHKG") || upper.equals("HK")) {
             return "HK";
@@ -106,6 +220,6 @@ public class TradingCalendarController {
                 || upper.equals("CN")) {
             return "CN";
         }
-        return "US"; // 默认 US
+        return DEFAULT_MARKET;
     }
 }

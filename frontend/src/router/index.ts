@@ -36,6 +36,12 @@ const routes: RouteRecordRaw[] = [
     name: 'DataSourceStatus',
     component: () => import('../views/DataSourceStatus.vue'),
     meta: { title: '数据源状态', breadcrumb: '管理', icon: '🔌' }
+  },
+  {
+    path: '/trading-calendar',
+    name: 'TradingCalendar',
+    component: () => import('../views/TradingCalendarView.vue'),
+    meta: { title: '开盘日历', breadcrumb: '管理', icon: '📅' }
   }
 ]
 
