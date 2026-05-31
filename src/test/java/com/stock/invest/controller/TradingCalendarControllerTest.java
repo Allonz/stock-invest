@@ -3,7 +3,11 @@ package com.stock.invest.controller;
 import com.stock.invest.enums.dto.ApiResponse;
 import com.stock.invest.model.TradingCalendarResult;
 import com.stock.invest.service.impl.TradingCalendarFallback;
+import com.stock.invest.repository.TradingCalendarRepository;
+import com.stock.invest.service.TradingCalendarDbService;
+import com.stock.invest.entity.TradingCalendarEntity;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -28,8 +32,19 @@ class TradingCalendarControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @BeforeEach
+    void setUp() {
+        // Default: repository returns empty to trigger fallback chain
+        when(tradingCalendarRepository.findByMarketAndTradeDate(any(), any()))
+                .thenReturn(java.util.Optional.empty());
+    }
+
     @MockBean
     private TradingCalendarFallback fallback;
+    @MockBean
+    private TradingCalendarDbService tradingCalendarDbService;
+    @MockBean
+    private TradingCalendarRepository tradingCalendarRepository;
 
     @Test @DisplayName("ET-12: /is-open with date param returns trading day")
     void isOpen_tradingDay() throws Exception {

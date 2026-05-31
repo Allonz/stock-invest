@@ -70,3 +70,24 @@ CREATE TABLE IF NOT EXISTS data_fill_tasks (
     INDEX idx_dft_status (status),
     INDEX idx_dft_symbol_trade_date (symbol, trade_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ============================================================
+-- trading_calendar: track trading-day calendar for each market
+-- ============================================================
+CREATE TABLE IF NOT EXISTS trading_calendar (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    market VARCHAR(16) NOT NULL DEFAULT 'US' COMMENT '市场代码: US | HK | CN',
+    trade_date DATE NOT NULL COMMENT '交易日',
+    is_open BIT(1) NOT NULL DEFAULT 1 COMMENT '是否开盘: 1=开盘, 0=休市',
+    source VARCHAR(32) NULL DEFAULT NULL COMMENT '数据来源: tiger | tigeropen | alpaca | default',
+    type VARCHAR(16) NULL DEFAULT NULL COMMENT '类型: TRADING | HOLIDAY | WEEKEND',
+    detail VARCHAR(256) NULL DEFAULT NULL COMMENT '详情/节假日名称',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_trading_calendar_market_trade_date (market, trade_date),
+    INDEX idx_tc_market (market),
+    INDEX idx_tc_trade_date (trade_date),
+    INDEX idx_tc_market_date (market, trade_date),
+    INDEX idx_tc_is_open (is_open)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
