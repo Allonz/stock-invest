@@ -23,6 +23,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -61,7 +63,7 @@ public class AdminController {
             @RequestParam(value = "date", required = false) String date,
             @RequestParam(value = "limit", defaultValue = "20") Integer limit,
             @RequestParam(value = "windowDays", defaultValue = "7") Integer windowDays) {
-        LocalDate targetDate = (date != null) ? LocalDate.parse(date) : LocalDate.now();
+        LocalDate targetDate = (date != null) ? LocalDate.parse(date) : ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate();
         log.info("[Admin] triggerScreening: date={}, limit={}, windowDays={}", targetDate, limit, windowDays);
         screeningService.runScreening(targetDate);
         return ResponseEntity.ok(ApiResponse.ok("Screening triggered. date=" + targetDate));
@@ -79,7 +81,7 @@ public class AdminController {
         final ScreeningProgress progress = screeningProgressService.getProgress(taskId);
 
         new Thread(() -> {
-            LocalDate tradeDate = LocalDate.now();
+            LocalDate tradeDate = ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate();
             try {
                 // Run screening ONCE — it processes all windows (2~7d) internally
                 log.info("[Admin] async screening: starting (all windows 2~7d)");
@@ -129,7 +131,7 @@ public class AdminController {
         final ScreeningProgress progress = screeningProgressService.getProgress(taskId);
 
         new Thread(() -> {
-            LocalDate tradeDate = LocalDate.now();
+            LocalDate tradeDate = ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate();
             try {
                 List<ScreeningProgressService.WindowProgress> windowList = progress.getWindows();
                 if (!windowList.isEmpty()) {
@@ -331,7 +333,7 @@ public class AdminController {
             @RequestParam(value = "windowDays", defaultValue = "2") Integer windowDays
     ) {
         LocalDate tradeDate = (date == null || date.trim().isEmpty())
-                ? LocalDate.now()
+                ? ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate()
                 : LocalDate.parse(date);
         log.info("[Admin] runScreening: date={}, limit={}, windowDays={}", tradeDate, limit, windowDays);
         try {

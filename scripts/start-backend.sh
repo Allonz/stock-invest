@@ -1,8 +1,7 @@
-#!/usr/bin/env bash                  
+#!/usr/bin/env bash
 set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROFILE="${1:-twelvedata}"
 PORT="${SERVER_PORT:-8090}"
 
 cd "${PROJECT_ROOT}"
@@ -16,8 +15,7 @@ else
   echo "[backend] WARN: no .venv at ${PROJECT_ROOT}/.venv — Python scripts may use system python"
 fi
 
-echo "[backend] project root: ${PROJECT_ROOT}"                      ·      
-echo "[backend] active profile: ${PROFILE}"
+echo "[backend] project root: ${PROJECT_ROOT}"
 echo "[backend] target port: ${PORT}"
 
 EXISTING_PID="$(lsof -tiTCP:${PORT} -sTCP:LISTEN 2>/dev/null || true)"
@@ -29,4 +27,4 @@ fi
 
 echo "[backend] starting Spring Boot..."
 
-mvn spring-boot:run -Dspring-boot.run.profiles="${PROFILE}"
+mvn spring-boot:run -Dspring-boot.run.profiles=default

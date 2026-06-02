@@ -87,8 +87,8 @@ const dataNavItems = [
 const mgmtNavItems = [
   { path: '/fill-tasks', label: '补填任务', icon: '🔄' },
   { path: '/screener', label: '行情筛选', icon: '🔍' },
-  { path: '/datasource-status', label: '数据源状态', icon: '📡' },
-  { path: '/trading-calendar', label: '开盘日历', icon: '📅' }
+  { path: '/trading-calendar', label: '开盘日历', icon: '📅' },
+  { path: '/datasource-status', label: '数据源状态', icon: '📡' }
 ]
 
 /** 点击搜索栏跳转到 K线数据页 */

@@ -8,6 +8,8 @@ import com.stock.invest.repository.ScreeningMatchRepository;
 import com.stock.invest.repository.StockDailyBarRepository;
 import com.stock.invest.service.PatternEvaluateService;
 import com.stock.invest.service.ScreeningService;
+import com.stock.invest.service.TradingCalendarDbService;
+import com.stock.invest.entity.TradingCalendarEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -42,16 +44,19 @@ public class ScreeningServiceImpl implements ScreeningService {
     private final ScreeningMatchRepository screeningMatchRepository;
     private final PatternEvaluateService patternEvaluateService;
     private final ScannerProperties scannerProperties;
+    private final TradingCalendarDbService tradingCalendarDbService;
 
     public ScreeningServiceImpl(
             StockDailyBarRepository stockDailyBarRepository,
             ScreeningMatchRepository screeningMatchRepository,
             PatternEvaluateService patternEvaluateService,
-            ScannerProperties scannerProperties) {
+            ScannerProperties scannerProperties,
+            TradingCalendarDbService tradingCalendarDbService) {
         this.stockDailyBarRepository = stockDailyBarRepository;
         this.screeningMatchRepository = screeningMatchRepository;
         this.patternEvaluateService = patternEvaluateService;
         this.scannerProperties = scannerProperties;
+        this.tradingCalendarDbService = tradingCalendarDbService;
     }
 
     @Override
@@ -74,6 +79,7 @@ public class ScreeningServiceImpl implements ScreeningService {
 
         // 按 symbol 分组
         Map<String, List<StockDailyBar>> barsBySymbol = new LinkedHashMap<>();
+        LocalDate latestTradeDate = allBars.get(0).getTradeDate();
         for (StockDailyBar bar : allBars) {
             barsBySymbol.computeIfAbsent(bar.getSymbol(), k -> new ArrayList<>()).add(bar);
         }
@@ -92,8 +98,8 @@ public class ScreeningServiceImpl implements ScreeningService {
 
             StockDailyBar latest = bars.get(bars.size() - 1);
 
-            // 只检查目标交易日的个股
-            if (!targetDate.equals(latest.getTradeDate())) {
+            // 以库里实际最新日期作为筛选基准，targetDate 仅作批次标记
+            if (!latestTradeDate.equals(latest.getTradeDate())) {
                 continue;
             }
             if (latest.getClosePrice() == null) {
@@ -109,6 +115,13 @@ public class ScreeningServiceImpl implements ScreeningService {
                 }
                 // 取对应窗口长度的数据
                 List<StockDailyBar> windowSlice = bars.subList(bars.size() - windowDays, bars.size());
+
+                // 连续开盘日校验
+                if (!isWindowConsecutiveTradingDays(windowSlice, windowDays)) {
+                    log.debug("[Screening] skip symbol={} window={}d: data not on consecutive trading days",
+                            symbol, windowDays);
+                    continue;
+                }
 
                 // 算法1: 递增成交量
                 if (patternEvaluateService.matchesIncreasingVolumePattern(windowSlice, windowDays)) {
@@ -150,5 +163,37 @@ public class ScreeningServiceImpl implements ScreeningService {
         row.setWindowDays(windowDays);
         row.setAlgorithm(algorithm);
         return row;
+    }
+
+    /**
+     * 判断窗口数据是否覆盖连续开盘日（无缺失）。
+     * <p>
+     * 取窗口首尾日期范围，查 trading_calendar，统计该范围内
+     * 实际开盘日列表，与窗口数据的日期列表做 equals 比较。
+     * 完全一致 = 无缺口，放行。
+     * </p>
+     */
+    private boolean isWindowConsecutiveTradingDays(List<StockDailyBar> windowSlice, int windowDays) {
+        if (windowSlice == null || windowSlice.isEmpty()) {
+            return false;
+        }
+
+        LocalDate firstDate = windowSlice.get(0).getTradeDate();
+        LocalDate lastDate = windowSlice.get(windowSlice.size() - 1).getTradeDate();
+
+        // 从日历获取 range 内的开盘日（已升序）
+        List<TradingCalendarEntity> calEntries = tradingCalendarDbService.getRange("US", firstDate, lastDate);
+        List<LocalDate> openDaysInRange = calEntries.stream()
+                .filter(TradingCalendarEntity::getIsOpen)
+                .map(TradingCalendarEntity::getTradeDate)
+                .sorted()
+                .toList();
+
+        // 窗口数据的日期（已升序，因为 bars 在外部已排序）
+        List<LocalDate> actualDates = windowSlice.stream()
+                .map(StockDailyBar::getTradeDate)
+                .toList();
+
+        return openDaysInRange.equals(actualDates);
     }
 }
