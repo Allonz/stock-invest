@@ -1,27 +1,26 @@
 package com.stock.invest.controller;
 
-import com.stock.invest.enums.dto.ApiResponse;
-import com.stock.invest.model.TradingCalendarResult;
-import com.stock.invest.service.impl.TradingCalendarFallback;
-import com.stock.invest.repository.TradingCalendarRepository;
-import com.stock.invest.service.TradingCalendarDbService;
-import com.stock.invest.entity.TradingCalendarEntity;
-import org.junit.jupiter.api.DisplayName;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.time.LocalDate;
+
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.LocalDate;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import com.stock.invest.model.TradingCalendarResult;
+import com.stock.invest.repository.TradingCalendarRepository;
+import com.stock.invest.service.TradingCalendarDbService;
+import com.stock.invest.service.impl.TradingCalendarFallback;
 
 /**
  * ET-12 ~ ET-15: TradingCalendarController 端点测试
@@ -129,10 +128,4 @@ class TradingCalendarControllerTest {
                 .andExpect(jsonPath("$.data.isOpen").value(true));
     }
 
-    @Test @DisplayName("ET-15: /cache/clear returns success")
-    void clearCache() throws Exception {
-        mockMvc.perform(post("/api/v1/trading-calendar/cache/clear"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.cleared").value(true));
-    }
 }

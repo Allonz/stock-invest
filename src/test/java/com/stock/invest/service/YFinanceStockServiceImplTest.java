@@ -1,12 +1,8 @@
 package com.stock.invest.service;
 
-import com.stock.invest.client.YahooFinanceRestClient;
-import com.stock.invest.config.ScannerProperties;
-import com.stock.invest.model.KLineData;
-import com.stock.invest.model.StockInfo;
-import com.stock.invest.service.impl.YFinanceStockServiceImpl;
-import com.stock.invest.util.PythonScriptExecutor;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,7 +10,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.junit.jupiter.api.Assertions.*;
+import com.stock.invest.model.KLineData;
+import com.stock.invest.model.StockInfo;
+import com.stock.invest.service.impl.YFinanceStockServiceImpl;
+import com.stock.invest.util.PythonScriptExecutor;
 
 @ExtendWith(MockitoExtension.class)
 class YFinanceStockServiceImplTest {

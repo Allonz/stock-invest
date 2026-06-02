@@ -1,8 +1,12 @@
 package com.stock.invest.controller;
 
-import com.stock.invest.entity.ScreeningMatch;
-import com.stock.invest.enums.dto.ApiResponse;
-import com.stock.invest.repository.ScreeningMatchRepository;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -11,13 +15,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.Instant;
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import com.stock.invest.entity.ScreeningMatch;
+import com.stock.invest.enums.dto.ApiResponse;
+import com.stock.invest.repository.ScreeningMatchRepository;
 
 /**
  * 通知查询控制器
@@ -57,7 +57,7 @@ public class NotificationController {
                 int wd = m.getWindowDays();
                 hitsByAlgorithm
                         .computeIfAbsent(algo, k -> new LinkedHashMap<>())
-                        .merge(wd + "d", 1L, Long::sum);
+                        .merge(wd + "d", 1L, (a, b) -> Long.sum(a, b));
             }
 
             Map<String, Object> payload = new LinkedHashMap<>();

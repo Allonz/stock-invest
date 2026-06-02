@@ -1,30 +1,33 @@
 package com.stock.invest.service;
 
-import com.stock.invest.config.ScannerProperties;
-import com.stock.invest.entity.ScreeningMatch;
-import com.stock.invest.entity.StockDailyBar;
-import com.stock.invest.repository.ScreeningMatchRepository;
-import com.stock.invest.repository.StockDailyBarRepository;
-import com.stock.invest.service.impl.ScreeningServiceImpl;
-import org.junit.jupiter.api.BeforeEach;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import com.stock.invest.config.ScannerProperties;
+import com.stock.invest.entity.StockDailyBar;
+import com.stock.invest.repository.ScreeningMatchRepository;
+import com.stock.invest.repository.StockDailyBarRepository;
+import com.stock.invest.service.impl.ScreeningServiceImpl;
 
 @ActiveProfiles("test")
 @ExtendWith(MockitoExtension.class)
@@ -96,7 +99,7 @@ class ScreeningServiceTest {
             when(stockDailyBarRepository.findByTradeDateBetweenOrderByTradeDateDesc(any(LocalDate.class), eq(tradeDate)))
                     .thenReturn(bars);
 
-            String batchId = screeningService.runScreening(tradeDate);
+            screeningService.runScreening(tradeDate);
 
             // 数据不足7天，但内部取 windowDays = min(7, 2) = 2 < 3，所以被跳过
             verify(screeningMatchRepository, never()).saveAll(anyList());
@@ -135,7 +138,7 @@ class ScreeningServiceTest {
             when(patternEvaluateService.matchesIncreasingVolumePattern(anyList(), anyInt()))
                     .thenReturn(false);
 
-            String batchId = screeningService.runScreening(tradeDate);
+            screeningService.runScreening(tradeDate);
 
             verify(screeningMatchRepository, never()).saveAll(anyList());
         }

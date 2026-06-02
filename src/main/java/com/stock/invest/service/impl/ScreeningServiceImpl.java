@@ -43,7 +43,6 @@ public class ScreeningServiceImpl implements ScreeningService {
     private final StockDailyBarRepository stockDailyBarRepository;
     private final ScreeningMatchRepository screeningMatchRepository;
     private final PatternEvaluateService patternEvaluateService;
-    private final ScannerProperties scannerProperties;
     private final TradingCalendarDbService tradingCalendarDbService;
 
     public ScreeningServiceImpl(
@@ -55,7 +54,6 @@ public class ScreeningServiceImpl implements ScreeningService {
         this.stockDailyBarRepository = stockDailyBarRepository;
         this.screeningMatchRepository = screeningMatchRepository;
         this.patternEvaluateService = patternEvaluateService;
-        this.scannerProperties = scannerProperties;
         this.tradingCalendarDbService = tradingCalendarDbService;
     }
 

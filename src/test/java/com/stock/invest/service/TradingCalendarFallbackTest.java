@@ -290,19 +290,6 @@ class TradingCalendarFallbackTest {
         verify(alpaca, never()).isTradingDay(any(), any());
     }
 
-    @Test @DisplayName("FT-17: clearCache works")
-    void clearCache_removesEntries() {
-        when(tiger.isAvailable()).thenReturn(true);
-        when(tiger.isTradingDay("US", DATE))
-                .thenReturn(TradingCalendarResult.trading("US", DATE, "tiger", "TRADING"));
-
-        fallback.isTradingDay("US", DATE);    // cache it
-        fallback.clearCache();                // clear
-
-        TradingCalendarResult r2 = fallback.isTradingDay("US", DATE); // miss -> call source
-        assertTrue(r2.isTradingDay());
-        verify(tiger, times(2)).isTradingDay("US", DATE);
-    }
 
     @Test @DisplayName("FT-18: getCacheStats returns valid stats")
     void getCacheStats_works() {

@@ -1,11 +1,17 @@
 package com.stock.invest.datasource;
 
-import com.stock.invest.datasource.rule.TigerAvailabilityRule;
-import com.stock.invest.datasource.rule.TigerOpenAvailabilityRule;
-import com.stock.invest.datasource.rule.TiingoAvailabilityRule;
-import com.stock.invest.datasource.rule.TwelveDataAvailabilityRule;
-import com.stock.invest.datasource.rule.YFinanceAvailabilityRule;
-import org.junit.jupiter.api.BeforeEach;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,13 +21,11 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import com.stock.invest.datasource.rule.TigerAvailabilityRule;
+import com.stock.invest.datasource.rule.TigerOpenAvailabilityRule;
+import com.stock.invest.datasource.rule.TiingoAvailabilityRule;
+import com.stock.invest.datasource.rule.TwelveDataAvailabilityRule;
+import com.stock.invest.datasource.rule.YFinanceAvailabilityRule;
 
 /**
  * TC-AVAIL-001~007: DataSourceAvailabilityChecker 单元测试

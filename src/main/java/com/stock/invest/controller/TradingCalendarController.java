@@ -26,7 +26,6 @@ import java.util.*;
  * - GET  /api/v1/trading-calendar/is-open           — 查单日是否开盘
  * - POST /api/v1/trading-calendar/fetch-full-year    — 手动触发全年日历查询入库
  * - GET  /api/v1/trading-calendar/list               — 返回整年日历列表
- * - POST /api/v1/trading-calendar/cache/clear        — 清空 fallback 缓存
  *
  * is-open 策略：DB 优先 → fallback 链实时查 → 全部不可用时默认 true
  */
@@ -195,17 +194,6 @@ public class TradingCalendarController {
         }
     }
 
-    /**
-     * 清空 fallback 缓存（不影响 DB 数据）。
-     */
-    @PostMapping("/cache/clear")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> clearCache() {
-        fallback.clearCache();
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("cleared", true);
-        data.put("message", "日历查询缓存已清空");
-        return ResponseEntity.ok(ApiResponse.ok(data));
-    }
 
     /** 交易所 MIC → 市场代码映射 */
     private static String resolveMarket(String exchange) {

@@ -67,12 +67,6 @@ public interface StockDailyBarRepository extends JpaRepository<StockDailyBar, Lo
     @Query("SELECT DISTINCT b.symbol FROM StockDailyBar b ORDER BY b.symbol ASC")
     List<String> findAllSymbols();
 
-    @Query("SELECT DISTINCT b.tradeDate FROM StockDailyBar b ORDER BY b.tradeDate ASC")
-    List<LocalDate> findDistinctTradeDatesAsc();
-
-    @Query("SELECT b FROM StockDailyBar b WHERE b.tradeDate IN :dates ORDER BY b.symbol ASC, b.tradeDate ASC")
-    List<StockDailyBar> findByTradeDateInOrderBySymbolAscTradeDateAsc(@Param("dates") Collection<LocalDate> dates);
-
     @Query("SELECT COUNT(DISTINCT b.symbol) FROM StockDailyBar b")
     long countDistinctSymbols();
 

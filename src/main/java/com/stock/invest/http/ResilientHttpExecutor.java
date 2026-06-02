@@ -69,24 +69,24 @@ public class ResilientHttpExecutor {
                     }
                 }
                 ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(httpHeaders), String.class);
-                log.debug("[ResilientHttp] get: success — url={}, status={}", url, response.getStatusCodeValue());
+                log.debug("[ResilientHttp] get: success — url={}, status={}", url, response.getStatusCode().value());
                 return response.getBody();
             } catch (HttpStatusCodeException ex) {
-                if (ex.getRawStatusCode() == 429 && attempts < max) {
+                if (ex.getStatusCode().value() == 429 && attempts < max) {
                     long backoffMs = parseRetryAfterMs(ex) + jitter(attempts);
                     log.warn("[ResilientHttp] get: HTTP 429, backing off {} ms (attempt {}/{})", backoffMs, attempts, max);
                     rotateUserAgentFor429();
                     sleepQuietly(backoffMs);
                     continue;
                 }
-                if ((ex.getRawStatusCode() >= 500 || ex.getRawStatusCode() == 408) && attempts < max) {
+                if ((ex.getStatusCode().value() >= 500 || ex.getStatusCode().value() == 408) && attempts < max) {
                     long backoffMs = (long) (500 * Math.pow(2, attempts - 1)) + jitter(attempts);
                     log.warn("[ResilientHttp] get: HTTP {} retry in {} ms (attempt {}/{})",
-                            ex.getRawStatusCode(), backoffMs, attempts, max);
+                            ex.getStatusCode().value(), backoffMs, attempts, max);
                     sleepQuietly(backoffMs);
                     continue;
                 }
-                log.error("[ResilientHttp] get: HTTP {} non-retryable — url={}", ex.getRawStatusCode(), url);
+                log.error("[ResilientHttp] get: HTTP {} non-retryable — url={}", ex.getStatusCode().value(), url);
                 throw ex;
             }
         }

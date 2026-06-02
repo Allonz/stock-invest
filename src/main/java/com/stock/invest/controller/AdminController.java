@@ -59,7 +59,7 @@ public class AdminController {
     }
 
     @PostMapping("/trigger-screening")
-    public ResponseEntity<ApiResponse> triggerScreening(
+    public ResponseEntity<ApiResponse<?>> triggerScreening(
             @RequestParam(value = "date", required = false) String date,
             @RequestParam(value = "limit", defaultValue = "20") Integer limit,
             @RequestParam(value = "windowDays", defaultValue = "7") Integer windowDays) {
@@ -73,7 +73,7 @@ public class AdminController {
      * POST /api/admin/trigger-screening-async — 异步全量筛选（windowDays=2,3,4,5,6,7, limit=TOTAL）
      */
     @PostMapping("/trigger-screening-async")
-    public ResponseEntity<ApiResponse> triggerScreeningAsync() {
+    public ResponseEntity<ApiResponse<?>> triggerScreeningAsync() {
         log.info("[Admin] triggerScreeningAsync: starting full async screening");
         List<Integer> windows = Arrays.asList(2, 3, 4, 5, 6, 7);
         int limit = Integer.MAX_VALUE;
@@ -121,7 +121,7 @@ public class AdminController {
      * POST /api/admin/run-screening-async — 异步高级筛选，入参 {limit, windowDays}
      */
     @PostMapping("/run-screening-async")
-    public ResponseEntity<ApiResponse> runScreeningAsync(@RequestBody Map<String, Object> params) {
+    public ResponseEntity<ApiResponse<?>> runScreeningAsync(@RequestBody Map<String, Object> params) {
         int limit = params.containsKey("limit") ? ((Number) params.get("limit")).intValue() : 60;
         int windowDays = params.containsKey("windowDays") ? ((Number) params.get("windowDays")).intValue() : 7;
         log.info("[Admin] runScreeningAsync: window={}, limit={}", windowDays, limit);
@@ -164,7 +164,7 @@ public class AdminController {
      * GET /api/admin/screening-progress?taskId=xxx
      */
     @GetMapping("/screening-progress")
-    public ResponseEntity<ApiResponse> getScreeningProgress(@RequestParam("taskId") String taskId) {
+    public ResponseEntity<ApiResponse<?>> getScreeningProgress(@RequestParam("taskId") String taskId) {
         ScreeningProgress p = screeningProgressService.getProgress(taskId);
         if (p == null) {
             return ResponseEntity.ok(ApiResponse.ok(Map.of(
@@ -183,7 +183,7 @@ public class AdminController {
      * 异步触发数据补缺。立即返回 taskId，后台线程执行 fillGaps。
      */
     @PostMapping("/trigger-data-fill")
-    public ResponseEntity<ApiResponse> triggerDataFill() {
+    public ResponseEntity<ApiResponse<?>> triggerDataFill() {
         log.info("[Admin] triggerDataFill: manual trigger (async)");
 
         DataFillProgressService.FillProgress progress = dataFillProgressService.startFill();
@@ -213,7 +213,7 @@ public class AdminController {
      * 返回当前异步补缺的进度。
      */
     @GetMapping("/data-fill-progress")
-    public ResponseEntity<ApiResponse> getDataFillProgress() {
+    public ResponseEntity<ApiResponse<?>> getDataFillProgress() {
         DataFillProgressService.FillProgress p = dataFillProgressService.getProgress();
         if (p == null) {
             return ResponseEntity.ok(ApiResponse.ok(Map.of(
@@ -236,7 +236,7 @@ public class AdminController {
      * 返回补缺任务列表，支持按 status 过滤和分页。
      */
     @GetMapping("/fill-tasks")
-    public ResponseEntity<ApiResponse> getFillTasks(
+    public ResponseEntity<ApiResponse<?>> getFillTasks(
             @RequestParam(value = "status", required = false) String status,
             @RequestParam(value = "symbol", required = false) String symbol,
             @RequestParam(value = "tradeDate", required = false) String tradeDateStr,
@@ -309,7 +309,7 @@ public class AdminController {
      * 按 status 分组统计补缺任务数量。
      */
     @GetMapping("/fill-task-count")
-    public ResponseEntity<ApiResponse> getFillTaskCount() {
+    public ResponseEntity<ApiResponse<?>> getFillTaskCount() {
         long total = dataFillTaskRepository.count();
         long retrying = dataFillTaskRepository.countByStatus("retrying");
         long completed = dataFillTaskRepository.countByStatus("completed");
@@ -327,7 +327,7 @@ public class AdminController {
      * POST /api/admin/run-screening 完整版筛选
      */
     @PostMapping("/run-screening")
-    public ResponseEntity<ApiResponse> runScreening(
+    public ResponseEntity<ApiResponse<?>> runScreening(
             @RequestParam(value = "date", required = false) String date,
             @RequestParam(value = "limit", defaultValue = "50") Integer limit,
             @RequestParam(value = "windowDays", defaultValue = "2") Integer windowDays

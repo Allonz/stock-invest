@@ -1,5 +1,15 @@
 package com.stock.invest.service.impl;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stock.invest.client.TwelveDataRestClient;
 import com.stock.invest.config.ScannerProperties;
@@ -8,16 +18,6 @@ import com.stock.invest.model.StockInfo;
 import com.stock.invest.service.DataSourceStrategy;
 import com.stock.invest.util.PythonScriptExecutor;
 import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 @Service("twelveDataStockService")
 public class TwelveDataStockServiceImpl implements DataSourceStrategy {
@@ -27,7 +27,6 @@ public class TwelveDataStockServiceImpl implements DataSourceStrategy {
     private final PythonScriptExecutor pythonScriptExecutor;
     private final TwelveDataRestClient twelveDataRestClient;
     
-    private final ScannerProperties scannerProperties;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -52,7 +51,6 @@ public class TwelveDataStockServiceImpl implements DataSourceStrategy {
         log.info("TwelveDataStockServiceImpl {} : Service initialized", LocalDateTime.now().format(dateFormat));
         this.pythonScriptExecutor = pythonScriptExecutor;
         this.twelveDataRestClient = twelveDataRestClient;
-        this.scannerProperties = scannerProperties;
         this.objectMapper = objectMapper;
     }
 

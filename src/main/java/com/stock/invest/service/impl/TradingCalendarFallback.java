@@ -97,12 +97,6 @@ public class TradingCalendarFallback implements TradingCalendarService {
         return cache.stats();
     }
 
-    /** 清空缓存 */
-    public void clearCache() {
-        cache.invalidateAll();
-        log.info("[fallback] 日历查询缓存已清空");
-    }
-
     private static String buildCacheKey(String market, LocalDate date) {
         return market + ":" + date.format(DateTimeFormatter.ISO_LOCAL_DATE);
     }

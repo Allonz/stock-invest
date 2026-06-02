@@ -1,20 +1,19 @@
 package com.stock.invest.service;
 
-import com.stock.invest.entity.TradingCalendarEntity;
-import com.stock.invest.model.TradingCalendarResult;
-import com.stock.invest.repository.TradingCalendarRepository;
-import com.stock.invest.service.impl.TradingCalendarFallback;
+import java.time.LocalDate;
+import java.time.Year;
+import java.util.List;
+import java.util.Optional;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-import java.time.Year;
-import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import com.stock.invest.entity.TradingCalendarEntity;
+import com.stock.invest.model.TradingCalendarResult;
+import com.stock.invest.repository.TradingCalendarRepository;
+import com.stock.invest.service.impl.TradingCalendarFallback;
 
 /**
  * 交易日历持久化服务。
@@ -28,8 +27,6 @@ import java.util.Optional;
 public class TradingCalendarDbService {
 
     private static final Logger log = LoggerFactory.getLogger(TradingCalendarDbService.class);
-
-    private static final ZoneId NY_ZONE = ZoneId.of("America/New_York");
 
     private final TradingCalendarRepository repository;
     private final TradingCalendarFallback fallback;

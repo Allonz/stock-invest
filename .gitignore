@@ -18,3 +18,4 @@ buildNumber.properties
 logs/
 frontend/node_modules/
 frontend/dist/
+analyze_dead.py
