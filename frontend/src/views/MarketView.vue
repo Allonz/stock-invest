@@ -117,8 +117,9 @@ const notificationStats = computed(() => {
   if (!data?.results) return { totalCount: 0, detail: {} }
   let totalCount = 0
   for (const algo of Object.values(data.results)) {
-    for (const count of Object.values(algo)) {
-      totalCount += count
+    for (const windowVal of Object.values(algo)) {
+      // new format: { count: 74, stocks: [...] }; old format: 74 (backwards compat)
+      totalCount += typeof windowVal === "object" && windowVal !== null ? windowVal.count : windowVal
     }
   }
   return { totalCount, detail: data.results }

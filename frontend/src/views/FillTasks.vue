@@ -149,7 +149,7 @@ import {
   NPagination, NInput, NDatePicker,
   useNotification
 } from 'naive-ui'
-import { triggerDataFill, fetchDataFillProgress, fetchFillTasks, fetchFillTaskCount } from '../api/admin'
+import { triggerDataFill, triggerRetryTasks, fetchDataFillProgress, fetchFillTasks, fetchFillTaskCount } from '../api/admin'
 
 const notification = useNotification()
 
@@ -175,6 +175,7 @@ const progress = reactive({
 })
 
 const triggerLoading = ref(false)
+const retryLoading = ref(false)
 
 // 阶段定义（按规划图，增加详情文字）
 const stages = computed(() => [
@@ -404,6 +405,23 @@ async function loadProgress() {
 }
 
 // ============ 操作 ============
+
+async function handleTriggerRetry() {
+  retryLoading.value = true
+  try {
+    const res = await triggerRetryTasks()
+    if (res.data.success) {
+      notification.success({ title: '触发历史重试', content: '历史任务重试已异步启动', duration: 3000 })
+    } else {
+      notification.error({ title: '触发失败', content: res.data.data?.message || '未知错误', duration: 3000 })
+    }
+  } catch (err: any) {
+    notification.error({ title: '触发失败', content: err.message || '网络错误', duration: 3000 })
+  } finally {
+    retryLoading.value = false
+  }
+}
+
 async function handleTriggerFill() {
   triggerLoading.value = true
   try {

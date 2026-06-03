@@ -208,6 +208,16 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.ok(data));
     }
 
+    @PostMapping("/trigger-retry-tasks")
+    public ResponseEntity<ApiResponse<?>> triggerRetryTasks() {
+        log.info("[Admin] triggerRetryTasks: manual trigger");
+        new Thread(() -> {
+            try { dataGapFillerService.processRetryingTasks(); }
+            catch (Exception e) { log.error("[Admin] processRetryingTasks failed", e); }
+        }, "processRetry-async").start();
+        return ResponseEntity.ok(ApiResponse.ok(Map.of("message", "Retry tasks triggered")));
+    }
+
     /**
      * GET /api/admin/data-fill-progress
      * 返回当前异步补缺的进度。

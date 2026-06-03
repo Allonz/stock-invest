@@ -7,6 +7,7 @@ import os
 import time
 import random
 from datetime import datetime, timedelta
+import pytz
 from typing import List, Dict, Any, Optional
 import urllib.request
 import urllib.parse
@@ -98,8 +99,10 @@ def get_daily_kline(symbol: str) -> str:
         values = data.get("values", [])
         items = []
         for v in reversed(values):
+            dt = datetime.strptime(v["datetime"], "%Y-%m-%d")
+            dt_aware = pytz.timezone("America/New_York").localize(dt)
             items.append({
-                "time": int(datetime.strptime(v["datetime"], "%Y-%m-%d").timestamp() * 1000),
+                "time": int(dt_aware.timestamp() * 1000),
                 "timeString": v["datetime"],
                 "open": float(v["open"]),
                 "high": float(v["high"]),

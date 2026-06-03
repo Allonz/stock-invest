@@ -54,6 +54,11 @@ export function triggerDataFill() {
   return request.post<ApiResponse<{ taskId: string; message: string }>>('/api/admin/trigger-data-fill')
 }
 
+/** 异步触发历史任务重试 */
+export function triggerRetryTasks() {
+  return request.post<ApiResponse<{ message: string }>>('/api/admin/trigger-retry-tasks')
+}
+
 /** 获取补缺进度 */
 export function fetchDataFillProgress() {
   return request.get<ApiResponse<{

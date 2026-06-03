@@ -48,25 +48,44 @@ public class NotificationController {
             String latestBatchId = latest.get().getBatchId();
             LocalDate screenDate = latest.get().getTradeDate();
 
-            // 按 batchId 查询所有匹配记录，按 algorithm + windowDays 分组统计
+            // 按 batchId 查询所有匹配记录，按 algorithm + windowDays 分组统计（含具体代码）
             List<ScreeningMatch> allMatches = screeningMatchRepository
                     .findByBatchIdOrderByIdAsc(latestBatchId);
-            Map<String, Map<String, Long>> hitsByAlgorithm = new LinkedHashMap<>();
+            Map<String, Map<String, Object>> resultByAlgo = new LinkedHashMap<>();
             for (ScreeningMatch m : allMatches) {
                 String algo = m.getAlgorithm();
                 int wd = m.getWindowDays();
-                hitsByAlgorithm
-                        .computeIfAbsent(algo, k -> new LinkedHashMap<>())
-                        .merge(wd + "d", 1L, (a, b) -> Long.sum(a, b));
+                String windowKey = wd + "d";
+
+                Map<String, Object> windowData = resultByAlgo
+                        .computeIfAbsent(algo, k -> new LinkedHashMap<>());
+                @SuppressWarnings("unchecked")
+                Map<String, Object> windowGroup = (Map<String, Object>) windowData
+                        .computeIfAbsent(windowKey, k -> {
+                            Map<String, Object> g = new LinkedHashMap<>();
+                            g.put("count", 0L);
+                            g.put("stocks", new ArrayList<Map<String, Object>>());
+                            return g;
+                        });
+
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> stocks = (List<Map<String, Object>>) windowGroup.get("stocks");
+                windowGroup.put("count", ((Long) windowGroup.get("count")) + 1L);
+
+                Map<String, Object> stockInfo = new LinkedHashMap<>();
+                stockInfo.put("symbol", m.getSymbol());
+                stockInfo.put("lastClose", m.getLastClose());
+                stockInfo.put("rise", m.getRise());
+                stocks.add(stockInfo);
             }
 
             Map<String, Object> payload = new LinkedHashMap<>();
             payload.put("batchId", latestBatchId);
             payload.put("screenDate", screenDate.toString());
-            payload.put("results", hitsByAlgorithm);
+            payload.put("results", resultByAlgo);
 
             log.info("[Notification] latest: batchId={}, screenDate={}, totalHits={}",
-                    latestBatchId, screenDate, hitsByAlgorithm);
+                    latestBatchId, screenDate, resultByAlgo);
             return ResponseEntity.ok(ApiResponse.ok(payload));
         } catch (Exception e) {
             log.error("getLatestNotification failed", e);

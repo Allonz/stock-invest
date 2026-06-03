@@ -138,8 +138,9 @@ def get_daily_kline(symbol: str) -> str:
         }
         
         for index, row in hist.iterrows():
+            idx_ts = index if index.tz is not None else index.tz_localize("America/New_York")
             item = {
-                "time": int(index.timestamp() * 1000),
+                "time": int(idx_ts.timestamp() * 1000),
                 "timeString": index.strftime("%Y-%m-%d"),
                 "open": float(row['Open']),
                 "high": float(row['High']),
