@@ -2,8 +2,10 @@ package com.stock.invest.controller;
 
 import com.stock.invest.enums.dto.ApiResponse;
 import com.stock.invest.entity.DataFillTask;
+import com.stock.invest.entity.StockDataSourcePriority;
 import com.stock.invest.repository.DataFillTaskRepository;
 import com.stock.invest.service.DataFillProgressService;
+import com.stock.invest.service.StockDataSourcePriorityService;
 import com.stock.invest.service.DataGapFillerService;
 import com.stock.invest.repository.ScreeningMatchRepository;
 import com.stock.invest.service.ScreeningProgressService;
@@ -40,6 +42,7 @@ public class AdminController {
     private final ScreeningService screeningService;
     private final DataGapFillerService dataGapFillerService;
     private final DataFillProgressService dataFillProgressService;
+    private final StockDataSourcePriorityService stockDataSourcePriorityService;
     private final DataFillTaskRepository dataFillTaskRepository;
     private final ScreeningMatchRepository screeningMatchRepository;
     private final ScreeningProgressService screeningProgressService;
@@ -47,12 +50,14 @@ public class AdminController {
     public AdminController(ScreeningService screeningService,
                            DataGapFillerService dataGapFillerService,
                            DataFillProgressService dataFillProgressService,
+                           StockDataSourcePriorityService stockDataSourcePriorityService,
                            DataFillTaskRepository dataFillTaskRepository,
                            ScreeningMatchRepository screeningMatchRepository,
                            ScreeningProgressService screeningProgressService) {
         this.screeningService = screeningService;
         this.dataGapFillerService = dataGapFillerService;
         this.dataFillProgressService = dataFillProgressService;
+        this.stockDataSourcePriorityService = stockDataSourcePriorityService;
         this.dataFillTaskRepository = dataFillTaskRepository;
         this.screeningMatchRepository = screeningMatchRepository;
         this.screeningProgressService = screeningProgressService;
@@ -222,6 +227,23 @@ public class AdminController {
      * GET /api/admin/data-fill-progress
      * 返回当前异步补缺的进度。
      */
+
+    /**
+     * GET /api/admin/stock-data-source-priority
+     * 查询某支股票的数据源优先级列表。无 symbol 参数返回所有记录（分页待扩展）。
+     */
+    @GetMapping("/stock-data-source-priority")
+    public ResponseEntity<ApiResponse<?>> getStockDataSourcePriority(
+            @RequestParam(required = false) String symbol) {
+        if (symbol != null && !symbol.isBlank()) {
+            List<StockDataSourcePriority> records = stockDataSourcePriorityService
+                    .getPriorityRecords(symbol);
+            return ResponseEntity.ok(ApiResponse.ok(records));
+        }
+        return ResponseEntity.ok(ApiResponse.ok(
+                stockDataSourcePriorityService.getAllRecords()));
+    }
+
     @GetMapping("/data-fill-progress")
     public ResponseEntity<ApiResponse<?>> getDataFillProgress() {
         DataFillProgressService.FillProgress p = dataFillProgressService.getProgress();

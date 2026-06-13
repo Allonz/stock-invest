@@ -3,6 +3,7 @@ package com.stock.invest.service.impl;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
@@ -32,6 +33,7 @@ import com.stock.invest.service.DataFillProgressService;
 import com.stock.invest.service.DataGapFillerService;
 import com.stock.invest.service.DataSourceStrategy;
 import com.stock.invest.service.TradingCalendarDbService;
+import com.stock.invest.service.StockDataSourcePriorityService;
 
 /**
  * 数据补缺服务 —— 通过 fallback 链补全缺失的日 K 线数据。
@@ -63,6 +65,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
     private final GapFillProperties gapFillProperties;
     private final DataFillProgressService dataFillProgressService;
     private final TradingCalendarDbService tradingCalendarDbService;
+    private final StockDataSourcePriorityService stockDataSourcePriorityService;
 
     public DataGapFillerServiceImpl(
             StockDailyBarRepository stockDailyBarRepository,
@@ -70,13 +73,15 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
             List<DataSourceStrategy> dataSources,
             GapFillProperties gapFillProperties,
             DataFillProgressService dataFillProgressService,
-            TradingCalendarDbService tradingCalendarDbService) {
+            TradingCalendarDbService tradingCalendarDbService,
+            StockDataSourcePriorityService stockDataSourcePriorityService) {
         this.stockDailyBarRepository = stockDailyBarRepository;
         this.dataFillTaskRepository = dataFillTaskRepository;
         this.dataSources = dataSources;
         this.gapFillProperties = gapFillProperties;
         this.dataFillProgressService = dataFillProgressService;
         this.tradingCalendarDbService = tradingCalendarDbService;
+        this.stockDataSourcePriorityService = stockDataSourcePriorityService;
     }
 
     @Override
@@ -209,8 +214,17 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         LocalDate lookbackLimit = today.minusDays(MAX_LOOKBACK_DAYS);
         LocalDate rangeStart = oldestInBars.isAfter(lookbackLimit) ? oldestInBars : lookbackLimit;
 
-        // 范围上界：取 bar 最新日期和 today 中较晚者
-        LocalDate rangeEnd = newestInBars.isAfter(today) ? newestInBars : today;
+        // 范围上界：按时间段决定是否排除当天
+        // 00:00~16:00 ET → 排除当天（盘中数据不完整）
+        // 16:00~23:59 ET → 包含当天（收盘后可补当天数据）
+        LocalTime nowTime = LocalTime.now(AMERICA_NY);
+        LocalDate rangeEnd;
+        if (nowTime.isBefore(LocalTime.of(16, 0))) {
+            LocalDate yesterday = today.minusDays(1);
+            rangeEnd = newestInBars.isAfter(yesterday) ? newestInBars : yesterday;
+        } else {
+            rangeEnd = newestInBars.isAfter(today) ? newestInBars : today;
+        }
 
         Set<LocalDate> existingDates = existingBars.stream()
                 .map(StockDailyBar::getTradeDate)
@@ -245,7 +259,8 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
     private boolean fetchAndPersist(String symbol, LocalDate tradeDate) {
         log.info("[DataGapFiller] fillWithFallback: begin symbol={}, date={}", symbol, tradeDate);
 
-        List<FallbackSource> fallbacks = buildFallbackChain();
+        // 使用该股票专属的数据源优先级列表（含历史成功记录排序 + fallback）
+        List<FallbackSource> fallbacks = buildFallbackChainForSymbol(symbol);
         for (FallbackSource source : fallbacks) {
             log.info("[DataGapFiller] fillWithFallback: trying symbol={}, source={}", symbol, source.name);
             try {
@@ -258,6 +273,9 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
                     LocalDate itemDate = epochMillisToLocalDate(item.getTime());
                     if (tradeDate.equals(itemDate)) {
                         persist(symbol, tradeDate, item, source.name);
+                        // 更新该股票的该数据源优先级（最近成功时间），先删旧记录再写新记录
+                        stockDataSourcePriorityService.updatePriority(
+                                symbol, source.name, java.time.LocalDateTime.now());
                         log.info("[DataGapFiller] fillWithFallback: success symbol={}, source={}", symbol, source.name);
                         return true;
                     }
@@ -401,16 +419,40 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
 
     private record FallbackSource(String name, KLineFetcher fetcher) {}
 
+    /**
+     * 构建全局默认 fallback 链（不依赖某支股票，用于无历史记录的股票）。
+     */
     private List<FallbackSource> buildFallbackChain() {
-        Map<String, Integer> priority = Map.of(
-                "tiger", 1, "tigeropen", 2, "yfinance", 3,
-                "twelvedata", 4, "tiingo", 5
-        );
+        return buildFallbackChainForSymbol(null);
+    }
+
+    /**
+     * 构建某支股票专属的 fallback 链。
+     * <ul>
+     *   <li>有历史成功记录 → 按 last_success_time DESC 优先</li>
+     *   <li>无历史记录 → 使用默认顺序 yfinance → tiingo → tiger → twelvedata → tigeropen</li>
+     *   <li>Tiger 截图数据源不参与优先级排序</li>
+     * </ul>
+     */
+    private List<FallbackSource> buildFallbackChainForSymbol(String symbol) {
+        List<String> priorityOrder;
+        if (symbol != null) {
+            priorityOrder = stockDataSourcePriorityService.getPriorityList(symbol);
+        } else {
+            priorityOrder = StockDataSourcePriorityService.DEFAULT_DATA_SOURCE_ORDER;
+        }
+
+        // 按优先顺序构建可用的数据源链
+        Map<String, Integer> priorityMap = new java.util.HashMap<>();
+        for (int i = 0; i < priorityOrder.size(); i++) {
+            priorityMap.put(priorityOrder.get(i), i);
+        }
+
         return dataSources.stream()
                 .filter(DataSourceStrategy::isAvailable)
-                .sorted(Comparator.comparingInt(s -> priority.getOrDefault(s.getSourceName(), 99)))
+                .sorted(Comparator.comparingInt(s -> priorityMap.getOrDefault(s.getSourceName(), 99)))
                 .map(ds -> new FallbackSource(ds.getSourceName(),
-                        symbol -> ds.getDailyKLineDataAsObject(symbol)))
+                        sym -> ds.getDailyKLineDataAsObject(sym)))
                 .collect(Collectors.toList());
     }
 

@@ -52,6 +52,8 @@ class DataGapFillerServiceTest {
     private DataFillProgressService dataFillProgressService;
     @Mock
     private com.stock.invest.service.TradingCalendarDbService tradingCalendarDbService;
+    @Mock
+    private StockDataSourcePriorityService stockDataSourcePriorityService;
 
     private DataGapFillerServiceImpl service;
 
@@ -76,7 +78,8 @@ class DataGapFillerServiceTest {
                 dataSources,
                 gapFillProperties,
                 dataFillProgressService,
-                tradingCalendarDbService);
+                tradingCalendarDbService,
+                stockDataSourcePriorityService);
     }
 
     private DataFillTask createTask(String symbol, LocalDate tradeDate,
