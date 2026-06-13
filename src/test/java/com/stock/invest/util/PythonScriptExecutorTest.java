@@ -3,8 +3,6 @@ package com.stock.invest.util;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledOnOs;
-import org.junit.jupiter.api.condition.OS;
 
 import java.io.IOException;
 import java.util.List;
@@ -68,6 +66,7 @@ class PythonScriptExecutorTest {
         List<?> result = mapper.readValue(output, List.class);
         assertEquals(2, result.size(), "Expected 2 stock entries by default");
 
+        @SuppressWarnings("unchecked")
         Map<String, Object> first = (Map<String, Object>) result.get(0);
         assertEquals("AAPL", first.get("symbol"));
         assertEquals("Apple Inc.", first.get("name"));

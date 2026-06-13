@@ -24,16 +24,12 @@
     <div class="table-container">
       <div class="table-header">
         <span class="title">📈 K线数据 · {{ symbol || '—' }}</span>
-        <div class="actions">
-          <NButton size="tiny" @click="loadSampleData">📊 示例数据</NButton>
-        </div>
       </div>
 
       <!-- 空状态 -->
       <div v-if="!hasData" class="empty-state">
         <div class="empty-icon">📊</div>
-        <p>输入股票代码并点击查询</p>
-        <p style="font-size: 12px; color: #ccc; margin-top: 4px;">目前为静态展示, 等待 API 对接</p>
+        <p>{{ statusMsg || '输入股票代码并点击查询, 如 TOVX' }}</p>
       </div>
 
       <NDataTable
@@ -51,23 +47,15 @@
 
 <script setup lang="ts">
 import { ref, reactive, h } from 'vue'
-import { NInput, NButton, NTag, NDataTable, useNotification } from 'naive-ui'
-
-const notification = useNotification()
+import { NInput, NButton, NTag, NDataTable } from 'naive-ui'
+import { fetchBars } from '../api/bars'
+import type { BarRecord } from '../api/bars'
 
 // ============ 状态 ============
 const symbol = ref('')
 const lastSearched = ref('')
+const statusMsg = ref('')
 const hasData = ref(false)
-interface BarRecord {
-  id: number
-  date: string
-  open: number
-  high: number
-  low: number
-  close: number
-  volume: number
-}
 const barData = ref<BarRecord[]>([])
 
 // ============ 分页配置 ============
@@ -85,28 +73,26 @@ const pagination = reactive({
 
 // ============ 表格列定义 ============
 const columns = [
-  { title: '日期', key: 'date', width: 120, sorter: true },
+  { title: '股票代码', key: 'symbol', width: 90, sorter: (a: BarRecord, b: BarRecord) => a.symbol.localeCompare(b.symbol) },
+  { title: '日期', key: 'tradeDate', width: 120, defaultSortOrder: 'descend', sorter: (a: BarRecord, b: BarRecord) => a.tradeDate.localeCompare(b.tradeDate) },
   {
-    title: '开盘', key: 'open', width: 110, sorter: true,
-    render: (row: BarRecord) => formatPrice(row.open)
+    title: '开盘价', key: 'openPrice', width: 110, sorter: (a: BarRecord, b: BarRecord) => a.openPrice - b.openPrice,
+    render: (row: BarRecord) => formatPrice(row.openPrice)
   },
   {
-    title: '最高', key: 'high', width: 110, sorter: true,
-    render: (row: BarRecord) => h('span', { style: 'color: #f5222d; font-weight: 600;' }, formatPrice(row.high))
+    title: '收盘价', key: 'closePrice', width: 110, sorter: (a: BarRecord, b: BarRecord) => a.closePrice - b.closePrice,
+    render: (row: BarRecord) => formatPrice(row.closePrice)
   },
   {
-    title: '最低', key: 'low', width: 110, sorter: true,
-    render: (row: BarRecord) => h('span', { style: 'color: #52c41a; font-weight: 600;' }, formatPrice(row.low))
-  },
-  {
-    title: '收盘', key: 'close', width: 110, sorter: true,
-    render: (row: BarRecord) => formatPrice(row.close)
-  },
-  {
-    title: '涨跌幅', key: 'changePercent', width: 110, sorter: true,
+    title: '涨跌幅', key: 'changePercent', width: 110,
+    sorter: (a: BarRecord, b: BarRecord) => {
+      const pa = a.openPrice > 0 ? (a.closePrice - a.openPrice) / a.openPrice : 0
+      const pb = b.openPrice > 0 ? (b.closePrice - b.openPrice) / b.openPrice : 0
+      return pa - pb
+    },
     render: (row: BarRecord) => {
-      const pct = ((row.close - row.open) / row.open * 100).toFixed(2)
-      const isUp = row.close >= row.open
+      const pct = row.openPrice > 0 ? ((row.closePrice - row.openPrice) / row.openPrice * 100).toFixed(2) : '0.00'
+      const isUp = row.closePrice >= row.openPrice
       return h(NTag, {
         type: isUp ? 'error' : 'success',
         size: 'small',
@@ -115,70 +101,51 @@ const columns = [
     }
   },
   {
-    title: '成交量', key: 'volume', width: 120, sorter: true,
+    title: '成交量', key: 'volume', width: 120, sorter: (a: BarRecord, b: BarRecord) => a.volume - b.volume,
     render: (row: BarRecord) => formatVolume(row.volume)
-  }
+  },
+  { title: '数据源', key: 'source', width: 100, sorter: (a: BarRecord, b: BarRecord) => a.source.localeCompare(b.source) }
 ]
 
 // ============ 辅助函数 ============
 function formatPrice(val: number): string {
-  return `$${val.toFixed(4)}`
+  return '$' + val.toFixed(4)
 }
 
 function formatVolume(val: number): string {
-  if (val >= 1_000_000) return (val / 1_000_000).toFixed(1) + 'M'
-  if (val >= 1_000) return (val / 1_000).toFixed(1) + 'K'
+  if (val >= 100_000_000) return (val / 100_000_000).toFixed(2) + '亿'
+  if (val >= 10_000) return (val / 10_000).toFixed(2) + '万'
   return val.toString()
 }
 
-// ============ 方法 ============
-/** 查询 K线数据 */
+// ============ 查询 ============
+let searching = false
+
 async function handleSearch() {
+  if (searching) return
   const code = symbol.value.trim().toUpperCase()
   if (!code) {
-    notification.warning({ title: '请输入股票代码', duration: 2000 })
+    statusMsg.value = '请输入股票代码'
     return
   }
+  statusMsg.value = ''
   lastSearched.value = code
-  notification.info({ title: '查询', content: `正在查询 ${code} 的K线数据...`, duration: 2000 })
-  // TODO: 对接后端 API GET /api/bars?symbol=XXX
-  // 目前先用示例数据展示
-  loadSampleData()
-}
+  searching = true
+  hasData.value = false
+  barData.value = []
 
-/** 加载示例 K线数据 */
-function loadSampleData() {
-  const sample: BarRecord[] = []
-  const basePrice = symbol.value ? 0.3 : 0.4329
-  const startDate = new Date('2026-05-01')
-
-  for (let i = 0; i < 20; i++) {
-    const date = new Date(startDate)
-    date.setDate(date.getDate() + i)
-    // 跳过周末
-    if (date.getDay() === 0 || date.getDay() === 6) continue
-
-    const volatility = basePrice * 0.05
-    const open = basePrice + (Math.random() - 0.5) * volatility
-    const close = open + (Math.random() - 0.5) * volatility * 2
-    const high = Math.max(open, close) + Math.abs(volatility * Math.random())
-    const low = Math.min(open, close) - Math.abs(volatility * Math.random())
-    const volume = Math.floor(Math.random() * 100000) + 10000
-
-    sample.push({
-      id: i,
-      date: date.toISOString().split('T')[0],
-      open: Math.round(open * 10000) / 10000,
-      high: Math.round(high * 10000) / 10000,
-      low: Math.round(low * 10000) / 10000,
-      close: Math.round(close * 10000) / 10000,
-      volume
-    })
+  try {
+    const res = await fetchBars(code)
+    barData.value = res.data.rows
+    hasData.value = res.data.rows.length > 0
+    if (!hasData.value) {
+      statusMsg.value = '未找到 ' + code + ' 的K线数据'
+    }
+  } catch (err: any) {
+    statusMsg.value = '查询失败: ' + (err.message || '网络错误')
+  } finally {
+    searching = false
   }
-
-  barData.value = sample
-  hasData.value = true
-  notification.success({ title: '数据加载完成', content: `共 ${sample.length} 条K线数据`, duration: 2000 })
 }
 </script>
 
@@ -232,11 +199,6 @@ function loadSampleData() {
 .table-header .title {
   font-size: 15px;
   font-weight: 600;
-}
-
-.table-header .actions {
-  display: flex;
-  gap: 8px;
 }
 
 /* 空状态 */

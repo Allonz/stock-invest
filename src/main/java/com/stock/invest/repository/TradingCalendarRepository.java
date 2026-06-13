@@ -5,7 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -15,7 +14,6 @@ import java.util.Optional;
  * 交易日历数据访问层。
  * 提供按市场+日期查询、按年查询、upsert 操作。
  */
-@Repository
 public interface TradingCalendarRepository extends JpaRepository<TradingCalendarEntity, Long> {
 
     Optional<TradingCalendarEntity> findByMarketAndTradeDate(String market, LocalDate tradeDate);

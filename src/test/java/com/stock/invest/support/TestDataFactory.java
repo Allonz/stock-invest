@@ -10,7 +10,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * 测试数据工厂：生成 mock 的实体和模型对象。

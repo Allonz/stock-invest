@@ -1,6 +1,5 @@
 package com.stock.invest.client;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stock.invest.config.TwelveDataProperties;
 import com.stock.invest.http.ResilientHttpExecutor;

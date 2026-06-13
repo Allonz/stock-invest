@@ -19,6 +19,7 @@ import static org.mockito.Mockito.*;
 class AlpacaRestClientTest {
 
     private ObjectMapper objectMapper;
+    @SuppressWarnings("unused")
     private HttpClient httpClient;
 
     @BeforeEach

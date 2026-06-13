@@ -2,8 +2,6 @@ package com.stock.invest.service.impl;
 
 import org.junit.jupiter.api.Test;
 
-import java.lang.annotation.Annotation;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 class YFinanceStockServiceImplTypeTest {

@@ -1,5 +1,14 @@
 package com.stock.invest.service.impl;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.time.LocalDate;
+import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stock.invest.model.KLineData;
@@ -8,14 +17,7 @@ import com.stock.invest.model.StockInfo;
 import com.stock.invest.service.DataSourceStrategy;
 import com.stock.invest.util.PythonScriptExecutor;
 import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.LocalDate;
 
 /**
  * StockService接口的Yahoo Finance实现
@@ -203,6 +205,21 @@ public class YFinanceStockServiceImpl implements DataSourceStrategy {
             return new KLineData();
         }
     }
+
+    /**
+     * 按指定日期范围获取K线数据（精确查询）
+     */
+    public KLineData getDailyKLineDataByDateRange(String symbol, LocalDate startDate, LocalDate endDate) {
+        try {
+            String result = pythonScriptExecutor.executeScript(getScriptName(),
+                    "get_daily_kline_range", symbol, startDate.toString(), endDate.toString());
+            return objectMapper.readValue(result, KLineData.class);
+        } catch (Exception e) {
+            log.warn("Failed to get daily kline by range for {}: {}", symbol, e.getMessage());
+            return new KLineData();
+        }
+    }
+
     public List<String> scanStocks(Market market, int limit, Double minPrice, Double maxPrice) {
         try {
             String minPriceStr = minPrice != null ? minPrice.toString() : "";

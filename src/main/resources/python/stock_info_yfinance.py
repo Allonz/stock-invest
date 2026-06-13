@@ -118,25 +118,15 @@ def get_stock_list() -> str:
     except Exception as e:
         return json.dumps({"error": str(e)})
 
-def get_daily_kline(symbol: str) -> str:
+def get_daily_kline(symbol: str, days: int = 7) -> str:
     """获取日K线数据"""
     try:
-        # 添加随机延迟
         time.sleep(random.uniform(2, 4))
-        
-        # 获取股票数据
         stock = yf.Ticker(symbol)
-        hist = safe_yfinance_request(stock.history, period="7d")
-        
+        hist = safe_yfinance_request(stock.history, period=str(days) + "d")
         if hist.empty:
             return json.dumps({"error": f"No historical data found for {symbol}"})
-        
-        # 构建K线数据
-        kline_data = {
-            "symbol": symbol,
-            "items": []
-        }
-        
+        kline_data = {"symbol": symbol, "items": []}
         for index, row in hist.iterrows():
             idx_ts = index if index.tz is not None else index.tz_localize("America/New_York")
             item = {
@@ -150,10 +140,37 @@ def get_daily_kline(symbol: str) -> str:
                 "amount": float(row['Close'] * row['Volume'])
             }
             kline_data["items"].append(item)
-        
         return json.dumps(kline_data)
     except Exception as e:
         return json.dumps({"error": str(e)})
+
+
+def get_daily_kline_range(symbol: str, start_date: str, end_date: str) -> str:
+    """获取指定日期范围内的日K线数据"""
+    try:
+        time.sleep(random.uniform(2, 4))
+        stock = yf.Ticker(symbol)
+        hist = safe_yfinance_request(stock.history, start=start_date, end=end_date)
+        if hist.empty:
+            return json.dumps({"error": f"No data for {symbol} in range {start_date}~{end_date}"})
+        kline_data = {"symbol": symbol, "items": []}
+        for index, row in hist.iterrows():
+            idx_ts = index if index.tz is not None else index.tz_localize("America/New_York")
+            item = {
+                "time": int(idx_ts.timestamp() * 1000),
+                "timeString": index.strftime("%Y-%m-%d"),
+                "open": float(row['Open']),
+                "high": float(row['High']),
+                "low": float(row['Low']),
+                "close": float(row['Close']),
+                "volume": int(row['Volume']),
+                "amount": float(row['Close'] * row['Volume'])
+            }
+            kline_data["items"].append(item)
+        return json.dumps(kline_data)
+    except Exception as e:
+        return json.dumps({"error": str(e)})
+
 
 def get_batch_kline(symbols: str, period: str, count: int) -> str:
     """获取批量K线数据"""
@@ -245,7 +262,14 @@ def main():
         if len(sys.argv) < 3:
             print(json.dumps({"error": "Symbol not specified"}))
             sys.exit(1)
-        print(get_daily_kline(sys.argv[2]))
+        days = int(sys.argv[3]) if len(sys.argv) > 3 else 7
+        print(get_daily_kline(sys.argv[2], days))
+
+    elif command == "get_daily_kline_range":
+        if len(sys.argv) < 5:
+            print(json.dumps({"error": "Missing parameters: symbol start_date end_date"}))
+            sys.exit(1)
+        print(get_daily_kline_range(sys.argv[2], sys.argv[3], sys.argv[4]))
     
     elif command == "get_batch_kline":
         if len(sys.argv) < 5:

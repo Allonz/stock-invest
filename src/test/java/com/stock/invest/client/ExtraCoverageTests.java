@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stock.invest.config.TwelveDataProperties;
 import com.stock.invest.http.ResilientHttpExecutor;
 import com.stock.invest.model.KLineData;
-import com.stock.invest.model.KLineIterator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

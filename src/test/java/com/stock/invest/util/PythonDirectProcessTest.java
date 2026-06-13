@@ -62,6 +62,7 @@ class PythonDirectProcessTest {
         List<?> result = mapper.readValue(output, List.class);
         assertEquals(2, result.size());
 
+        @SuppressWarnings("unchecked")
         Map<String, Object> first = (Map<String, Object>) result.get(0);
         assertEquals("AAPL", first.get("symbol"));
     }

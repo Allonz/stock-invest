@@ -495,7 +495,7 @@ async function toggleNotifBatch(batchId: string) {
 
 // ===================== 表格列定义 =====================
 const detailColumns = [
-  { title: '代码', key: 'symbol', width: 120, align: 'center' as const, render: (row: ScreeningMatch) => {
+  { title: '代码', key: 'symbol', width: 120, align: 'center' as const, sorter: (a: ScreeningMatch, b: ScreeningMatch) => a.symbol.localeCompare(b.symbol), render: (row: ScreeningMatch) => {
         const copied = copiedSymbol.value === row.symbol
         return [
           h('span', { class: 'symbol-text' }, row.symbol),
@@ -507,8 +507,8 @@ const detailColumns = [
         }, '复制')
         ]
       } },
-  { title: '收盘价', key: 'lastClose', width: 110, align: 'center' as const, render: (row: ScreeningMatch) => `${row.lastClose.toFixed(4)}` },
-  { title: '涨跌', key: 'rise', width: 80, align: 'center' as const, render: (row: ScreeningMatch) => h(NTag, {
+  { title: '收盘价', key: 'lastClose', width: 110, align: 'center' as const, sorter: (a: ScreeningMatch, b: ScreeningMatch) => a.lastClose - b.lastClose, render: (row: ScreeningMatch) => `${row.lastClose.toFixed(4)}` },
+  { title: '涨跌', key: 'rise', width: 80, align: 'center' as const, sorter: (a: ScreeningMatch, b: ScreeningMatch) => Number(a.rise) - Number(b.rise), render: (row: ScreeningMatch) => h(NTag, {
     type: row.rise ? 'error' : 'success',
     size: 'small',
     bordered: false
@@ -518,7 +518,7 @@ const detailColumns = [
     size: 'small',
     bordered: false
   }, { default: () => row.algorithm }) },
-  { title: '窗口', key: 'windowDays', width: 70, align: 'center' as const, render: (row: ScreeningMatch) => `${row.windowDays}天` }
+  { title: '窗口', key: 'windowDays', width: 70, align: 'center' as const, sorter: (a: ScreeningMatch, b: ScreeningMatch) => a.windowDays - b.windowDays, render: (row: ScreeningMatch) => `${row.windowDays}天` }
 ]
 
 // ===================== 初始化 =====================

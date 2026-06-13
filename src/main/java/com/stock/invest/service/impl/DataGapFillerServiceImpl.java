@@ -264,7 +264,14 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         for (FallbackSource source : fallbacks) {
             log.info("[DataGapFiller] fillWithFallback: trying symbol={}, source={}", symbol, source.name);
             try {
-                KLineData klineData = source.fetcher.fetch(symbol);
+                KLineData klineData = null;
+                // yfinance 优先使用精确日期范围查询
+                if ("yfinance".equals(source.name) && source.ds() instanceof YFinanceStockServiceImpl) {
+                    klineData = ((YFinanceStockServiceImpl) source.ds()).getDailyKLineDataByDateRange(symbol, tradeDate, tradeDate.plusDays(1));
+                }
+                if (klineData == null || klineData.getItems() == null || klineData.getItems().isEmpty()) {
+                    klineData = source.fetcher.fetch(symbol);
+                }
                 if (klineData == null || klineData.getItems() == null || klineData.getItems().isEmpty()) {
                     log.warn("[DataGapFiller] fillWithFallback: no data symbol={}, source={}", symbol, source.name);
                     continue;
@@ -417,14 +424,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         KLineData fetch(String symbol) throws Exception;
     }
 
-    private record FallbackSource(String name, KLineFetcher fetcher) {}
-
-    /**
-     * 构建全局默认 fallback 链（不依赖某支股票，用于无历史记录的股票）。
-     */
-    private List<FallbackSource> buildFallbackChain() {
-        return buildFallbackChainForSymbol(null);
-    }
+    private record FallbackSource(String name, KLineFetcher fetcher, DataSourceStrategy ds) {}
 
     /**
      * 构建某支股票专属的 fallback 链。
@@ -452,7 +452,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
                 .filter(DataSourceStrategy::isAvailable)
                 .sorted(Comparator.comparingInt(s -> priorityMap.getOrDefault(s.getSourceName(), 99)))
                 .map(ds -> new FallbackSource(ds.getSourceName(),
-                        sym -> ds.getDailyKLineDataAsObject(sym)))
+                        sym -> ds.getDailyKLineDataAsObject(sym), ds))
                 .collect(Collectors.toList());
     }
 

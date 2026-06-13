@@ -10,13 +10,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.client.HttpStatusCodeException;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.URI;
-import java.nio.charset.Charset;
 import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -117,6 +112,7 @@ class ResilientHttpExecutorBackoffTest {
         return (long) parseRetryAfterMs.invoke(null, ex);
     }
 
+    @SuppressWarnings("unused")
     private HttpStatusCodeException createMockException(HttpStatus status, HttpHeaders headers) {
         return new HttpStatusCodeException(status, status.getReasonPhrase(), headers, null, null) {
             @Override

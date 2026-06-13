@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 
 class TigerApiConfigTest {
 
-    private final TigerApiConfig config = new TigerApiConfig();
+    private final TigerApiConfig config = new TigerApiConfig(null);
 
     @Test
     @DisplayName("cleanPrivateKey removes PEM headers and whitespace, retains Base64")

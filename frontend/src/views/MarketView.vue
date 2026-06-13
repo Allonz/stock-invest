@@ -175,7 +175,7 @@ const pagination = reactive({
 
 /** 创建表格列定义 */
 const tableColumns = computed(() => [
-  { title: '代码', key: 'symbol', width: 120, align: 'center' as const, sorter: true, render: (row: ScreeningMatch) => {
+  { title: '代码', key: 'symbol', width: 120, align: 'center' as const, defaultSortOrder: 'ascend', sorter: (a: ScreeningMatch, b: ScreeningMatch) => a.symbol.localeCompare(b.symbol), render: (row: ScreeningMatch) => {
         const copied = copiedSymbol.value === row.symbol
         return [
           h('span', { class: 'symbol-cell' }, row.symbol),
@@ -188,7 +188,7 @@ const tableColumns = computed(() => [
         ]
       } },
   { title: '名称', key: 'name', width: 180, align: 'center' as const, render: (row: ScreeningMatch) => row.name || '—' },
-  { title: '最新价', key: 'lastClose', width: 120, align: 'center' as const, sorter: true, render: (row: ScreeningMatch) => h('span', { class: 'price-cell' }, `$${row.lastClose.toFixed(4)}`) },
+  { title: '最新价', key: 'lastClose', width: 120, align: 'center' as const, defaultSortOrder: 'descend', sorter: (a: ScreeningMatch, b: ScreeningMatch) => a.lastClose - b.lastClose, render: (row: ScreeningMatch) => h('span', { class: 'price-cell' }, `$${row.lastClose.toFixed(4)}`) },
   {
     title: '涨幅', key: 'rise', width: 100, align: 'center' as const,
     render: (row: ScreeningMatch) => {
