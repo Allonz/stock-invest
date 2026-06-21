@@ -1,11 +1,22 @@
 package com.stock.invest.service;
 
-import com.stock.invest.config.GapFillProperties;
-import com.stock.invest.entity.DataFillTask;
-import com.stock.invest.repository.DataFillTaskRepository;
-import com.stock.invest.repository.StockDailyBarRepository;
-import com.stock.invest.service.impl.DataGapFillerServiceImpl;
-import com.stock.invest.service.SymbolBlacklistService;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,16 +28,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.temporal.ChronoUnit;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import com.stock.invest.config.GapFillProperties;
+import com.stock.invest.entity.DataFillTask;
+import com.stock.invest.repository.DataFillTaskRepository;
+import com.stock.invest.repository.StockDailyBarRepository;
+import com.stock.invest.service.impl.DataGapFillerServiceImpl;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
