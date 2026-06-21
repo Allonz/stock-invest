@@ -17,7 +17,7 @@ import com.stock.invest.model.StockInfo;
 import com.stock.invest.service.DataSourceStrategy;
 import com.stock.invest.util.PythonScriptExecutor;
 import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
-import java.time.LocalDate;
+
 
 /**
  * StockService接口的Yahoo Finance实现
@@ -81,6 +81,10 @@ public class YFinanceStockServiceImpl implements DataSourceStrategy {
             KLineData pythonKLineData = getDailyKLine(symbol, days);
             if (pythonKLineData != null && pythonKLineData.getItems() != null && !pythonKLineData.getItems().isEmpty()) {
                 klineData.setItems(pythonKLineData.getItems());
+                // 填充每个 item 的 symbol 字段（Python 脚本返回的 JSON 中 item 不含 symbol）
+                for (KLineIterator item : klineData.getItems()) {
+                    item.setSymbol(symbol);
+                }
                 
                 // 从第一个K线数据中提取价格信息
                 KLineIterator firstItem = pythonKLineData.getItems().get(0);
@@ -95,7 +99,7 @@ public class YFinanceStockServiceImpl implements DataSourceStrategy {
                 item.setTime(System.currentTimeMillis());
                 klineData.setItems(List.of(item));
             }
-            
+ 
             return klineData;
         } catch (Exception e) {
             log.warn("Error getting daily kline data as object for {}: {}", symbol, e.getMessage());
@@ -207,13 +211,24 @@ public class YFinanceStockServiceImpl implements DataSourceStrategy {
     }
 
     /**
-     * 按指定日期范围获取K线数据（精确查询）
+     * 按指定交易日获取K线数据。
+     * yfinance 的 history(start=, end=) 是 end-exclusive，
+     * 所以内部将 tradeDate 和 tradeDate+1 传给 Python 脚本。
      */
-    public KLineData getDailyKLineDataByDateRange(String symbol, LocalDate startDate, LocalDate endDate) {
+    public KLineData getDailyKLineDataByDateRange(String symbol, LocalDate tradeDate) {
         try {
+            LocalDate yfEnd = tradeDate.plusDays(1);
+            log.info("[YFinanceStockServiceImpl] dateRange symbol={}, range=[{},{}]", symbol, tradeDate, yfEnd);
             String result = pythonScriptExecutor.executeScript(getScriptName(),
-                    "get_daily_kline_range", symbol, startDate.toString(), endDate.toString());
-            return objectMapper.readValue(result, KLineData.class);
+                    "get_daily_kline_range", symbol, tradeDate.toString(), yfEnd.toString());
+            KLineData klineData = objectMapper.readValue(result, KLineData.class);
+            // 填充每个 item 的 symbol 字段（Python 脚本返回的 JSON 中 item 不含 symbol）
+            if (klineData != null && klineData.getItems() != null) {
+                for (KLineIterator item : klineData.getItems()) {
+                    item.setSymbol(symbol);
+                }
+            }
+            return klineData;
         } catch (Exception e) {
             log.warn("Failed to get daily kline by range for {}: {}", symbol, e.getMessage());
             return new KLineData();

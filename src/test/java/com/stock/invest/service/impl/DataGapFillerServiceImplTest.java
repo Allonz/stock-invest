@@ -53,6 +53,8 @@ class DataGapFillerServiceImplTest {
     private com.stock.invest.service.TradingCalendarDbService tradingCalendarDbService;
     @Mock
     private com.stock.invest.service.StockDataSourcePriorityService stockDataSourcePriorityService;
+    @Mock
+    private com.stock.invest.service.SymbolBlacklistService symbolBlacklistService;
 
     private DataGapFillerServiceImpl service;
 
@@ -79,7 +81,8 @@ class DataGapFillerServiceImplTest {
                 gapFillProperties,
                 dataFillProgressService,
                 tradingCalendarDbService,
-                stockDataSourcePriorityService);
+                stockDataSourcePriorityService,
+                symbolBlacklistService);
     }
 
     private LocalDate nyToday() {

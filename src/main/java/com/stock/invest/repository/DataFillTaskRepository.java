@@ -4,6 +4,7 @@ import com.stock.invest.entity.DataFillTask;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -39,4 +40,13 @@ public interface DataFillTaskRepository extends JpaRepository<DataFillTask, Long
 
     @Query("SELECT t FROM DataFillTask t WHERE t.status = 'retrying' ORDER BY t.createdAt ASC")
     List<DataFillTask> findRetryableTasks();
+
+    @Modifying
+    @Query("UPDATE DataFillTask t SET t.status = :newStatus, t.lastError = :error WHERE t.symbol = :symbol AND t.status IN :statuses")
+    int updateStatusBySymbolAndStatusIn(
+        @Param("symbol") String symbol,
+        @Param("statuses") List<String> statuses,
+        @Param("newStatus") String newStatus,
+        @Param("error") String error
+    );
 }

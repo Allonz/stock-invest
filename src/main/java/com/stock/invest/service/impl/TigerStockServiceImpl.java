@@ -1,27 +1,9 @@
 package com.stock.invest.service.impl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.stock.invest.model.KLineData;
-import com.stock.invest.model.KLineIterator;
-import com.stock.invest.model.StockInfo;
-import com.tigerbrokers.stock.openapi.client.https.client.TigerHttpClient;
-import com.tigerbrokers.stock.openapi.client.https.request.quote.QuoteKlineRequest;
-import com.tigerbrokers.stock.openapi.client.https.response.quote.QuoteKlineResponse;
-import com.tigerbrokers.stock.openapi.client.https.domain.quote.item.KlineItem;
-import com.tigerbrokers.stock.openapi.client.https.domain.quote.item.KlinePoint;
-import com.tigerbrokers.stock.openapi.client.https.domain.quote.model.BaseFilter;
-import com.tigerbrokers.stock.openapi.client.https.request.quote.MarketScannerRequest;
-import com.tigerbrokers.stock.openapi.client.https.response.quote.MarketScannerResponse;
-import com.tigerbrokers.stock.openapi.client.struct.enums.KType;
-import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
-import com.tigerbrokers.stock.openapi.client.struct.enums.StockField;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,8 +14,28 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.stock.invest.model.KLineData;
+import com.stock.invest.model.KLineIterator;
+import com.stock.invest.model.StockInfo;
 import com.stock.invest.service.DataSourceStrategy;
 import com.stock.invest.service.PatternEvaluateService;
+import com.tigerbrokers.stock.openapi.client.https.client.TigerHttpClient;
+import com.tigerbrokers.stock.openapi.client.https.domain.quote.item.KlineItem;
+import com.tigerbrokers.stock.openapi.client.https.domain.quote.item.KlinePoint;
+import com.tigerbrokers.stock.openapi.client.https.domain.quote.model.BaseFilter;
+import com.tigerbrokers.stock.openapi.client.https.request.quote.MarketScannerRequest;
+import com.tigerbrokers.stock.openapi.client.https.request.quote.QuoteKlineRequest;
+import com.tigerbrokers.stock.openapi.client.https.response.quote.MarketScannerResponse;
+import com.tigerbrokers.stock.openapi.client.https.response.quote.QuoteKlineResponse;
+import com.tigerbrokers.stock.openapi.client.struct.enums.KType;
+import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
+import com.tigerbrokers.stock.openapi.client.struct.enums.StockField;
 
 /**
  * 老虎证券服务实现
@@ -98,36 +100,54 @@ public class TigerStockServiceImpl implements DataSourceStrategy {
     }
     public KLineData getDailyKLineDataAsObject(String symbol) {
         try {
-            
-            // 创建K线请求
+            ZonedDateTime now = ZonedDateTime.now(ZoneId.of("America/New_York"));
             QuoteKlineRequest request = QuoteKlineRequest.newRequest(
                 Collections.singletonList(symbol),
                 KType.day,
-                ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate().minusDays(30).format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
-                ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))
+                now.minusDays(30).format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
+                now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))
                 .withLimit(30);
-            
-            // 发送请求
             QuoteKlineResponse response = client.execute(request);
-            
-            // 检查响应
             if (response == null || !response.isSuccess()) {
-                log.error("获取K线数据失败: {}", response == null ? "响应为空" : response.getMessage());
                 return new KLineData();
             }
-            // 创建KLineData对象
             KLineData kLineData = new KLineData();
             kLineData.setSymbol(symbol);
-            
-            // 解析K线数据
             List<KLineIterator> items = new ArrayList<>();
             for (KlineItem item : response.getKlineItems()) {
                 parseAndAddKLineIterator(items, item);
             }
-            
-            // 设置K线数据
             kLineData.setItems(items);
-                
+            return kLineData;
+        } catch (Exception e) {
+            log.warn("获取K线数据时出错: {}", e.getMessage());
+            return new KLineData();
+        }
+    }
+
+    @Override
+    public KLineData getDailyKLineDataByDateRange(String symbol, LocalDate tradeDate) {
+        try {
+            log.info("[TigerStockServiceImpl] dateRange symbol={}, range=[{},{}]", symbol, tradeDate, tradeDate);
+            String dateStr = tradeDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+            QuoteKlineRequest request = QuoteKlineRequest.newRequest(
+                Collections.singletonList(symbol),
+                KType.day,
+                dateStr,
+                dateStr)
+                .withLimit(30);
+            QuoteKlineResponse response = client.execute(request);
+            if (response == null || !response.isSuccess()) {
+                log.error("获取K线数据失败: {}", response == null ? "响应为空" : response.getMessage());
+                return new KLineData();
+            }
+            KLineData kLineData = new KLineData();
+            kLineData.setSymbol(symbol);
+            List<KLineIterator> items = new ArrayList<>();
+            for (KlineItem item : response.getKlineItems()) {
+                parseAndAddKLineIterator(items, item);
+            }
+            kLineData.setItems(items);
             return kLineData;
         } catch (Exception e) {
             log.warn("获取K线数据时出错: {}", e.getMessage());

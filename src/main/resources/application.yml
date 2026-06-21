@@ -7,7 +7,7 @@ spring:
     timeout-per-shutdown-phase: 20s
   # 设置数据库连接
   datasource:
-    url: jdbc:mysql://127.0.0.1:3307/${MYSQL_DATABASE:stock_invest}?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false
+    url: jdbc:mysql://127.0.0.1:3307/${MYSQL_DATABASE:stock_invest}?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: ${MYSQL_USERNAME:root}
     password: ${MYSQL_PASSWORD:allon23}
@@ -72,3 +72,10 @@ logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36}:%line - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36}:%line - %msg%n"
+
+stock-invest:
+  gap-filler:
+    blacklist:
+      enabled: true
+      not-found-threshold: 2
+      skip-count-threshold: 3

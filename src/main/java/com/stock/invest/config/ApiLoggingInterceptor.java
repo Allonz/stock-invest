@@ -32,7 +32,7 @@ public class ApiLoggingInterceptor implements HandlerInterceptor {
         if (elapsed > 2000) {
             log.warn("[API] {} {} → {} ({}ms) ⚠️ SLOW", method, path, status, elapsed);
         } else {
-            log.info("[API] {} {} → {} ({}ms)", method, path, status, elapsed);
+            log.debug("[API] {} {} → {} ({}ms)", method, path, status, elapsed);
         }
     }
 }

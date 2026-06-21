@@ -67,6 +67,11 @@ public class TiingoRestClient {
         int days = Math.max(outputSize + 10, 20);
         LocalDate end = LocalDate.now(ZoneOffset.UTC);
         LocalDate start = end.minusDays(days);
+        return fetchDailyBars(symbol, start, end);
+    }
+
+    public KLineData fetchDailyBars(String symbol, LocalDate start, LocalDate end) throws Exception {
+        requireToken();
         String url = baseUrl() + "/tiingo/daily/" + encode(symbol)
                 + "/prices?startDate=" + start
                 + "&endDate=" + end

@@ -116,6 +116,43 @@ def get_daily_kline(symbol: str) -> str:
         return json.dumps({"error": str(e)})
 
 
+def get_daily_kline_range(symbol: str, start_date: str, end_date: str) -> str:
+    """按日期范围获取K线数据 (TwelveData API)."""
+    try:
+        data = api_request("time_series", {
+            "symbol": symbol,
+            "interval": "1day",
+            "start_date": start_date,
+            "end_date": end_date,
+            "dp": "2"
+        })
+        values = data.get("values", [])
+        items = []
+        for v in reversed(values):
+            dt = datetime.strptime(v["datetime"], "%Y-%m-%d")
+            dt_aware = pytz.timezone("America/New_York").localize(dt)
+            items.append({
+                "time": int(dt_aware.timestamp() * 1000),
+                "timeString": v["datetime"],
+                "open": float(v["open"]),
+                "high": float(v["high"]),
+                "low": float(v["low"]),
+                "close": float(v["close"]),
+                "volume": int(v.get("volume", 0)),
+                "amount": float(v["close"]) * int(v.get("volume", 0))
+            })
+        return json.dumps({"symbol": symbol, "items": items})
+    except Exception as e:
+        err_str = str(e)
+        code = "NOT_FOUND" if "404" in err_str else "UNKNOWN_ERROR"
+        return json.dumps({
+            "code": code,
+            "symbol": symbol,
+            "message": err_str,
+            "source": "twelvedata"
+        })
+
+
 def get_batch_kline(symbols: str, period: str, count: int) -> str:
     """获取批量K线数据."""
     try:
@@ -194,6 +231,12 @@ def main():
             print(json.dumps({"error": "Symbol not specified"}))
             sys.exit(1)
         print(get_daily_kline(sys.argv[2]))
+
+    elif command == "get_daily_kline_range":
+        if len(sys.argv) < 5:
+            print(json.dumps({"error": "Symbol, start_date, end_date required"}))
+            sys.exit(1)
+        print(get_daily_kline_range(sys.argv[2], sys.argv[3], sys.argv[4]))
 
     elif command == "get_batch_kline":
         if len(sys.argv) < 5:

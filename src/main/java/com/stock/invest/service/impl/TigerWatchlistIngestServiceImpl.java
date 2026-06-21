@@ -80,6 +80,18 @@ public class TigerWatchlistIngestServiceImpl implements TigerWatchlistIngestServ
             }
             double px = row.lastPrice();
             StockDailyBar bar = stockDailyBarRepository.findBySymbolAndTradeDate(sym, tradeDate).orElseGet(StockDailyBar::new);
+            // if existing record, check vol vs previous day
+            if (bar.getId() != null && bar.getVolume() != null && bar.getVolume() > 0) {
+                LocalDate prevDate = tradeDate.minusDays(1);
+                StockDailyBar prevBar = stockDailyBarRepository.findBySymbolAndTradeDate(sym, prevDate).orElse(null);
+                if (prevBar != null && prevBar.getVolume() != null && prevBar.getVolume() > 0 && prevBar.getVolume().equals(vol)) {
+                    log.warn("[TigerIngest] SUSPICIOUS: symbol={}, tradeDate={}, volume={} identical to prev day ({}). Skip", sym, tradeDate, vol, prevDate);
+                    skipped++;
+                    reasons.add(sym + ": vol unchanged from " + prevDate);
+                    continue;
+                }
+            }
+
             bar.setSymbol(sym);
             bar.setTradeDate(tradeDate);
             bar.setOpenPrice(px);

@@ -62,7 +62,7 @@ public class TigerOpenStockServiceImpl implements DataSourceStrategy {
     @Override
     public KLineData getDailyKLineDataAsObject(String symbol) {
         try {
-            return bridge.fetchDailyBars(symbol, 30);
+            return bridge.fetchDailyBars(symbol, 12);
         } catch (Exception e) {
             log.warn("[TigerOpenStock] getDailyKLineDataAsObject failed for {}: {}", symbol, e.getMessage());
             return new KLineData();

@@ -7,9 +7,11 @@ import com.stock.invest.service.DataSourceStrategy;
 import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -53,9 +55,40 @@ public class TiingoDataSourceStrategy implements DataSourceStrategy {
     public KLineData getDailyKLineDataAsObject(String symbol) {
         try {
             return tiingoRestClient.fetchDailyBars(symbol, 30);
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode().value() == 404) {
+                KLineData empty = new KLineData();
+                empty.setSymbol(symbol);
+                empty.setItems(java.util.Collections.emptyList());
+                log.warn("[Tiingo] symbol not found (404): {}", symbol);
+                return empty;
+            }
+            log.warn("tiingo getDailyKLineDataAsObject failed for {}: {}", symbol, e.getMessage());
+            return new KLineData();
         } catch (Exception e) {
             log.warn("tiingo getDailyKLineDataAsObject failed for {}: {}", symbol, e.getMessage());
-            return null;
+            return new KLineData();
+        }
+    }
+
+    @Override
+    public KLineData getDailyKLineDataByDateRange(String symbol, LocalDate tradeDate) {
+        try {
+            log.info("[TiingoDataSourceStrategy] dateRange symbol={}, range=[{},{}]", symbol, tradeDate, tradeDate);
+            return tiingoRestClient.fetchDailyBars(symbol, tradeDate, tradeDate);
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode().value() == 404) {
+                KLineData empty = new KLineData();
+                empty.setSymbol(symbol);
+                empty.setItems(java.util.Collections.emptyList());
+                log.warn("[Tiingo] symbol not found (404) for date range: {}", symbol);
+                return empty;
+            }
+            log.warn("tiingo getDailyKLineDataByDateRange failed for {}: {}", symbol, e.getMessage());
+            return new KLineData();
+        } catch (Exception e) {
+            log.warn("tiingo getDailyKLineDataByDateRange failed for {}: {}", symbol, e.getMessage());
+            return new KLineData();
         }
     }
 

@@ -5,6 +5,7 @@ import com.stock.invest.entity.DataFillTask;
 import com.stock.invest.repository.DataFillTaskRepository;
 import com.stock.invest.repository.StockDailyBarRepository;
 import com.stock.invest.service.impl.DataGapFillerServiceImpl;
+import com.stock.invest.service.SymbolBlacklistService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -54,6 +55,8 @@ class DataGapFillerServiceTest {
     private com.stock.invest.service.TradingCalendarDbService tradingCalendarDbService;
     @Mock
     private StockDataSourcePriorityService stockDataSourcePriorityService;
+    @Mock
+    private SymbolBlacklistService symbolBlacklistService;
 
     private DataGapFillerServiceImpl service;
 
@@ -79,7 +82,8 @@ class DataGapFillerServiceTest {
                 gapFillProperties,
                 dataFillProgressService,
                 tradingCalendarDbService,
-                stockDataSourcePriorityService);
+                stockDataSourcePriorityService,
+                symbolBlacklistService);
     }
 
     private DataFillTask createTask(String symbol, LocalDate tradeDate,

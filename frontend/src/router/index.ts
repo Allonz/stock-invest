@@ -42,6 +42,12 @@ const routes: RouteRecordRaw[] = [
     name: 'TradingCalendar',
     component: () => import('../views/TradingCalendarView.vue'),
     meta: { title: '开盘日历', breadcrumb: '管理', icon: '📅' }
+  },
+  {
+    path: '/blacklist',
+    name: 'Blacklist',
+    component: () => import('../views/BlacklistView.vue'),
+    meta: { title: '股票黑名单', breadcrumb: '管理', icon: '🚫' }
   }
 ]
 

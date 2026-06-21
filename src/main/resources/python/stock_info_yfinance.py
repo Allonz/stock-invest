@@ -152,7 +152,12 @@ def get_daily_kline_range(symbol: str, start_date: str, end_date: str) -> str:
         stock = yf.Ticker(symbol)
         hist = safe_yfinance_request(stock.history, start=start_date, end=end_date)
         if hist.empty:
-            return json.dumps({"error": f"No data for {symbol} in range {start_date}~{end_date}"})
+            return json.dumps({
+                "code": "NOT_FOUND",
+                "symbol": symbol,
+                "message": f"No data for {symbol} in range {start_date}~{end_date}",
+                "source": "yfinance"
+            })
         kline_data = {"symbol": symbol, "items": []}
         for index, row in hist.iterrows():
             idx_ts = index if index.tz is not None else index.tz_localize("America/New_York")
@@ -169,7 +174,19 @@ def get_daily_kline_range(symbol: str, start_date: str, end_date: str) -> str:
             kline_data["items"].append(item)
         return json.dumps(kline_data)
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        err_str = str(e)
+        if "404" in err_str or "not found" in err_str.lower():
+            code = "NOT_FOUND"
+        elif "NaN" in err_str or "Non-standard token" in err_str:
+            code = "PARSE_ERROR"
+        else:
+            code = "UNKNOWN_ERROR"
+        return json.dumps({
+            "code": code,
+            "symbol": symbol,
+            "message": err_str,
+            "source": "yfinance"
+        })
 
 
 def get_batch_kline(symbols: str, period: str, count: int) -> str:

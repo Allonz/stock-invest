@@ -70,6 +70,7 @@ public class PythonScriptExecutor {
             }
 
             Process process = processBuilder.start();
+            log.info("Python脚本执行: script={} args={}", scriptName, java.util.Arrays.toString(args));
             try {
                 // 单独读取 stdout（结果输出）
                 StringBuilder output = new StringBuilder();
@@ -92,7 +93,7 @@ public class PythonScriptExecutor {
                 }
                 String stderr = errOutput.toString().trim();
                 if (!stderr.isEmpty()) {
-                    log.debug("Python脚本 stderr (script={}): {}", scriptName, stderr);
+                    log.info("Python脚本 stderr (script={}): {}", scriptName, stderr);
                 }
 
                 boolean completed = process.waitFor(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
@@ -104,11 +105,15 @@ public class PythonScriptExecutor {
 
                 int exitCode = process.exitValue();
                 if (exitCode != 0) {
-                    log.warn("Python脚本执行失败，退出码: {}, stderr: {}", exitCode, stderr.isEmpty() ? output.toString().trim() : stderr);
-                    throw new IOException("Python脚本执行失败，退出码: " + exitCode + (stderr.isEmpty() ? "" : ", stderr: " + stderr));
+                    log.warn("Python脚本执行失败，退出码: {}", exitCode);
+                    throw new IOException("Python脚本执行失败，退出码: " + exitCode);
                 }
 
-                return output.toString();
+                String result = output.toString().trim();
+                // 记录执行结果摘要（取前200字符，避免刷屏）
+                String preview = result.length() > 200 ? result.substring(0, 200) + "..." : result;
+                log.info("Python脚本 stdout (script={}): {}", scriptName, preview);
+                return result;
             } finally {
                 process.destroy();
             }
@@ -130,7 +135,7 @@ public class PythonScriptExecutor {
         if (envOverride != null && exe.equals(envOverride)) {
             log.info("使用环境变量指定的 Python: {}", exe);
         } else if (PythonRuntimeSupport.isResolvedPythonFromProjectVenv(exe)) {
-            log.info("使用项目虚拟环境 Python: {}", exe);
+            // 项目虚拟环境 Python，无需额外日志
         } else if ("python3".equals(exe)) {
             log.info("检测到 python 命令不可用，已回退使用 python3");
         } else {

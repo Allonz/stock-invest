@@ -5,6 +5,7 @@ import com.stock.invest.model.StockInfo;
 import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
 
 import java.util.List;
+import java.time.LocalDate;
 import java.util.Map;
 
 /**
@@ -45,4 +46,18 @@ public interface DataSourceStrategy {
 
     /** 查询低价股票并根据成交量筛选（带数量限制） */
     Map<String, Object> scanLowPriceStocksWithVolumePattern(int limit);
+
+    /**
+     * 按指定交易日获取 K 线数据（精确查询）。
+     * <p>数据源支持精确日期则高效实现，不支持则走默认的 {@link #getDailyKLineDataAsObject} 全量拉取。</p>
+     * <p>注意：不要在实现内做「精确查不到→换范围再查」的 fallback 逻辑。</p>
+     * <p>各数据源实现应根据自身 API 的日期边界语义在内部膨胀日期范围。</p>
+     *
+     * @param symbol    股票代码
+     * @param tradeDate 需要查询的交易日（含）
+     * @return K线数据
+     */
+    default KLineData getDailyKLineDataByDateRange(String symbol, LocalDate tradeDate) {
+        return getDailyKLineDataAsObject(symbol);
+    }
 }

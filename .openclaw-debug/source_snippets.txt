@@ -1,0 +1,386 @@
+=== TradingCalendarScheduler ===
+package com.stock.invest.scheduler;
+
+import com.stock.invest.service.TradingCalendarDbService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.time.Year;
+import java.time.ZoneId;
+
+/**
+ * 开盘日历定时同步调度。
+ * 每周一 4:30 美东时间执行，抓取当年整年开盘日历并 upsert 入库。
+ */
+@Component
+public class TradingCalendarScheduler {
+
+    private static final Logger log = LoggerFactory.getLogger(TradingCalendarScheduler.class);
+
+    private static final ZoneId NY_ZONE = ZoneId.of("America/New_York");
+    private static final String DEFAULT_MARKET = "US";
+
+    private final TradingCalendarDbService tradingCalendarDbService;
+
+    public TradingCalendarScheduler(TradingCalendarDbService tradingCalendarDbService) {
+        this.tradingCalendarDbService = tradingCalendarDbService;
+    }
+
+    /**
+     * 每周一 4:30 美东时间执行，查当年整年开盘日历并 upsert 入库。
+     */
+    @Scheduled(cron = "0 30 4 * * MON", zone = "America/New_York")
+    public void fetchWeeklyCalendar() {
+        Instant start = Instant.now();
+        int currentYear = Year.now(NY_ZONE).getValue();
+        log.info("[TradingCalendarScheduler] fetchWeeklyCalendar: === START === year={}, market={}", currentYear, DEFAULT_MARKET);
+
+        try {
+            int count = tradingCalendarDbService.fetchAndStoreFullYear(DEFAULT_MARKET, currentYear);
+            log.info("[TradingCalendarScheduler] fetchWeeklyCalendar: === END === " +
+                    "year={}, count={}, elapsedMs={}",
+                    currentYear, count, Duration.between(start, Instant.now()).toMillis());
+        } catch (Exception e) {
+            log.error("[TradingCalendarScheduler] fetchWeeklyCalendar: === FAILED === " +
+                    "year={}, elapsedMs={}, error={}",
+                    currentYear, Duration.between(start, Instant.now()).toMillis(), e.getMessage(), e);
+        }
+    }
+}
+
+
+=== DataGapFillerServiceImpl (first 200 lines) ===
+package com.stock.invest.service.impl;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.stock.invest.config.GapFillProperties;
+import com.stock.invest.entity.DataFillTask;
+import com.stock.invest.entity.StockDailyBar;
+import com.stock.invest.model.KLineData;
+import com.stock.invest.model.KLineIterator;
+import com.stock.invest.repository.DataFillTaskRepository;
+import com.stock.invest.repository.StockDailyBarRepository;
+import com.stock.invest.service.DataFillProgressService;
+import com.stock.invest.service.DataGapFillerService;
+import com.stock.invest.service.DataSourceStrategy;
+import com.stock.invest.service.TradingCalendarDbService;
+import com.stock.invest.service.StockDataSourcePriorityService;
+import com.stock.invest.service.SymbolBlacklistService;
+import com.stock.invest.entity.SymbolBlacklist;
+
+/**
+ * 数据补缺服务 —— 通过 fallback 链补全缺失的日 K 线数据。
+ * <p>
+ * Fallback 链通过自动收集所有 {@link com.stock.invest.service.DataSourceStrategy} bean 构建，
+ * 按优先级（yfinance -> twelvedata -> tiingo -> tigeropen -> tiger）排序，
+ * 过滤掉不可用的数据源。
+ * </p>
+ * <p>
+ * 在查找缺失日期时会通过 {@link TradingCalendarDbService} 查询交易日历，
+ * 跳过非开盘日（节假日、周末），避免不必要的 API 调用。
+ * </p>
+ */
+@Service
+public class DataGapFillerServiceImpl implements DataGapFillerService {
+
+    private static final Logger log = LoggerFactory.getLogger(DataGapFillerServiceImpl.class);
+
+    private static final ZoneId AMERICA_NY = ZoneId.of("America/New_York");
+
+
+    private static final int MAX_SYMBOLS_PER_RUN = 200;
+    private static final int MAX_LOOKBACK_DAYS = 30;
+    private static final int MAX_MISSING_DATES_PER_SYMBOL = 5;
+
+    private final StockDailyBarRepository stockDailyBarRepository;
+    private final DataFillTaskRepository dataFillTaskRepository;
+    private final List<DataSourceStrategy> dataSources;
+    private final GapFillProperties gapFillProperties;
+    private final DataFillProgressService dataFillProgressService;
+    private final TradingCalendarDbService tradingCalendarDbService;
+    private final StockDataSourcePriorityService stockDataSourcePriorityService;
+    private final SymbolBlacklistService symbolBlacklistService;
+
+    public DataGapFillerServiceImpl(
+            StockDailyBarRepository stockDailyBarRepository,
+            DataFillTaskRepository dataFillTaskRepository,
+            List<DataSourceStrategy> dataSources,
+            GapFillProperties gapFillProperties,
+            DataFillProgressService dataFillProgressService,
+            TradingCalendarDbService tradingCalendarDbService,
+            StockDataSourcePriorityService stockDataSourcePriorityService,
+            SymbolBlacklistService symbolBlacklistService) {
+        this.stockDailyBarRepository = stockDailyBarRepository;
+        this.dataFillTaskRepository = dataFillTaskRepository;
+        this.dataSources = dataSources;
+        this.gapFillProperties = gapFillProperties;
+        this.dataFillProgressService = dataFillProgressService;
+        this.tradingCalendarDbService = tradingCalendarDbService;
+        this.stockDataSourcePriorityService = stockDataSourcePriorityService;
+        this.symbolBlacklistService = symbolBlacklistService;
+    }
+
+    @Override
+    @Transactional
+    public void fillGaps() {
+        Instant batchStart = Instant.now();
+        log.info("[DataGapFiller] fillGaps: === BEGIN ===");
+
+        // 获取进度对象，如果没有（scheduler 触发）则忽略
+        DataFillProgressService.FillProgress progress = dataFillProgressService.getProgress();
+
+        List<String> allSymbols = stockDailyBarRepository.findAllSymbols();
+        if (allSymbols.isEmpty()) {
+            log.info("[DataGapFiller] fillGaps: no symbols found in stock_daily_bars");
+            if (progress != null) {
+                progress.setStage("COMPLETED");
+                progress.setRunning(false);
+            }
+            return;
+        }
+        Set<String> blacklistedSymbols = new HashSet<>(symbolBlacklistService.getBlacklistedSymbols());
+        List<String> filteredSymbols = allSymbols.stream()
+                .filter(s -> !blacklistedSymbols.contains(s))
+                .collect(java.util.stream.Collectors.toList());
+        if (!blacklistedSymbols.isEmpty()) {
+            log.info("[DataGapFiller] [blacklist] filtered symbols: {}, count={}", blacklistedSymbols, blacklistedSymbols.size());
+            // 清理已入黑 symbol 的 retry 任务
+            for (String s : blacklistedSymbols) {
+                dataFillTaskRepository.updateStatusBySymbolAndStatusIn(
+                        s,
+                        java.util.List.of("pending", "retrying"),
+                        "stopped",
+                        "symbol is blacklisted, stop retry"
+                );
+            }
+        }
+        log.info("[DataGapFiller] fillGaps: scanning totalSymbols={}, afterBlacklistFilter={}, skipped={}",
+                allSymbols.size(), filteredSymbols.size(), allSymbols.size() - filteredSymbols.size());
+
+        if (progress != null) {
+            progress.setTotalSymbols(allSymbols.size());
+            progress.setStage("SCANNING");
+        }
+
+        int processed = 0;
+        int totalGapsFound = 0;
+        int totalFilled = 0;
+        int totalFailed = 0;
+
+        for (String symbol : filteredSymbols) {
+            if (processed >= MAX_SYMBOLS_PER_RUN) {
+                log.info("[DataGapFiller] fillGaps: reached max symbols per run ({})", MAX_SYMBOLS_PER_RUN);
+                break;
+            }
+
+            // 更新进度：切换到 FILLING 阶段
+            if (progress != null) {
+                progress.setStage("FILLING");
+            }
+
+            FillResult result = fillGapsForSymbol(symbol, progress);
+            processed += result.symbolsProcessed;
+            totalGapsFound += result.gapsFound;
+            totalFilled += result.filled;
+            totalFailed += result.failed;
+
+            // 更新进度
+            if (progress != null) {
+                progress.incrementProcessedSymbols();
+                progress.addGapsFound(result.gapsFound);
+            }
+        }
+
+        // 补缺完成后也处理未完成的 retry 任务
+        processRetryingTasks();
+
+        log.info("[DataGapFiller] fillGaps: === COMPLETED === " +
+                "totalSymbols={}, gapsFound={}, filled={}, failed={}, elapsedMs={}",
+                allSymbols.size(), totalGapsFound, totalFilled, totalFailed,
+                Duration.between(batchStart, Instant.now()).toMillis());
+
+        if (progress != null) {
+            progress.setStage("COMPLETED");
+            progress.setRunning(false);
+        }
+    }
+
+    private FillResult fillGapsForSymbol(String symbol, DataFillProgressService.FillProgress progress) {
+        List<StockDailyBar> bars = stockDailyBarRepository
+                .findBySymbolOrderByTradeDateDesc(symbol, PageRequest.of(0, MAX_LOOKBACK_DAYS));
+        if (bars.isEmpty()) {
+            return FillResult.empty();
+        }
+        Collections.reverse(bars);
+
+        StockDailyBar latest = bars.get(bars.size() - 1);
+        if (latest.getClosePrice() != null && latest.getClosePrice() > gapFillProperties.getMinPriceThreshold()) {
+            return FillResult.empty();
+        }
+
+        List<LocalDate> missingDates = findMissingTradeDates(bars, tradingCalendarDbService);
+        if (missingDates.isEmpty()) {
+            return FillResult.empty();
+        }
+
+        String msg = String.format("fillGaps: symbol=%s gapsFound=%d, dates=%s, latestClose=%s",
+
+
+=== TigerWatchlistIngestServiceImpl (first 150 lines) ===
+package com.stock.invest.service.impl;
+
+import com.stock.invest.entity.StockDailyBar;
+import com.stock.invest.enums.dto.TigerWatchlistIngestRequestDto;
+import com.stock.invest.enums.dto.TigerWatchlistIngestResponseDto;
+import com.stock.invest.enums.dto.TigerWatchlistRowDto;
+import com.stock.invest.repository.StockDailyBarRepository;
+import com.stock.invest.service.TigerWatchlistIngestService;
+import com.stock.invest.util.WatchlistVolumeParser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.regex.Pattern;
+
+@Service
+public class TigerWatchlistIngestServiceImpl implements TigerWatchlistIngestService {
+
+    private static final Logger log = LoggerFactory.getLogger(TigerWatchlistIngestServiceImpl.class);
+    private static final Pattern SYMBOL_PATTERN = Pattern.compile("^[A-Z0-9\\-]{1,32}$");
+
+    private final StockDailyBarRepository stockDailyBarRepository;
+
+    public TigerWatchlistIngestServiceImpl(StockDailyBarRepository stockDailyBarRepository) {
+        this.stockDailyBarRepository = stockDailyBarRepository;
+    }
+
+    @Override
+    @Transactional
+    public TigerWatchlistIngestResponseDto ingest(TigerWatchlistIngestRequestDto request) {
+        Instant start = Instant.now();
+
+        if (request == null) {
+            throw new IllegalArgumentException("request is required");
+        }
+        if (request.tradeDate() == null || request.tradeDate().trim().isEmpty()) {
+            throw new IllegalArgumentException("tradeDate is required");
+        }
+        if (request.rows() == null || request.rows().isEmpty()) {
+            throw new IllegalArgumentException("rows must not be empty");
+        }
+        LocalDate tradeDate = LocalDate.parse(request.tradeDate().trim());
+        log.info("[TigerIngest] importScreenCapture: begin — tradeDate={}, totalRows={}", tradeDate, request.rows().size());
+        String batchId = UUID.randomUUID().toString();
+        int imported = 0;
+        int skipped = 0;
+        List<String> reasons = new ArrayList<>();
+
+        for (TigerWatchlistRowDto row : request.rows()) {
+            if (row == null) {
+                skipped++;
+                reasons.add("null row");
+                continue;
+            }
+            String sym = resolveSymbol(row);
+            if (sym == null || !SYMBOL_PATTERN.matcher(sym).matches()) {
+                skipped++;
+                reasons.add("invalid symbol: " + sym);
+                continue;
+            }
+            if (row.lastPrice() == null || row.lastPrice() <= 0D) {
+                skipped++;
+                reasons.add(sym + ": lastPrice invalid");
+                continue;
+            }
+            long vol;
+            try {
+                vol = WatchlistVolumeParser.parseVolumeLong(volumeToParseString(row.volume()));
+            } catch (IllegalArgumentException e) {
+                skipped++;
+                reasons.add(sym + ": " + e.getMessage());
+                continue;
+            }
+            double px = row.lastPrice();
+            StockDailyBar bar = stockDailyBarRepository.findBySymbolAndTradeDate(sym, tradeDate).orElseGet(StockDailyBar::new);
+            bar.setSymbol(sym);
+            bar.setTradeDate(tradeDate);
+            bar.setOpenPrice(px);
+            bar.setClosePrice(px);
+            bar.setVolume(vol);
+            bar.setSource(SNAPSHOT_SOURCE);
+            if (row.name() != null && !row.name().trim().isEmpty()) {
+                String n = row.name().trim();
+                if (n.length() > 128) {
+                    n = n.substring(0, 128);
+                }
+                bar.setName(n);
+            }
+            stockDailyBarRepository.save(bar);
+            log.info("[TigerIngest] importScreenCapture: save symbol={}, price={}, volume={}, date={}",
+                    sym, px, vol, tradeDate);
+            imported++;
+        }
+
+        TigerWatchlistIngestResponseDto out = new TigerWatchlistIngestResponseDto(batchId, tradeDate, imported, skipped, reasons);
+        log.info("[TigerIngest] importScreenCapture: completed — batchId={}, tradeDate={}, total={}, imported={}, skipped={}, elapsedMs={}",
+                batchId, tradeDate, request.rows().size(), imported, skipped, Duration.between(start, Instant.now()).toMillis());
+        if (skipped > 0 && log.isDebugEnabled()) {
+            log.debug("[TigerIngest] importScreenCapture: skip reasons: {}", reasons);
+        }
+        return out;
+    }
+
+    private static String volumeToParseString(Object v) {
+        if (v == null) {
+            return "0";
+        }
+        if (v instanceof Number) {
+            return String.valueOf(((Number) v).longValue());
+        }
+        return String.valueOf(v);
+    }
+
+    private static String resolveSymbol(TigerWatchlistRowDto row) {
+        if (row.symbol() != null && !row.symbol().trim().isEmpty()) {
+            return row.symbol().trim().toUpperCase();
+        }
+        return null;
+    }
+}

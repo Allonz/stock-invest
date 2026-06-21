@@ -30,4 +30,16 @@ request.interceptors.response.use(
   }
 )
 
+// ========== HTTP 方法快捷函数 ==========
+
+/** GET 请求 */
+export function get<T = any>(url: string, config?: Record<string, any>) {
+  return request.get(url, config).then(res => res.data as T)
+}
+
+/** POST 请求 */
+export function post<T = any>(url: string, data?: any, config?: Record<string, any>) {
+  return request.post(url, data, config).then(res => res.data as T)
+}
+
 export default request
