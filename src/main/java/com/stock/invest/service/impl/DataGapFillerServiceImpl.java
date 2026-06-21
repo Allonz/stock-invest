@@ -165,9 +165,6 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
             }
         }
 
-        // 补缺完成后也处理未完成的 retry 任务
-        processRetryingTasks();
-
         log.info("[DataGapFiller] fillGaps: === COMPLETED === " +
                 "totalSymbols={}, gapsFound={}, filled={}, failed={}, elapsedMs={}",
                 allSymbols.size(), totalGapsFound, totalFilled, totalFailed,
