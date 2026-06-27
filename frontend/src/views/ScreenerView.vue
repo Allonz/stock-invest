@@ -138,7 +138,7 @@
             <div class="batch-info">
               <span class="batch-date">{{ batch.lastTradeDate }}</span>
               <span class="batch-count">{{ batch.matchCount }} 条匹配</span>
-              <span class="batch-id">ID: {{ batch.batchId.slice(0, 16) }}...</span>
+              <span class="batch-id">ID: {{ batch.batchId }}</span>
             </div>
             <div class="batch-actions">
               <NButton size="tiny" quaternary>
@@ -161,7 +161,7 @@
               size="small"
               :max-height="400"
             />
-            <div class="batch-detail-footer">
+             <div class="batch-detail-footer">
               共 {{ batchDetailData.length }} 条记录
             </div>
           </div>
@@ -190,7 +190,7 @@
             <div class="batch-info">
               <span class="batch-date">{{ batch.screenDate }}</span>
               <span class="batch-count">{{ batch.matchCount }} 条匹配</span>
-              <span class="batch-id">ID: {{ batch.batchId.slice(0, 16) }}...</span>
+              <span class="batch-id">ID: {{ batch.batchId }}</span>
             </div>
             <div class="batch-actions">
               <NButton size="tiny" quaternary>
@@ -548,10 +548,10 @@ onMounted(() => {
 }
 
 .action-card {
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 10px;
   padding: 20px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  box-shadow: var(--shadow-sm);
   display: flex;
   gap: 16px;
   align-items: flex-start;
@@ -559,7 +559,7 @@ onMounted(() => {
 }
 
 .action-card:hover {
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: var(--shadow-hover);
 }
 
 .action-icon {
@@ -569,7 +569,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f0f7ff;
+  background: var(--icon-bg);
   border-radius: 12px;
   flex-shrink: 0;
 }
@@ -582,12 +582,12 @@ onMounted(() => {
   font-size: 15px;
   font-weight: 600;
   margin-bottom: 6px;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .action-content p {
   font-size: 13px;
-  color: #999;
+  color: var(--text-tertiary);
   line-height: 1.5;
 }
 
@@ -603,9 +603,9 @@ onMounted(() => {
 
 /* === 进度面板 === */
 .progress-card {
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 10px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  box-shadow: var(--shadow-sm);
   margin-bottom: 20px;
   overflow: hidden;
 }
@@ -615,12 +615,13 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 14px 20px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .progress-title {
   font-size: 15px;
   font-weight: 600;
+  color: var(--text-primary);
 }
 
 .progress-body {
@@ -637,7 +638,7 @@ onMounted(() => {
 .window-label {
   font-weight: 600;
   font-size: 13px;
-  color: #333;
+  color: var(--text-primary);
   width: 50px;
   flex-shrink: 0;
 }
@@ -645,7 +646,7 @@ onMounted(() => {
 .progress-bar-track {
   flex: 1;
   height: 16px;
-  background: #f0f0f0;
+  background: var(--progress-bg);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -665,12 +666,12 @@ onMounted(() => {
 }
 
 .progress-bar-fill.fill-waiting {
-  background: #d9d9d9;
+  background: var(--text-tertiary);
 }
 
 .progress-text {
   font-size: 12px;
-  color: #666;
+  color: var(--text-secondary);
   width: 100px;
   flex-shrink: 0;
   text-align: right;
@@ -680,7 +681,7 @@ onMounted(() => {
   margin-top: 12px;
   text-align: center;
   font-size: 13px;
-  color: #999;
+  color: var(--text-tertiary);
 }
 
 /* === 历史记录 === */
@@ -693,9 +694,9 @@ onMounted(() => {
 }
 
 .table-container {
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 10px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
 
@@ -704,12 +705,13 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 14px 20px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .table-header .title {
   font-size: 15px;
   font-weight: 600;
+  color: var(--text-primary);
 }
 
 .table-header .actions {
@@ -720,12 +722,12 @@ onMounted(() => {
 .empty-state {
   padding: 40px;
   text-align: center;
-  color: #999;
+  color: var(--text-tertiary);
 }
 
 /* 批次卡片 */
 .batch-card {
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .batch-card:last-child {
@@ -742,33 +744,39 @@ onMounted(() => {
 }
 
 .batch-header:hover {
-  background: #f5f8ff;
+  background: var(--hover-bg);
 }
 
 .batch-info {
   display: flex;
   align-items: center;
   gap: 16px;
+  flex: 1;
+  min-width: 0;
 }
 
 .batch-date {
   font-weight: 600;
   font-size: 14px;
-  color: #333;
+  color: var(--text-primary);
+  flex-shrink: 0;
 }
 
 .batch-count {
   font-size: 13px;
   color: #1890ff;
-  background: #f0f7ff;
+  background: var(--accent-bg);
   padding: 2px 10px;
   border-radius: 10px;
+  flex-shrink: 0;
 }
 
 .batch-id {
   font-size: 12px;
-  color: #999;
+  color: var(--text-tertiary);
   font-family: 'Menlo', 'Consolas', monospace;
+  word-break: break-all;
+  overflow-wrap: break-word;
 }
 
 .batch-detail {
@@ -778,7 +786,7 @@ onMounted(() => {
 .batch-detail-footer {
   padding: 8px 0;
   font-size: 12px;
-  color: #999;
+  color: var(--text-tertiary);
   text-align: right;
 }
 
@@ -787,12 +795,12 @@ onMounted(() => {
   align-items: center;
   justify-content: flex-end;
   padding: 12px 20px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border-color);
 }
 
 .pagination-bar .info {
   font-size: 12px;
-  color: #999;
+  color: var(--text-tertiary);
 }
 
 :deep(.symbol-text) {

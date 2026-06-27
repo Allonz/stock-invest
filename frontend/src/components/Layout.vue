@@ -1,5 +1,5 @@
 <template>
-  <!-- 全局布局: 左侧深色侧边栏 + 右侧白色内容区 -->
+  <!-- 全局布局: 左侧深色侧边栏 + 右侧内容区 -->
   <div class="layout">
     <!-- ============ 左侧导航栏 ============ -->
     <aside class="sidebar">
@@ -142,7 +142,6 @@ function handleSearchClick() {
   font-weight: 600;
 }
 
-/* 导航 */
 .nav {
   flex: 1;
   padding: 12px 0;
@@ -188,7 +187,6 @@ function handleSearchClick() {
   text-align: center;
 }
 
-/* 底部状态 */
 .sidebar-footer {
   padding: 12px 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -212,14 +210,14 @@ function handleSearchClick() {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #f0f2f5;
+  background: var(--bg-primary);
 }
 
 /* 顶栏 */
 .topbar {
   height: 56px;
-  background: #fff;
-  border-bottom: 1px solid #e8e8e8;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-light);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -235,13 +233,13 @@ function handleSearchClick() {
 
 .topbar-left .breadcrumb {
   font-size: 13px;
-  color: #999;
+  color: var(--text-tertiary);
 }
 
 .topbar-left .page-title {
   font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .topbar-right {
@@ -254,18 +252,18 @@ function handleSearchClick() {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #f5f5f5;
+  background: var(--hover-bg);
   border-radius: 6px;
   padding: 6px 12px;
   font-size: 13px;
-  color: #999;
+  color: var(--text-tertiary);
   cursor: pointer;
   transition: background 0.2s;
 }
 
 .search-box:hover {
-  background: #ebebeb;
-  color: #666;
+  background: var(--hover-bg2);
+  color: var(--text-secondary);
 }
 
 .avatar {
@@ -281,7 +279,6 @@ function handleSearchClick() {
   font-weight: 600;
 }
 
-/* 内容区域 */
 .content-area {
   flex: 1;
   padding: 20px 24px;

@@ -23,3 +23,6 @@ analyze_dead.py
 __pycache__/
 *.bak
 Untitled
+
+# Windows mount point (WSL accidental tracking)
+C:/

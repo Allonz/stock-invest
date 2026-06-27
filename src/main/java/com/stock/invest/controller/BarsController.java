@@ -2,13 +2,17 @@ package com.stock.invest.controller;
 
 import com.stock.invest.entity.StockDailyBar;
 import com.stock.invest.repository.StockDailyBarRepository;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +44,52 @@ public class BarsController {
         result.put("symbol", code);
         result.put("total", bars.size());
         result.put("rows", bars);
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 分页查询全量K线数据（支持按股票代码/交易日/数据源筛选）
+     * GET /api/bars/pages/query?page=0&pageSize=20&sortBy=tradeDate&sortDir=desc&symbol=AAPL&tradeDate=2026-06-01&source=yfinance
+     */
+    @GetMapping("/pages/query")
+    public ResponseEntity<Map<String, Object>> queryBars(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int pageSize,
+            @RequestParam(defaultValue = "tradeDate") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir,
+            @RequestParam(required = false) String symbol,
+            @RequestParam(required = false) String tradeDate,
+            @RequestParam(required = false) String source) {
+
+        Sort sort = sortDir.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+        String sym = (symbol != null && !symbol.isBlank()) ? symbol.trim().toUpperCase() : null;
+        LocalDate date = (tradeDate != null && !tradeDate.isBlank()) ? LocalDate.parse(tradeDate) : null;
+        String src = (source != null && !source.isBlank()) ? source : null;
+
+        Pageable pageable = PageRequest.of(page, pageSize, sort);
+        Page<StockDailyBar> barPage = stockDailyBarRepository.findFiltered(sym, date, src, pageable);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("total", barPage.getTotalElements());
+        result.put("totalPages", barPage.getTotalPages());
+        result.put("page", barPage.getNumber());
+        result.put("pageSize", barPage.getSize());
+        result.put("rows", barPage.getContent());
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 获取所有数据源列表
+     * GET /api/bars/sources
+     */
+    @GetMapping("/sources")
+    public ResponseEntity<Map<String, Object>> getSources() {
+        List<String> sources = stockDailyBarRepository.findAllSources();
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("sources", sources);
         return ResponseEntity.ok(result);
     }
 }

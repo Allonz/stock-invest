@@ -3,6 +3,7 @@ package com.stock.invest.repository;
 import com.stock.invest.entity.StockDailyBar;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.repository.query.Param;
 
@@ -91,4 +92,16 @@ public interface StockDailyBarRepository extends JpaRepository<StockDailyBar, Lo
     @Query("SELECT b FROM StockDailyBar b WHERE b.symbol IN :symbols AND b.name IS NOT NULL ORDER BY b.tradeDate DESC")
     List<StockDailyBar> findBySymbolInAndNameIsNotNull(@Param("symbols") List<String> symbols);
 
+    /**
+     * 多条件筛选分页查询（所有条件均为可选）
+     */
+    @Query("SELECT b FROM StockDailyBar b WHERE "
+            + "(:symbol IS NULL OR b.symbol = :symbol) AND "
+            + "(:tradeDate IS NULL OR b.tradeDate = :tradeDate) AND "
+            + "(:source IS NULL OR b.source = :source)")
+    Page<StockDailyBar> findFiltered(
+            @Param("symbol") String symbol,
+            @Param("tradeDate") LocalDate tradeDate,
+            @Param("source") String source,
+            Pageable pageable);
 }

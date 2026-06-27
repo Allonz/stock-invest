@@ -13,5 +13,5 @@ import org.springframework.test.context.ActiveProfiles;
 @ExtendWith(MockitoExtension.class)
 public abstract class BaseMockTest {
 
-    // 子类通过 @MockBean 声明各自的 mock
+    // 子类通过 @MockitoBean 声明各自的 mock
 }

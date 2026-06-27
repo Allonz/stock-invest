@@ -103,7 +103,7 @@ const loading = ref(true)
 const notificationData = ref<NotificationResult | null>(null)
 const screeningData = ref<LatestScreening | null>(null)
 const selectedWindow = ref(2)
-const selectedAlgo = ref('all')
+const selectedAlgo = ref('volume_spike')
 
 /** 窗口选项 */
 const windowOptions = [2, 3, 4, 5, 6, 7]
@@ -131,10 +131,10 @@ const totalMatches = computed(() => screeningData.value?.totalMatches || 0)
 /** 筛选日期 */
 const screeningDate = computed(() => screeningData.value?.tradeDate || '')
 
-/** 批次 ID 简短版 */
+/** 批次 ID */
 const batchIdShort = computed(() => {
   const id = screeningData.value?.batchId || notificationData.value?.batchId
-  return id ? id.slice(0, 12) + '...' : ''
+  return id || ''
 })
 
 /** 算法统计 */
@@ -301,10 +301,10 @@ onMounted(loadData)
 
 /* 筛选栏 */
 .filter-bar {
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 10px;
   padding: 14px 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-sm);
   margin-bottom: 20px;
   display: flex;
   align-items: center;
@@ -317,9 +317,9 @@ onMounted(loadData)
   border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
-  border: 1px solid #d9d9d9;
-  background: #fff;
-  color: #666;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-secondary);
   transition: all 0.2s;
   user-select: none;
 }
@@ -342,9 +342,9 @@ onMounted(loadData)
 
 /* 表格容器 */
 .table-container {
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 10px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
 
@@ -353,12 +353,13 @@ onMounted(loadData)
   align-items: center;
   justify-content: space-between;
   padding: 14px 20px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .table-header .title {
   font-size: 15px;
   font-weight: 600;
+  color: var(--text-primary);
 }
 
 .table-header .actions {
@@ -371,12 +372,12 @@ onMounted(loadData)
   align-items: center;
   justify-content: flex-end;
   padding: 12px 20px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border-color);
 }
 
 .table-footer .info {
   font-size: 12px;
-  color: #999;
+  color: var(--text-tertiary);
 }
 
 /* 表格内样式 */

@@ -41,20 +41,20 @@ const cardStyle = computed(() => props.width ? { width: props.width } : {})
 
 <style scoped>
 .stat-card {
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 10px;
   padding: 16px 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-sm);
   transition: box-shadow 0.2s;
 }
 
 .stat-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-hover);
 }
 
 .label {
   font-size: 12px;
-  color: #999;
+  color: var(--text-tertiary);
   margin-bottom: 6px;
 }
 

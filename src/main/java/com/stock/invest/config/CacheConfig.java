@@ -24,7 +24,8 @@ public class CacheConfig {
         CaffeineCacheManager cacheManager = new CaffeineCacheManager("dailyBars", "stockInfo");
         cacheManager.setCaffeine(Caffeine.newBuilder()
                 .maximumSize(cacheProperties.getMaximumSize())
-                .expireAfterWrite(cacheProperties.getExpireAfterWriteMinutes(), TimeUnit.MINUTES));
+                .expireAfterWrite(cacheProperties.getExpireAfterWriteMinutes(), TimeUnit.MINUTES)
+                .recordStats());
         return cacheManager;
     }
 }

@@ -325,13 +325,13 @@ onMounted(() => {
 }
 
 .action-card {
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 10px;
   padding: 16px 20px;
   display: flex;
   align-items: center;
   gap: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-sm);
 }
 
 .action-icon {
@@ -341,7 +341,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f0f5ff;
+  background: var(--icon-bg);
   border-radius: 10px;
   flex-shrink: 0;
 }
@@ -354,13 +354,13 @@ onMounted(() => {
   margin: 0 0 4px;
   font-size: 15px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .action-content p {
   margin: 0;
   font-size: 13px;
-  color: #999;
+  color: var(--text-tertiary);
 }
 
 .action-status {
@@ -373,7 +373,7 @@ onMounted(() => {
 
 /* ========= 过滤栏 ========= */
 .filter-bar {
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 10px;
   padding: 12px 16px;
   display: flex;
@@ -381,7 +381,7 @@ onMounted(() => {
   gap: 16px;
   flex-wrap: wrap;
   margin-bottom: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-sm);
 }
 
 .filter-item {
@@ -392,7 +392,7 @@ onMounted(() => {
 
 .filter-label {
   font-size: 13px;
-  color: #666;
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
@@ -408,7 +408,7 @@ onMounted(() => {
   gap: 16px;
   margin-bottom: 12px;
   padding: 8px 12px;
-  background: #fafafa;
+  background: var(--legend-bg);
   border-radius: 6px;
   font-size: 12px;
 }
@@ -417,7 +417,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 4px;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .dot {
@@ -430,14 +430,14 @@ onMounted(() => {
 .dot-open { background: #52c41a; }
 .dot-closed { background: #ff4d4f; }
 .dot-holiday { background: #fa8c16; }
-.dot-weekend { background: #e8e8e8; }
+.dot-weekend { background: #3a3a40; }
 
 /* ========= 日历网格 ========= */
 .calendar-container {
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 10px;
   padding: 16px 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-sm);
 }
 
 .calendar-header {
@@ -449,7 +449,7 @@ onMounted(() => {
 .calendar-weekday {
   text-align: center;
   font-size: 12px;
-  color: #999;
+  color: var(--text-tertiary);
   padding: 6px 0;
   font-weight: 500;
 }
@@ -484,32 +484,32 @@ onMounted(() => {
 }
 
 .calendar-cell.cell-open {
-  background: #f6ffed;
-  color: #389e0d;
-  border: 1px solid #b7eb8f;
+  background: #1a2e1a;
+  color: #52c41a;
+  border: 1px solid #2a5a2a;
 }
 
 .calendar-cell.cell-closed {
-  background: #fff2f0;
-  color: #cf1322;
-  border: 1px solid #ffccc7;
+  background: #2e1a1a;
+  color: #ff4d4f;
+  border: 1px solid #5a2a2a;
 }
 
 .calendar-cell.cell-weekend {
-  background: #fafafa;
-  color: #d9d9d9;
+  background: var(--stage-bg);
+  color: #3a3a40;
   border: 1px solid transparent;
 }
 
 .calendar-cell.cell-holiday {
-  background: #fff7e6;
-  color: #d46b08;
-  border: 1px solid #ffd591;
+  background: #2e2418;
+  color: #fa8c16;
+  border: 1px solid #5a3a18;
 }
 
 .calendar-cell.cell-unknown {
-  background: #f0f0f0;
-  color: #999;
+  background: var(--hover-bg);
+  color: var(--text-tertiary);
   border: 1px solid transparent;
 }
 
@@ -524,18 +524,18 @@ onMounted(() => {
   padding: 0 4px;
   border-radius: 3px;
   background: rgba(250, 140, 22, 0.2);
-  color: #d46b08;
+  color: #fa8c16;
 }
 
 /* ========= 统计 ========= */
 .calendar-stats {
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border-color);
   display: flex;
   gap: 20px;
   font-size: 13px;
-  color: #666;
+  color: var(--text-secondary);
   flex-wrap: wrap;
 }
 
@@ -547,9 +547,9 @@ onMounted(() => {
 .empty-state {
   text-align: center;
   padding: 80px 20px;
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 10px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-sm);
 }
 
 .empty-icon {

@@ -69,7 +69,7 @@ def get_stock_info(symbol: str) -> str:
         hist = safe_yfinance_request(stock.history, period="1d")
         if hist.empty:
             return json.dumps({"error": f"No historical data found for {symbol}"})
-        
+
         # 构建返回数据
         result = {
             "symbol": symbol,
@@ -82,7 +82,7 @@ def get_stock_info(symbol: str) -> str:
             "change": float(hist["Close"].iloc[-1] - hist["Open"].iloc[-1]),
             "changePercent": float((hist["Close"].iloc[-1] - hist["Open"].iloc[-1]) / hist["Open"].iloc[-1] * 100)
         }
-        
+
         return json.dumps(result)
     except Exception as e:
         return json.dumps({"error": str(e)})

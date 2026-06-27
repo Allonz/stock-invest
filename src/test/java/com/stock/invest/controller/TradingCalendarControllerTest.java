@@ -14,7 +14,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.stock.invest.model.TradingCalendarResult;
@@ -38,11 +38,11 @@ class TradingCalendarControllerTest {
                 .thenReturn(java.util.Optional.empty());
     }
 
-    @MockBean
+    @MockitoBean
     private TradingCalendarFallback fallback;
-    @MockBean
+    @MockitoBean
     private TradingCalendarDbService tradingCalendarDbService;
-    @MockBean
+    @MockitoBean
     private TradingCalendarRepository tradingCalendarRepository;
 
     @Test @DisplayName("ET-12: /is-open with date param returns trading day")

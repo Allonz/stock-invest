@@ -211,8 +211,8 @@ async function loadHealth() {
 }
 
 .status-card {
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 10px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-sm);
 }
 </style>

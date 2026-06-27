@@ -518,7 +518,7 @@ onUnmounted(() => {
 }
 
 .progress-time {
-  color: #999;
+  color: var(--text-tertiary);
   font-size: 12px;
 }
 
@@ -528,7 +528,6 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
-/* 四阶段进度条样式（按规划图） */
 .stages-container {
   display: flex;
   flex-direction: column;
@@ -541,23 +540,23 @@ onUnmounted(() => {
   flex-direction: column;
   padding: 10px 16px;
   border-radius: 8px;
-  background: #fafafa;
+  background: var(--stage-bg);
   border: 1px solid transparent;
   transition: all 0.3s;
 }
 
 .stage-block.waiting {
-  background: #fafafa;
+  background: var(--stage-bg);
 }
 
 .stage-block.active {
-  background: #f0f7ff;
-  border: 1px solid #b3d8ff;
+  background: var(--accent-bg);
+  border: 1px solid #2a4a7a;
 }
 
 .stage-block.done {
-  background: #f6ffed;
-  border: 1px solid #d9f7be;
+  background: #1a2e1a;
+  border: 1px solid #2a5a2a;
 }
 
 .stage-header {
@@ -578,8 +577,8 @@ onUnmounted(() => {
 }
 
 .stage-block.waiting .stage-icon-box {
-  background: #f0f0f0;
-  color: #999;
+  background: var(--hover-bg);
+  color: var(--text-tertiary);
 }
 
 .stage-block.active .stage-icon-box {
@@ -604,7 +603,7 @@ onUnmounted(() => {
 .stage-title {
   font-size: 14px;
   font-weight: 500;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .stage-block.active .stage-title {
@@ -629,12 +628,12 @@ onUnmounted(() => {
 }
 
 .waiting-text {
-  color: #999;
+  color: var(--text-tertiary);
 }
 
 .stage-detail {
   font-size: 12px;
-  color: #999;
+  color: var(--text-tertiary);
   margin-top: 4px;
   margin-left: 44px;
 }
@@ -658,7 +657,7 @@ onUnmounted(() => {
 .progress-bar-bg {
   width: 200px;
   height: 8px;
-  background: #e8e8e8;
+  background: var(--progress-bg);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -686,7 +685,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
-  color: #666;
+  color: var(--text-secondary);
   margin-bottom: 4px;
 }
 

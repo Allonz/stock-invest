@@ -15,6 +15,7 @@ spring:
       connection-init-sql: SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci
   # 设置JPA编码
   jpa:
+    open-in-view: false
     properties:
       hibernate:
         connection:

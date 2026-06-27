@@ -52,12 +52,16 @@ const columns = [
   {
     title: '首次入黑日期',
     key: 'first404Date',
-    width: 140
+    width: 140,
+    sorter: (a: BlacklistRow, b: BlacklistRow) =>
+      new Date(a.first404Date).getTime() - new Date(b.first404Date).getTime()
   },
   {
     title: '最近入黑日期',
     key: 'last404Date',
-    width: 140
+    width: 140,
+    sorter: (a: BlacklistRow, b: BlacklistRow) =>
+      new Date(a.last404Date).getTime() - new Date(b.last404Date).getTime()
   },
   {
     title: '错误来源',
