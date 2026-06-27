@@ -225,15 +225,46 @@
       </div>
     </template>
   </div>
+
+  <!-- ===================== 区域④：K线图表弹窗 ===================== -->
+  <div v-if="showCandleChart" class="candle-chart-card">
+    <div class="candle-chart-header">
+      <span class="candle-chart-title">📈 {{ selectedSymbol }} K线图（近30天）</span>
+      <div class="candle-chart-actions">
+        <NButton size="tiny" quaternary @click="showCandleChart = false">✕ 关闭</NButton>
+      </div>
+    </div>
+    <div class="candle-chart-body">
+      <div v-if="candleLoading" style="text-align:center;padding:40px;">
+        <NSpin size="small" />
+        <p style="margin-top:8px;color:#999;font-size:13px;">加载K线数据中...</p>
+      </div>
+      <VChart v-else-if="candleData.length > 0" :option="candleChartOption" autoresize style="width:100%;height:400px;" />
+      <div v-else style="text-align:center;padding:40px;color:#999;">
+        暂无 K 线数据
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, h, onMounted } from 'vue'
+import { ref, h, computed, onMounted } from 'vue'
 import { NSpin, NButton, NDataTable, useNotification, NTag, NSelect, NInputNumber } from 'naive-ui'
 import { fetchScreeningHistory, fetchBatchDetail, fetchNotificationHistory, fetchNotificationBatchDetail } from '../api/screening'
 import { triggerScreeningAsync, runScreenerAsync, fetchScreeningProgress } from '../api/admin'
 import type { ScreeningBatch, ScreeningMatch, NotificationBatch, NotificationBatchDetail } from '../api/screening'
 import type { WindowProgress } from '../api/admin'
+
+import { use } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { CandlestickChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent, DataZoomComponent, TitleComponent } from 'echarts/components'
+import VChart from 'vue-echarts'
+
+use([CanvasRenderer, CandlestickChart, GridComponent, TooltipComponent, DataZoomComponent, TitleComponent])
+
+import { fetchCandles } from '../api/bars'
+import type { CandleData } from '../api/bars'
 
 const notification = useNotification()
 
@@ -292,6 +323,12 @@ const progressData = ref<{
 const currentTaskId = ref<string | null>(null)
 
 const progressWindows = ref<WindowProgress[]>([])
+
+// ===================== K线图表状态 =====================
+const selectedSymbol = ref<string | null>(null)
+const candleLoading = ref(false)
+const candleData = ref<CandleData[]>([])
+const showCandleChart = ref(false)
 
 // ===================== Tab 切换 =====================
 function switchTab(tab: 'screening' | 'notification') {
@@ -415,6 +452,27 @@ function copySymbol(sym: string) {
   setTimeout(() => { copiedSymbol.value = null }, 1000)
 }
 
+/** 点击股票代码查看 K 线图 */
+async function onSymbolClick(symbol: string) {
+  selectedSymbol.value = symbol
+  showCandleChart.value = true
+  candleLoading.value = true
+  try {
+    const res = await fetchCandles(symbol, 30)
+    if (res.data.success) {
+      candleData.value = res.data.data
+    } else {
+      notification.warning({ title: 'K线数据加载失败', duration: 3000 })
+      candleData.value = []
+    }
+  } catch (err: any) {
+    notification.error({ title: 'K线数据异常', content: err.message, duration: 3000 })
+    candleData.value = []
+  } finally {
+    candleLoading.value = false
+  }
+}
+
 /** 加载筛选历史 */
 async function loadHistory() {
   loading.value = true
@@ -498,7 +556,11 @@ const detailColumns = [
   { title: '代码', key: 'symbol', width: 120, align: 'center' as const, sorter: (a: ScreeningMatch, b: ScreeningMatch) => a.symbol.localeCompare(b.symbol), render: (row: ScreeningMatch) => {
         const copied = copiedSymbol.value === row.symbol
         return [
-          h('span', { class: 'symbol-text' }, row.symbol),
+          h('span', {
+            class: 'symbol-text',
+            style: 'cursor:pointer',
+            onClick: () => { onSymbolClick(row.symbol); return false; }
+          }, row.symbol),
           copied
             ? h('span', { style: 'color:#52c41a;font-size:12px;margin-left:24px' }, '✓ 复制成功')
             : h('a', {
@@ -520,6 +582,110 @@ const detailColumns = [
   }, { default: () => row.algorithm }) },
   { title: '窗口', key: 'windowDays', width: 70, align: 'center' as const, sorter: (a: ScreeningMatch, b: ScreeningMatch) => a.windowDays - b.windowDays, render: (row: ScreeningMatch) => `${row.windowDays}天` }
 ]
+
+// ===================== K线图表配置 =====================
+const candleChartOption = computed(() => {
+  const data = candleData.value
+  if (!data || data.length === 0) return {}
+
+  const dates = data.map(d => d.date)
+  const ohlc = data.map(d => [d.open, d.close, d.low, d.high])
+  const volumes = data.map(d => d.volume)
+  const changes = data.map(d => d.changePercent)
+
+  return {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'cross' },
+      formatter: (params: any[]) => {
+        if (!params || params.length === 0) return ''
+        const idx = params[0].dataIndex
+        const d = data[idx]
+        if (!d) return ''
+        return [
+          `<div style="font-weight:600;margin-bottom:4px;">${d.date}</div>`,
+          `开盘: <b>${d.open.toFixed(4)}</b>`,
+          `收盘: <b>${d.close.toFixed(4)}</b>`,
+          `最高: <b>${d.high.toFixed(4)}</b>`,
+          `最低: <b>${d.low.toFixed(4)}</b>`,
+          `涨跌幅: <b>${d.changePercent.toFixed(2)}%</b>`,
+          `成交量: <b>${d.volume.toLocaleString()}</b>`,
+          d.afterHours != null ? `盘后价: <b>${d.afterHours.toFixed(4)}</b>` : '',
+          d.afterHoursChangePercent != null ? `盘后涨跌幅: <b>${d.afterHoursChangePercent.toFixed(2)}%</b>` : ''
+        ].filter(Boolean).join('<br/>')
+      }
+    },
+    grid: [
+      { left: '8%', right: '8%', top: '10%', height: '60%' },
+      { left: '8%', right: '8%', top: '78%', height: '12%' }
+    ],
+    xAxis: [
+      {
+        type: 'category',
+        data: dates,
+        axisLine: { onZero: false },
+        axisTick: { alignWithLabel: true },
+        splitLine: { show: false },
+        axisLabel: { rotate: 30, fontSize: 10 },
+        gridIndex: 0
+      },
+      {
+        type: 'category',
+        data: dates,
+        axisLabel: { show: false },
+        axisTick: { show: false },
+        splitLine: { show: false },
+        gridIndex: 1
+      }
+    ],
+    yAxis: [
+      {
+        type: 'value',
+        scale: true,
+        splitArea: { show: true },
+        gridIndex: 0
+      },
+      {
+        type: 'value',
+        scale: true,
+        splitNumber: 2,
+        axisLabel: { show: false },
+        splitLine: { show: false },
+        gridIndex: 1
+      }
+    ],
+    dataZoom: [
+      { type: 'inside', xAxisIndex: [0, 1], start: 50, end: 100 },
+      { type: 'slider', xAxisIndex: [0, 1], start: 50, end: 100, bottom: 8, height: 16 }
+    ],
+    series: [
+      {
+        type: 'candlestick',
+        data: ohlc,
+        xAxisIndex: 0,
+        yAxisIndex: 0,
+        itemStyle: {
+          color: '#ef232a',
+          color0: '#14b143',
+          borderColor: '#ef232a',
+          borderColor0: '#14b143'
+        }
+      },
+      {
+        type: 'bar',
+        data: volumes,
+        xAxisIndex: 1,
+        yAxisIndex: 1,
+        itemStyle: {
+          color: (params: any) => {
+            const d = data[params.dataIndex]
+            return d ? (d.close >= d.open ? '#14b143' : '#ef232a') : '#999'
+          }
+        }
+      }
+    ]
+  }
+})
 
 // ===================== 初始化 =====================
 onMounted(() => {
@@ -806,5 +972,37 @@ onMounted(() => {
 :deep(.symbol-text) {
   font-weight: 600;
   color: #1890ff;
+}
+
+/* === K线图表卡片 === */
+.candle-chart-card {
+  background: var(--bg-card);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+  margin-top: 20px;
+  overflow: hidden;
+}
+
+.candle-chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.candle-chart-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.candle-chart-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.candle-chart-body {
+  padding: 16px;
 }
 </style>

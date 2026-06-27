@@ -1,13 +1,19 @@
 package com.stock.invest.controller;
 
 import com.stock.invest.entity.StockDailyBar;
+import com.stock.invest.enums.dto.ApiResponse;
+import com.stock.invest.enums.dto.StockDailyBarCandleDto;
 import com.stock.invest.repository.StockDailyBarRepository;
+import com.stock.invest.service.StockDailyBarService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -24,10 +30,15 @@ import java.util.Map;
 @RequestMapping("/api/bars")
 public class BarsController {
 
-    private final StockDailyBarRepository stockDailyBarRepository;
+    private static final Logger log = LoggerFactory.getLogger(BarsController.class);
 
-    public BarsController(StockDailyBarRepository stockDailyBarRepository) {
+    private final StockDailyBarRepository stockDailyBarRepository;
+    private final StockDailyBarService stockDailyBarService;
+
+    public BarsController(StockDailyBarRepository stockDailyBarRepository,
+                          StockDailyBarService stockDailyBarService) {
         this.stockDailyBarRepository = stockDailyBarRepository;
+        this.stockDailyBarService = stockDailyBarService;
     }
 
     /**
@@ -91,5 +102,23 @@ public class BarsController {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("sources", sources);
         return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 获取蜡烛图数据（K线）
+     * GET /api/bars/{symbol}/candles?days=7
+     */
+    @GetMapping("/{symbol}/candles")
+    public ResponseEntity<ApiResponse<List<StockDailyBarCandleDto>>> getCandles(
+            @PathVariable String symbol,
+            @RequestParam(defaultValue = "7") int days) {
+        try {
+            List<StockDailyBarCandleDto> candles = stockDailyBarService.getRecentCandles(symbol, days);
+            return ResponseEntity.ok(ApiResponse.ok(candles));
+        } catch (Exception e) {
+            log.error("getCandles failed symbol={}", symbol, e);
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Failed to retrieve candle data"));
+        }
     }
 }

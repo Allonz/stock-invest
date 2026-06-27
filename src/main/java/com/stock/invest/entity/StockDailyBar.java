@@ -50,7 +50,22 @@ public class StockDailyBar {
     private Double openPrice;
 
     @Column(nullable = false)
+    private Double highPrice;   // 新增（最高价）
+
+    @Column(nullable = false)
+    private Double lowPrice;    // 新增（最低价）
+
+    @Column(nullable = false)
     private Double closePrice;
+
+    @Column(nullable = true)
+    private Double changePercent;           // 新增（涨跌幅 %）
+
+    @Column(nullable = true)
+    private Double afterHours;              // 新增（盘后价）
+
+    @Column(nullable = true)
+    private Double afterHoursChangePercent; // 新增（盘后涨跌幅 %）
 
     @Column(nullable = false)
     private Long volume;

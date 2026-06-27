@@ -80,8 +80,13 @@ def get_stock_info(symbol: str) -> str:
             "lowPrice": float(hist["Low"].iloc[-1]),
             "volume": int(hist["Volume"].iloc[-1]),
             "change": float(hist["Close"].iloc[-1] - hist["Open"].iloc[-1]),
-            "changePercent": float((hist["Close"].iloc[-1] - hist["Open"].iloc[-1]) / hist["Open"].iloc[-1] * 100)
+            "changePercent": float(info.get("regularMarketChangePercent", 0)),  # 从 info 获取涨跌幅
         }
+        # 盘后交易数据（部分股票无盘后交易）
+        if info.get("postMarketPrice") is not None:
+            result["afterHours"] = float(info["postMarketPrice"])
+        if info.get("postMarketChangePercent") is not None:
+            result["afterHoursChangePercent"] = float(info["postMarketChangePercent"])
 
         return json.dumps(result)
     except Exception as e:

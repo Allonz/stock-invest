@@ -226,8 +226,20 @@ public class TigerStockServiceImpl implements DataSourceStrategy {
             stockInfo.setSymbol(symbol);
             stockInfo.setCurrentPrice(latest.getClose());
             stockInfo.setVolume(latest.getVolume());
-            stockInfo.setChange(latest.getClose() - latest.getOpen());
-            stockInfo.setChangePercent((latest.getClose() - latest.getOpen()) / latest.getOpen() * 100);
+            // 标准涨跌幅计算：(今日收盘 - 昨日收盘) / 昨日收盘 * 100
+            if (kLineData.getItems().size() >= 2) {
+                KLineIterator prev = kLineData.getItems().get(1);
+                double prevClose = prev.getClose();
+                stockInfo.setChange(latest.getClose() - prevClose);
+                if (prevClose != 0D) {
+                    stockInfo.setChangePercent((latest.getClose() - prevClose) / prevClose * 100);
+                } else {
+                    stockInfo.setChangePercent(0D);
+                }
+            } else {
+                stockInfo.setChange(0D);
+                stockInfo.setChangePercent(0D);
+            }
             
             return stockInfo;
         } catch (Exception e) {
@@ -417,7 +429,10 @@ public class TigerStockServiceImpl implements DataSourceStrategy {
             point.getLow(),
             point.getClose(),
             point.getVolume(),
-            point.getAmount()
+            point.getAmount(),
+            0.0,   // changePercent: SDK 不直接返回，由 Service 层计算
+            0.0,   // afterHours: 暂留空（P1 阶段通过 TradeSession.AfterHours 获取）
+            0.0    // afterHoursChangePercent: 暂留空
         );
     }
     public KLineData getDailyKLine(String symbol) {

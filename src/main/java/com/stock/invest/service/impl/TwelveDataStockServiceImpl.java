@@ -92,6 +92,11 @@ public class TwelveDataStockServiceImpl implements DataSourceStrategy {
                     item.setSymbol(symbol);
                 }
             }
+            if (klineData != null && klineData.getItems() != null && !klineData.getItems().isEmpty()) {
+                KLineIterator first = klineData.getItems().get(0);
+                log.info("[TwelveDataStockServiceImpl] dateRange response: symbol={}, date={}, open={}, high={}, low={}, close={}, source=twelvedata",
+                        symbol, first.getTimeString(), first.getOpen(), first.getHigh(), first.getLow(), first.getClose());
+            }
             return klineData;
         } catch (Exception e) {
             log.error("Failed to get daily kline by date range for {}: {}", symbol, e.getMessage());

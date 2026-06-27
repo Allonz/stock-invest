@@ -14,11 +14,15 @@ public class KLineIterator {
     private double close;
     private long volume;
     private double amount;
+    private double changePercent;           // 涨跌幅（%）
+    private double afterHours;               // 盘后价
+    private double afterHoursChangePercent;  // 盘后涨跌幅（%）
 
     public KLineIterator() {
     }
 
-    public KLineIterator(String symbol, long time, double open, double high, double low, double close, long volume, double amount) {
+    public KLineIterator(String symbol, long time, double open, double high, double low, double close, long volume, double amount,
+                         double changePercent, double afterHours, double afterHoursChangePercent) {
         this.symbol = symbol;
         this.time = time;
         this.open = open;
@@ -27,6 +31,9 @@ public class KLineIterator {
         this.close = close;
         this.volume = volume;
         this.amount = amount;
+        this.changePercent = changePercent;
+        this.afterHours = afterHours;
+        this.afterHoursChangePercent = afterHoursChangePercent;
     }
 
     public String getSymbol() {
@@ -117,6 +124,30 @@ public class KLineIterator {
         this.amount = amount;
     }
 
+    public double getChangePercent() {
+        return changePercent;
+    }
+
+    public void setChangePercent(double changePercent) {
+        this.changePercent = changePercent;
+    }
+
+    public double getAfterHours() {
+        return afterHours;
+    }
+
+    public void setAfterHours(double afterHours) {
+        this.afterHours = afterHours;
+    }
+
+    public double getAfterHoursChangePercent() {
+        return afterHoursChangePercent;
+    }
+
+    public void setAfterHoursChangePercent(double afterHoursChangePercent) {
+        this.afterHoursChangePercent = afterHoursChangePercent;
+    }
+
     @Override
     public String toString() {
         return "KLineIterator{" +
@@ -129,6 +160,9 @@ public class KLineIterator {
                 ", close=" + close +
                 ", volume=" + volume +
                 ", amount=" + amount +
+                ", changePercent=" + changePercent +
+                ", afterHours=" + afterHours +
+                ", afterHoursChangePercent=" + afterHoursChangePercent +
                 '}';
     }
 }

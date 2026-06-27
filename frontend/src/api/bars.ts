@@ -1,5 +1,6 @@
 // K线数据查询 API
 import request from './request'
+import type { ApiResponse } from './request'
 
 /** K线记录 */
 export interface BarRecord {
@@ -54,4 +55,22 @@ export function fetchAllBars(
 /** 获取所有数据源列表 */
 export function fetchBarSources() {
   return request.get<{ sources: string[] }>('/api/bars/sources')
+}
+
+/** K线蜡烛图数据 */
+export interface CandleData {
+  date: string
+  open: number
+  high: number
+  low: number
+  close: number
+  changePercent: number
+  afterHours: number | null
+  afterHoursChangePercent: number | null
+  volume: number
+}
+
+/** 获取股票最近 K 线数据 */
+export function fetchCandles(symbol: string, days: number = 7) {
+  return request.get<ApiResponse<CandleData[]>>(`/api/bars/${symbol}/candles?days=${days}`)
 }

@@ -119,7 +119,7 @@ const notificationStats = computed(() => {
   for (const algo of Object.values(data.results)) {
     for (const windowVal of Object.values(algo)) {
       // new format: { count: 74, stocks: [...] }; old format: 74 (backwards compat)
-      totalCount += typeof windowVal === "object" && windowVal !== null ? windowVal.count : windowVal
+      totalCount += typeof windowVal === "object" && windowVal !== null ? (windowVal as any).count : (windowVal as number)
     }
   }
   return { totalCount, detail: data.results }
@@ -175,7 +175,7 @@ const pagination = reactive({
 
 /** 创建表格列定义 */
 const tableColumns = computed(() => [
-  { title: '代码', key: 'symbol', width: 120, align: 'center' as const, defaultSortOrder: 'ascend', sorter: (a: ScreeningMatch, b: ScreeningMatch) => a.symbol.localeCompare(b.symbol), render: (row: ScreeningMatch) => {
+  { title: '代码', key: 'symbol', width: 120, align: 'center' as const, defaultSortOrder: 'ascend' as const, sorter: (a: ScreeningMatch, b: ScreeningMatch) => a.symbol.localeCompare(b.symbol), render: (row: ScreeningMatch) => {
         const copied = copiedSymbol.value === row.symbol
         return [
           h('span', { class: 'symbol-cell' }, row.symbol),
@@ -188,7 +188,22 @@ const tableColumns = computed(() => [
         ]
       } },
   { title: '名称', key: 'name', width: 180, align: 'center' as const, render: (row: ScreeningMatch) => row.name || '—' },
-  { title: '最新价', key: 'lastClose', width: 120, align: 'center' as const, defaultSortOrder: 'descend', sorter: (a: ScreeningMatch, b: ScreeningMatch) => a.lastClose - b.lastClose, render: (row: ScreeningMatch) => h('span', { class: 'price-cell' }, `$${row.lastClose.toFixed(4)}`) },
+  { title: '最新价', key: 'lastClose', width: 120, align: 'center' as const, defaultSortOrder: 'descend' as const, sorter: (a: ScreeningMatch, b: ScreeningMatch) => a.lastClose - b.lastClose, render: (row: ScreeningMatch) => h('span', { class: 'price-cell' }, `$${row.lastClose.toFixed(4)}`) },
+  { title: '最高价', key: 'highPrice', width: 110, align: 'center' as const, sorter: (a: ScreeningMatch, b: ScreeningMatch) => (a.highPrice || 0) - (b.highPrice || 0), render: (row: ScreeningMatch) => row.highPrice != null ? h('span', { class: 'price-cell' }, `$${row.highPrice.toFixed(4)}`) : '—' },
+  { title: '最低价', key: 'lowPrice', width: 110, align: 'center' as const, sorter: (a: ScreeningMatch, b: ScreeningMatch) => (a.lowPrice || 0) - (b.lowPrice || 0), render: (row: ScreeningMatch) => row.lowPrice != null ? h('span', { class: 'price-cell' }, `$${row.lowPrice.toFixed(4)}`) : '—' },
+  { title: '涨跌幅', key: 'changePercent', width: 100, align: 'center' as const, sorter: (a: ScreeningMatch, b: ScreeningMatch) => (a.changePercent || 0) - (b.changePercent || 0), render: (row: ScreeningMatch) => {
+    const val = row.changePercent
+    if (val == null) return '—'
+    const color = val >= 0 ? '#ef232a' : '#14b143'
+    return h('span', { style: `color:${color};font-weight:600;` }, `${val >= 0 ? '+' : ''}${val.toFixed(2)}%`)
+  } },
+  { title: '盘后价', key: 'afterHours', width: 110, align: 'center' as const, sorter: (a: ScreeningMatch, b: ScreeningMatch) => (a.afterHours || 0) - (b.afterHours || 0), render: (row: ScreeningMatch) => row.afterHours != null ? h('span', { class: 'price-cell' }, `$${row.afterHours.toFixed(4)}`) : '—' },
+  { title: '盘后涨跌幅', key: 'afterHoursChangePercent', width: 110, align: 'center' as const, sorter: (a: ScreeningMatch, b: ScreeningMatch) => (a.afterHoursChangePercent || 0) - (b.afterHoursChangePercent || 0), render: (row: ScreeningMatch) => {
+    const val = row.afterHoursChangePercent
+    if (val == null) return '—'
+    const color = val >= 0 ? '#ef232a' : '#14b143'
+    return h('span', { style: `color:${color};font-weight:600;` }, `${val >= 0 ? '+' : ''}${val.toFixed(2)}%`)
+  } },
   {
     title: '涨幅', key: 'rise', width: 100, align: 'center' as const,
     render: (row: ScreeningMatch) => {
@@ -256,8 +271,14 @@ function handleExport() {
     notification.warning({ title: '无数据可导出', duration: 2000 })
     return
   }
-  const headers = ['代码', '名称', '最新价', '上涨', '算法', '窗口']
-  const rows = matches.map(m => [m.symbol, m.name || '', m.lastClose, m.rise ? '是' : '否', m.algorithm, m.windowDays])
+  const headers = ['代码', '名称', '最新价', '最高价', '最低价', '涨跌幅', '盘后价', '盘后涨跌幅', '上涨', '算法', '窗口']
+  const rows = matches.map(m => [
+    m.symbol, m.name || '', m.lastClose,
+    m.highPrice ?? '', m.lowPrice ?? '',
+    m.changePercent != null ? m.changePercent.toFixed(2) + '%' : '',
+    m.afterHours ?? '', m.afterHoursChangePercent != null ? m.afterHoursChangePercent.toFixed(2) + '%' : '',
+    m.rise ? '是' : '否', m.algorithm, m.windowDays
+  ])
   const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)

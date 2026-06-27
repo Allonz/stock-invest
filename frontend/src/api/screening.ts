@@ -12,6 +12,11 @@ export interface ScreeningMatch {
   algorithm: string
   name?: string          // 名称, 后端可能不返回, 前端可自行补充
   volume?: number        // 成交量
+  highPrice?: number     // 最高价
+  lowPrice?: number      // 最低价
+  changePercent?: number // 涨跌幅（%）
+  afterHours?: number | null    // 盘后价
+  afterHoursChangePercent?: number | null  // 盘后涨跌幅（%）
 }
 
 /** 最新筛选通知的统计结果 */

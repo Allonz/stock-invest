@@ -323,9 +323,9 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
                     LocalDate itemDate = item.getTimeString() != null && !item.getTimeString().isEmpty()
                             ? LocalDate.parse(item.getTimeString())
                             : epochMillisToLocalDate(item.getTime());
-                    log.info("[DataGapFiller] {} source item: symbol={}, epochTime={}, timeString='{}', parsedDate={}, open={}, close={}",
+                    log.info("[DataGapFiller] {} source item: symbol={}, epochTime={}, timeString='{}', parsedDate={}, open={}, high={}, low={}, close={}, changePercent={}",
                             source.name, item.getSymbol(), item.getTime(), item.getTimeString(), itemDate,
-                            item.getOpen(), item.getClose());
+                            item.getOpen(), item.getHigh(), item.getLow(), item.getClose(), item.getChangePercent());
                     // 跳过零价格无效数据
                     if (item.getOpen() == 0.0 && item.getClose() == 0.0) {
                         log.warn("[DataGapFiller] {} source item: skip zero-price placeholder symbol={}, date={}",
@@ -413,10 +413,18 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
             bar.setTradeDate(tradeDate);
         }
         bar.setOpenPrice(item.getOpen());
+        bar.setHighPrice(item.getHigh());
+        bar.setLowPrice(item.getLow());
         bar.setClosePrice(item.getClose());
+        bar.setChangePercent(item.getChangePercent());
+        bar.setAfterHours(item.getAfterHours());
+        bar.setAfterHoursChangePercent(item.getAfterHoursChangePercent());
         bar.setVolume(item.getVolume());
         bar.setSource(source);
         stockDailyBarRepository.save(bar);
+        log.info("[DataGapFiller] persist: symbol={}, date={}, open={}, high={}, low={}, close={}, changePct={}, afterHours={}, afterHoursChg={}, vol={}",
+                symbol, tradeDate, item.getOpen(), item.getHigh(), item.getLow(), item.getClose(),
+                item.getChangePercent(), item.getAfterHours(), item.getAfterHoursChangePercent(), item.getVolume());
     }
 
     private void createRetryTask(String symbol, LocalDate tradeDate, String error) {

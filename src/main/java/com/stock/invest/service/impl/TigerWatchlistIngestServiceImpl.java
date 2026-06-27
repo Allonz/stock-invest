@@ -106,7 +106,7 @@ public class TigerWatchlistIngestServiceImpl implements TigerWatchlistIngestServ
                 bar.setName(n);
             }
             stockDailyBarRepository.save(bar);
-            log.info("[TigerIngest] importScreenCapture: save symbol={}, price={}, volume={}, date={}",
+            log.info("[TigerIngest] importScreenCapture: save symbol={}, price={}, volume={}, date={}, high=null, low=null, changePct=null (screenshot source has no OHLC data)",
                     sym, px, vol, tradeDate);
             imported++;
         }

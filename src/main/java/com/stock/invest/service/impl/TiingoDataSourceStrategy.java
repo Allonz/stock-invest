@@ -105,9 +105,17 @@ public class TiingoDataSourceStrategy implements DataSourceStrategy {
             info.setCurrentPrice(latest.getClose());
             info.setOpenPrice(latest.getOpen());
             info.setVolume(latest.getVolume());
-            info.setChange(latest.getClose() - latest.getOpen());
-            if (latest.getOpen() != 0D) {
-                info.setChangePercent((latest.getClose() - latest.getOpen()) / latest.getOpen() * 100D);
+            // 标准涨跌幅计算：(今日收盘 - 昨日收盘) / 昨日收盘 * 100
+            if (data.getItems().size() >= 2) {
+                com.stock.invest.model.KLineIterator prev = data.getItems().get(1);
+                double prevClose = prev.getClose();
+                info.setChange(latest.getClose() - prevClose);
+                if (prevClose != 0D) {
+                    info.setChangePercent((latest.getClose() - prevClose) / prevClose * 100D);
+                }
+            } else {
+                info.setChange(0D);
+                info.setChangePercent(0D);
             }
             return info;
         } catch (Exception e) {
