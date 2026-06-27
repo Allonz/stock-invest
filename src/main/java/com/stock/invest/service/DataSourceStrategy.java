@@ -60,4 +60,16 @@ public interface DataSourceStrategy {
     default KLineData getDailyKLineDataByDateRange(String symbol, LocalDate tradeDate) {
         return getDailyKLineDataAsObject(symbol);
     }
+
+    /**
+     * 按指定交易日获取盘后价 K 线数据（精确查询）。
+     * <p>默认实现回退到 {@link #getDailyKLineDataByDateRange}，不支持盘后价的数据源直接使用默认值。</p>
+     *
+     * @param symbol    股票代码
+     * @param tradeDate 需要查询的交易日（含）
+     * @return K线数据
+     */
+    default KLineData getAfterHoursKLineDataByDateRange(String symbol, LocalDate tradeDate) {
+        return getDailyKLineDataByDateRange(symbol, tradeDate);
+    }
 }

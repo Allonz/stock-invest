@@ -77,6 +77,42 @@ def _cmd_bars(client, symbol: str, lim: int):
     print(json.dumps({"symbol": symbol, "items": items}))
 
 
+def _cmd_afterhours_bars(client, symbol: str, lim: int):
+    import math
+
+    from tigeropen.common.consts import BarPeriod
+    from tigeropen.common.consts import TradingSession
+
+    df = client.get_bars(
+        symbol, period=BarPeriod.DAY, limit=int(lim), trade_session=TradingSession.AFTER_HOURS
+    )
+    items = []
+    if df is not None and not df.empty:
+        for _, row in df.iterrows():
+            vol = row.get("volume")
+            if vol is None or (isinstance(vol, float) and math.isnan(vol)):
+                vol = 0
+            amt = row.get("amount")
+            if amt is None or (isinstance(amt, float) and math.isnan(amt)):
+                amt = 0.0
+            t = int(row["time"])
+            items.append(
+                {
+                    "symbol": str(row.get("symbol", symbol)),
+                    "time": t,
+                    "timeString": "",
+                    "open": float(row["open"]),
+                    "high": float(row["high"]),
+                    "low": float(row["low"]),
+                    "close": float(row["close"]),
+                    "volume": int(vol),
+                    "amount": float(amt),
+                }
+            )
+    items.sort(key=lambda x: x["time"], reverse=True)
+    print(json.dumps({"symbol": symbol, "items": items}))
+
+
 def _cmd_calendar(client, market: str, date_str: str):
     """查询指定日期是否为交易日。"""
     from datetime import datetime, timedelta
@@ -132,6 +168,11 @@ def main():
             print(json.dumps({"error": "bars needs symbol limit"}))
             sys.exit(2)
         _cmd_bars(client, sys.argv[2], int(sys.argv[3]))
+    elif cmd == "afterhours_bars":
+        if len(sys.argv) < 4:
+            print(json.dumps({"error": "afterhours_bars needs symbol limit"}))
+            sys.exit(2)
+        _cmd_afterhours_bars(client, sys.argv[2], int(sys.argv[3]))
     elif cmd == "calendar":
         if len(sys.argv) < 4:
             print(json.dumps({"error": "calendar needs market date (e.g. US 2026-06-01)"}))

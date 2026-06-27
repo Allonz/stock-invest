@@ -38,6 +38,7 @@ import com.stock.invest.service.DataFillProgressService;
 import com.stock.invest.service.DataGapFillerService;
 import com.stock.invest.service.DataSourceStrategy;
 import com.stock.invest.service.TradingCalendarDbService;
+import com.stock.invest.service.impl.TigerStockServiceImpl;
 import com.stock.invest.service.StockDataSourcePriorityService;
 import com.stock.invest.service.SymbolBlacklistService;
 import com.stock.invest.entity.SymbolBlacklist;
@@ -425,6 +426,68 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         log.info("[DataGapFiller] persist: symbol={}, date={}, open={}, high={}, low={}, close={}, changePct={}, afterHours={}, afterHoursChg={}, vol={}",
                 symbol, tradeDate, item.getOpen(), item.getHigh(), item.getLow(), item.getClose(),
                 item.getChangePercent(), item.getAfterHours(), item.getAfterHoursChangePercent(), item.getVolume());
+        
+        // 如果是 Tiger/TigerOpen 数据源，尝试合并盘后价
+        mergeAfterHoursIfAvailable(symbol, tradeDate, bar);
+    }
+
+    /**
+     * 尝试从 Tiger/TigerOpen 数据源获取盘后 K 线数据，更新 after_hours / after_hours_change_percent。
+     * <p>仅当当前数据源为 tiger 或 tigeropen 时执行，其他数据源跳过。</p>
+     *
+     * @param symbol    股票代码
+     * @param tradeDate 交易日
+     * @param bar       已持久化的 StockDailyBar 实体
+     */
+    private void mergeAfterHoursIfAvailable(String symbol, LocalDate tradeDate, StockDailyBar bar) {
+        String source = bar.getSource();
+        if (!"tiger".equals(source) && !"tigeropen".equals(source)) {
+            return;  // 只有 Tiger/TigerOpen 支持盘后数据
+        }
+
+        try {
+            // 查找 Tiger SDK 数据源
+            TigerStockServiceImpl tigerSource = findTigerSource();
+            if (tigerSource == null) {
+                log.debug("[DataGapFiller] mergeAfterHours: no Tiger source found for symbol={}, date={}", symbol, tradeDate);
+                return;
+            }
+
+            KLineData ahData = tigerSource.getAfterHoursKLineDataByDateRange(symbol, tradeDate);
+            if (ahData == null || ahData.getItems() == null || ahData.getItems().isEmpty()) {
+                log.debug("[DataGapFiller] mergeAfterHours: no after-hours data for symbol={}, date={}", symbol, tradeDate);
+                return;
+            }
+
+            KLineIterator ahItem = ahData.getItems().get(0);
+            double ahClose = ahItem.getClose();
+            double regClose = bar.getClosePrice() != null ? bar.getClosePrice() : 0.0;
+
+            bar.setAfterHours(ahClose);
+            if (regClose != 0.0) {
+                bar.setAfterHoursChangePercent((ahClose - regClose) / regClose * 100);
+            }
+
+            stockDailyBarRepository.save(bar);
+            log.info("[DataGapFiller] mergeAfterHours: symbol={}, date={}, afterHours={}, afterHoursChangePct={}",
+                    symbol, tradeDate, ahClose, bar.getAfterHoursChangePercent());
+        } catch (Exception e) {
+            log.warn("[DataGapFiller] mergeAfterHours failed for symbol={}, date={}: {}", symbol, tradeDate, e.getMessage());
+        }
+    }
+
+    /**
+     * 从注入的 dataSources 列表中查找 TigerStockServiceImpl 实例。
+     *
+     * @return TigerStockServiceImpl 实例，未找到时返回 null
+     */
+    private TigerStockServiceImpl findTigerSource() {
+        for (DataSourceStrategy ds : dataSources) {
+            if (ds instanceof TigerStockServiceImpl) {
+                return (TigerStockServiceImpl) ds;
+            }
+        }
+        return null;
     }
 
     private void createRetryTask(String symbol, LocalDate tradeDate, String error) {

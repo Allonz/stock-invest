@@ -35,6 +35,7 @@ import com.tigerbrokers.stock.openapi.client.https.response.quote.QuoteKlineResp
 import com.tigerbrokers.stock.openapi.client.struct.enums.KType;
 import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
 import com.tigerbrokers.stock.openapi.client.struct.enums.StockField;
+import com.tigerbrokers.stock.openapi.client.struct.enums.TradeSession;
 
 /**
  * 老虎证券服务实现
@@ -150,6 +151,37 @@ public class TigerStockServiceImpl implements DataSourceStrategy {
             return kLineData;
         } catch (Exception e) {
             log.warn("获取K线数据时出错: {}", e.getMessage());
+            return new KLineData();
+        }
+    }
+
+    @Override
+    public KLineData getAfterHoursKLineDataByDateRange(String symbol, LocalDate tradeDate) {
+        try {
+            log.info("[TigerStockServiceImpl] afterHours dateRange symbol={}, date={}", symbol, tradeDate);
+            String dateStr = tradeDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+            QuoteKlineRequest request = QuoteKlineRequest.newRequest(
+                Collections.singletonList(symbol),
+                KType.day,
+                dateStr,
+                dateStr)
+                .withLimit(30);
+            request.setTradeSession(TradeSession.AfterHours);
+            QuoteKlineResponse response = client.execute(request);
+            if (response == null || !response.isSuccess()) {
+                log.warn("[TigerStockServiceImpl] afterHours no data for symbol={}, date={}", symbol, tradeDate);
+                return new KLineData();
+            }
+            KLineData kLineData = new KLineData();
+            kLineData.setSymbol(symbol);
+            List<KLineIterator> items = new ArrayList<>();
+            for (KlineItem item : response.getKlineItems()) {
+                parseAndAddKLineIterator(items, item);
+            }
+            kLineData.setItems(items);
+            return kLineData;
+        } catch (Exception e) {
+            log.warn("[TigerStockServiceImpl] afterHours fetch failed for {}: {}", symbol, e.getMessage());
             return new KLineData();
         }
     }

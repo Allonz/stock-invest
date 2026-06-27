@@ -107,4 +107,26 @@ public class TigerOpenPythonBridge {
         }
         return data;
     }
+
+    /**
+     * 通过 Python tigeropen SDK 获取指定股票的盘后价 K 线数据。
+     *
+     * @param symbol   股票代码
+     * @param barLimit 最大返回条数
+     * @return KLineData 对象，失败或未配置凭证时返回 null
+     * @throws Exception 脚本执行失败时抛出
+     */
+    public KLineData fetchAfterHoursBars(String symbol, int barLimit) throws Exception {
+        if (!hasCredentials()) {
+            return null;
+        }
+        String json = executePythonScript("afterhours_bars",
+                symbol,
+                String.valueOf(Math.max(1, barLimit)));
+        KLineData data = objectMapper.readValue(json.trim(), KLineData.class);
+        if (data != null && data.getItems() != null) {
+            KLineDataUtils.sortItemsNewestFirst(data);
+        }
+        return data;
+    }
 }
