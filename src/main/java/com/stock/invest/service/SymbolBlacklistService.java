@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,10 +18,12 @@ import com.stock.invest.repository.SymbolBlacklistRepository;
 @Service
 public class SymbolBlacklistService {
 
-    @Autowired
-    private SymbolBlacklistRepository repository;
-
+    private final SymbolBlacklistRepository repository;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public SymbolBlacklistService(SymbolBlacklistRepository repository) {
+        this.repository = repository;
+    }
 
     /**
      * 获取需要跳过的黑名单 symbol 列表。

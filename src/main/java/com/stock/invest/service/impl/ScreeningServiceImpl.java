@@ -1,6 +1,5 @@
 package com.stock.invest.service.impl;
 
-import com.stock.invest.config.ScannerProperties;
 import com.stock.invest.constant.WindowConstants;
 import com.stock.invest.entity.ScreeningMatch;
 import com.stock.invest.entity.StockDailyBar;
@@ -20,10 +19,13 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * 模式筛选服务实现。
@@ -49,7 +51,6 @@ public class ScreeningServiceImpl implements ScreeningService {
             StockDailyBarRepository stockDailyBarRepository,
             ScreeningMatchRepository screeningMatchRepository,
             PatternEvaluateService patternEvaluateService,
-            ScannerProperties scannerProperties,
             TradingCalendarDbService tradingCalendarDbService) {
         this.stockDailyBarRepository = stockDailyBarRepository;
         this.screeningMatchRepository = screeningMatchRepository;
@@ -145,6 +146,86 @@ public class ScreeningServiceImpl implements ScreeningService {
         log.info("ScreeningServiceImpl: done batchId={}, tradeDate={}, symbols={}, processed={}, matchedRows={}",
                 batchId, targetDate, barsBySymbol.size(), processed, totalMatchedRows);
         return batchId;
+    }
+
+    @Override
+    public Map<String, Object> getLatestScreening() {
+        Optional<ScreeningMatch> top = screeningMatchRepository.findTopByOrderByTradeDateDescIdDesc();
+        if (top.isEmpty()) {
+            Map<String, Object> emptyResult = new HashMap<>();
+            emptyResult.put("batchId", null);
+            emptyResult.put("tradeDate", null);
+            emptyResult.put("matches", List.of());
+            return emptyResult;
+        }
+
+        ScreeningMatch latest = top.get();
+        String batchId = latest.getBatchId();
+        List<ScreeningMatch> matches = screeningMatchRepository.findByBatchIdOrderByIdAsc(batchId);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("batchId", batchId);
+        result.put("tradeDate", latest.getTradeDate().toString());
+        result.put("totalMatches", matches.size());
+        result.put("matches", buildMatchesWithName(matches));
+        return result;
+    }
+
+    @Override
+    public List<Map<String, Object>> getScreeningHistory() {
+        List<Object[]> batchSummaries = screeningMatchRepository.findBatchSummary();
+        List<Map<String, Object>> history = new ArrayList<>();
+        for (Object[] row : batchSummaries) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("batchId", row[0]);
+            item.put("matchCount", row[1]);
+            item.put("lastTradeDate", row[2] != null ? row[2].toString() : null);
+            history.add(item);
+        }
+        return history;
+    }
+
+    @Override
+    public Map<String, Object> getBatchDetail(String batchId) {
+        List<ScreeningMatch> matches = screeningMatchRepository.findByBatchIdOrderByIdAsc(batchId);
+        Map<String, Object> result = new HashMap<>();
+        result.put("batchId", batchId);
+        result.put("totalMatches", matches.size());
+        result.put("matches", buildMatchesWithName(matches));
+        return result;
+    }
+
+    @Override
+    public List<Object[]> countByBatchIdGroupByWindowDays(String batchId) {
+        return screeningMatchRepository.countByBatchIdGroupByWindowDays(batchId);
+    }
+
+    /**
+     * 为匹配列表批量补充 stock name，构建带 name 的匹配项列表。
+     */
+    private List<Map<String, Object>> buildMatchesWithName(List<ScreeningMatch> matches) {
+        if (matches == null || matches.isEmpty()) {
+            return List.of();
+        }
+        var symbols = matches.stream().map(ScreeningMatch::getSymbol).distinct().toList();
+        var nameMap = stockDailyBarRepository.findBySymbolInAndNameIsNotNull(symbols)
+                .stream()
+                .collect(Collectors.toMap(
+                        bar -> bar.getSymbol(),
+                        bar -> bar.getName(),
+                        (a, b) -> a
+                ));
+        return matches.stream().map(m -> {
+            var item = new LinkedHashMap<String, Object>();
+            item.put("id", m.getId());
+            item.put("symbol", m.getSymbol());
+            item.put("name", nameMap.getOrDefault(m.getSymbol(), ""));
+            item.put("lastClose", m.getLastClose());
+            item.put("rise", m.getRise());
+            item.put("windowDays", m.getWindowDays());
+            item.put("algorithm", m.getAlgorithm());
+            return item;
+        }).toList();
     }
 
     private ScreeningMatch buildMatch(String batchId, StockDailyBar latest,

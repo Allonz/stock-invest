@@ -5,8 +5,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
@@ -30,6 +32,36 @@ public class GlobalExceptionHandler {
         log.warn("[404] 资源不存在: method={}, path={}", e.getHttpMethod(), path);
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.error("资源不存在: " + path, "NotFound"));
+    }
+
+    /**
+     * 处理非法参数异常（400）
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<?>> handleIllegalArgument(IllegalArgumentException e) {
+        log.warn("[400] 非法参数: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(e.getMessage(), "BadRequest"));
+    }
+
+    /**
+     * 处理请求体解析失败（400）
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<?>> handleHttpMessageNotReadable(HttpMessageNotReadableException e) {
+        log.warn("[400] 请求体解析失败: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error("请求体格式错误", "BadRequest"));
+    }
+
+    /**
+     * 处理参数类型不匹配（400）
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<?>> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
+        log.warn("[400] 参数类型不匹配: param={}, value={}", e.getName(), e.getValue());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error("参数类型不匹配: " + e.getName(), "BadRequest"));
     }
 
     /**

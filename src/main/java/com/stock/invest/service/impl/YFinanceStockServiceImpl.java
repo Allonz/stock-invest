@@ -15,6 +15,7 @@ import com.stock.invest.model.KLineData;
 import com.stock.invest.model.KLineIterator;
 import com.stock.invest.model.StockInfo;
 import com.stock.invest.service.DataSourceStrategy;
+import com.stock.invest.service.StockScannerStrategy;
 import com.stock.invest.util.PythonScriptExecutor;
 import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
 
@@ -23,7 +24,7 @@ import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
  * StockService接口的Yahoo Finance实现
  */
 @Service("yFinanceStockService")
-public class YFinanceStockServiceImpl implements DataSourceStrategy {
+public class YFinanceStockServiceImpl implements StockScannerStrategy {
 
     private static final Logger log = LoggerFactory.getLogger(YFinanceStockServiceImpl.class);
 

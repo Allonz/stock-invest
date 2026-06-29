@@ -4,6 +4,7 @@ import com.stock.invest.client.TiingoRestClient;
 import com.stock.invest.model.KLineData;
 import com.stock.invest.model.StockInfo;
 import com.stock.invest.service.DataSourceStrategy;
+import com.stock.invest.service.StockScannerStrategy;
 import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +20,7 @@ import java.util.Map;
 
 @Component
 @Order(5)
-public class TiingoDataSourceStrategy implements DataSourceStrategy {
+public class TiingoDataSourceStrategy implements StockScannerStrategy {
 
     private static final Logger log = LoggerFactory.getLogger(TiingoDataSourceStrategy.class);
 

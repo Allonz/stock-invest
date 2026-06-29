@@ -19,11 +19,12 @@ import com.stock.invest.model.KLineData;
 import com.stock.invest.model.KLineIterator;
 import com.stock.invest.model.StockInfo;
 import com.stock.invest.service.DataSourceStrategy;
+import com.stock.invest.service.StockScannerStrategy;
 import com.stock.invest.util.PythonScriptExecutor;
 import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
 
 @Service("twelveDataStockService")
-public class TwelveDataStockServiceImpl implements DataSourceStrategy {
+public class TwelveDataStockServiceImpl implements StockScannerStrategy {
     private static final Logger log = LoggerFactory.getLogger(TwelveDataStockServiceImpl.class);
     private static final DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
