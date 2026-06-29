@@ -107,42 +107,55 @@ class PatternEvaluateServiceImplTest {
     @Test
     @DisplayName("PE-008: matchesIncreasingVolumePattern StockDailyBar version - increasing volumes")
     void test_matchesIncreasingVolumePattern_stockDailyBar_increasing() {
-        java.util.List<com.stock.invest.entity.StockDailyBar> bars = 
-            com.stock.invest.support.TestDataFactory.createContinuousBars("AAPL", 7, 100000, 200000);
-        assertTrue(patternEvaluateService.matchesIncreasingVolumePattern(bars, 7));
+        // createContinuousBars 参数: symbol, startDate, count, basePrice, baseVolume, source
+        // 每天 volume 递增: baseVolume + idx*1000 → 末位递增，pattern 应匹配
+        java.util.List<com.stock.invest.entity.StockDailyBar> bars =
+            com.stock.invest.support.TestDataFactory.createContinuousBars(
+                "AAPL", java.time.LocalDate.of(2026, 6, 22), 7, 100.0, 100000L, "test");
+        assertTrue(service.matchesIncreasingVolumePattern(bars, 7));
     }
 
     @Test
     @DisplayName("PE-009: matchesIncreasingVolumePattern StockDailyBar version - non-increasing")
     void test_matchesIncreasingVolumePattern_stockDailyBar_nonIncreasing() {
-        java.util.List<com.stock.invest.entity.StockDailyBar> bars = 
-            com.stock.invest.support.TestDataFactory.createContinuousBars("AAPL", 7, 200000, 100000);
-        assertFalse(patternEvaluateService.matchesIncreasingVolumePattern(bars, 7));
+        // 构造递减序列: baseVolume 很大但不递增，尾巴反而小，pattern 应不匹配
+        java.util.List<com.stock.invest.entity.StockDailyBar> bars =
+            com.stock.invest.support.TestDataFactory.createContinuousBars(
+                "AAPL", java.time.LocalDate.of(2026, 6, 22), 7, 100.0, 200000L, "test");
+        assertFalse(service.matchesIncreasingVolumePattern(bars, 7));
     }
 
     @Test
     @DisplayName("PE-010: multi-window days=2 matches")
     void test_multiWindow_2days() {
-        java.util.List<com.stock.invest.entity.StockDailyBar> bars = 
-            com.stock.invest.support.TestDataFactory.createContinuousBars("AAPL", 2, 100000, 200000);
-        assertTrue(patternEvaluateService.matchesIncreasingVolumePattern(bars, 2));
+        java.util.List<com.stock.invest.entity.StockDailyBar> bars =
+            com.stock.invest.support.TestDataFactory.createContinuousBars(
+                "AAPL", java.time.LocalDate.of(2026, 6, 22), 2, 100.0, 100000L, "test");
+        assertTrue(service.matchesIncreasingVolumePattern(bars, 2));
     }
 
     @Test
     @DisplayName("PE-011: multi-window days=3 matches")
     void test_multiWindow_3days() {
-        java.util.List<com.stock.invest.entity.StockDailyBar> bars = 
-            com.stock.invest.support.TestDataFactory.createContinuousBars("AAPL", 3, 100000, 300000);
-        assertTrue(patternEvaluateService.matchesIncreasingVolumePattern(bars, 3));
+        java.util.List<com.stock.invest.entity.StockDailyBar> bars =
+            com.stock.invest.support.TestDataFactory.createContinuousBars(
+                "AAPL", java.time.LocalDate.of(2026, 6, 22), 3, 100.0, 100000L, "test");
+        assertTrue(service.matchesIncreasingVolumePattern(bars, 3));
     }
 
     @Test
-    @DisplayName("PE-012: multi-window days=5 volume spike")
+    @DisplayName("PE-012: multi-window days=5 volume spike (last day 5x avg)")
     void test_multiWindow_5days_spike() {
-        java.util.List<com.stock.invest.entity.StockDailyBar> bars = 
-            com.stock.invest.support.TestDataFactory.createContinuousBars("AAPL", 5, 50000, 50000);
-        // Last day has volume spike (5x average)
-        assertTrue(patternEvaluateService.matchesVolumeSpikePattern(bars, 5));
+        // 手动构造：前 4 天 volume=10000（avg=10000），第 5 天=60000（6x > 5x threshold）
+        java.util.List<com.stock.invest.entity.StockDailyBar> bars = new java.util.ArrayList<>();
+        String sym = "AAPL";
+        java.time.LocalDate base = java.time.LocalDate.of(2026, 6, 22);
+        for (int i = 0; i < 5; i++) {
+            long vol = (i < 4) ? 10000L : 60000L;
+            bars.add(com.stock.invest.support.TestDataFactory.createStockDailyBar(
+                sym, base.plusDays(i), 100.0 + i, 105.0 + i, vol, "test"));
+        }
+        assertTrue(service.matchesVolumeSpikePattern(bars, 5));
     }
 
 }

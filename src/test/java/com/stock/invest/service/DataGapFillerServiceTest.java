@@ -25,8 +25,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 
 import com.stock.invest.config.GapFillProperties;
 import com.stock.invest.entity.DataFillTask;
@@ -70,14 +68,14 @@ class DataGapFillerServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(tigerDataSource.getSourceName()).thenReturn("tiger");
-        when(tigerDataSource.isAvailable()).thenReturn(true);
-        when(yfinanceDataSource.getSourceName()).thenReturn("yfinance");
-        when(yfinanceDataSource.isAvailable()).thenReturn(true);
-        when(twelvedataDataSource.getSourceName()).thenReturn("twelvedata");
-        when(twelvedataDataSource.isAvailable()).thenReturn(true);
-        when(tiingoDataSource.getSourceName()).thenReturn("tiingo");
-        when(tiingoDataSource.isAvailable()).thenReturn(true);
+        lenient().when(tigerDataSource.getSourceName()).thenReturn("tiger");
+        lenient().when(tigerDataSource.isAvailable()).thenReturn(true);
+        lenient().when(yfinanceDataSource.getSourceName()).thenReturn("yfinance");
+        lenient().when(yfinanceDataSource.isAvailable()).thenReturn(true);
+        lenient().when(twelvedataDataSource.getSourceName()).thenReturn("twelvedata");
+        lenient().when(twelvedataDataSource.isAvailable()).thenReturn(true);
+        lenient().when(tiingoDataSource.getSourceName()).thenReturn("tiingo");
+        lenient().when(tiingoDataSource.isAvailable()).thenReturn(true);
 
         List<DataSourceStrategy> dataSources = List.of(tigerDataSource, yfinanceDataSource, twelvedataDataSource, tiingoDataSource);
         service = new DataGapFillerServiceImpl(

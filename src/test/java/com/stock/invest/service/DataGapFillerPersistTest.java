@@ -57,10 +57,10 @@ class DataGapFillerPersistTest {
 
     @BeforeEach
     void setUp() {
-        when(tigerDataSource.getSourceName()).thenReturn("tiger");
-        when(tigerDataSource.isAvailable()).thenReturn(true);
-        when(yfinanceDataSource.getSourceName()).thenReturn("yfinance");
-        when(yfinanceDataSource.isAvailable()).thenReturn(true);
+        lenient().when(tigerDataSource.getSourceName()).thenReturn("tiger");
+        lenient().when(tigerDataSource.isAvailable()).thenReturn(true);
+        lenient().when(yfinanceDataSource.getSourceName()).thenReturn("yfinance");
+        lenient().when(yfinanceDataSource.isAvailable()).thenReturn(true);
 
         when(gapFillProperties.getMinPriceThreshold()).thenReturn(1.0);
 
@@ -112,7 +112,7 @@ class DataGapFillerPersistTest {
         item.setTimeString(tradeDate.toString());
         kd.setItems(List.of(item));
 
-        when(tigerDataSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
+        lenient().when(tigerDataSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
                 .thenReturn(kd);
 
         service.fillGaps();
@@ -174,7 +174,7 @@ class DataGapFillerPersistTest {
         item.setTimeString(tradeDate.toString());
         kd.setItems(List.of(item));
 
-        when(tigerDataSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
+        lenient().when(tigerDataSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
                 .thenReturn(kd);
 
         service.fillGaps();
@@ -222,9 +222,9 @@ class DataGapFillerPersistTest {
         item.setTimeString(tradeDate.toString());
         kd.setItems(List.of(item));
 
-        when(yfinanceDataSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
+        lenient().when(yfinanceDataSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
                 .thenReturn(kd);
-        when(tigerDataSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
+        lenient().when(tigerDataSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
                 .thenAnswer(inv -> {
                     KLineData empty = new KLineData();
                     empty.setSymbol("AAPL");
@@ -269,9 +269,9 @@ class DataGapFillerPersistTest {
         empty.setSymbol("AAPL");
         empty.setItems(List.of());
 
-        when(tigerDataSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
+        lenient().when(tigerDataSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
                 .thenReturn(empty);
-        when(yfinanceDataSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
+        lenient().when(yfinanceDataSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
                 .thenReturn(empty);
 
         when(dataFillTaskRepository.findBySymbolAndTradeDate(eq("AAPL"), eq(tradeDate)))
@@ -320,9 +320,9 @@ class DataGapFillerPersistTest {
         kd.setItems(List.of(item));
 
         // tiger returns empty so yfinance is used
-        when(tigerDataSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
+        lenient().when(tigerDataSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
                 .thenAnswer(inv -> { KLineData e = new KLineData(); e.setSymbol("AAPL"); e.setItems(List.of()); return e; });
-        when(yfinanceDataSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
+        lenient().when(yfinanceDataSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
                 .thenReturn(kd);
 
         service.fillGaps();
