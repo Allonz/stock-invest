@@ -215,8 +215,8 @@ public class ScreeningServiceImpl implements ScreeningService {
                         bar -> bar.getName(),
                         (a, b) -> a
                 ));
-        return matches.stream().map(m -> {
-            var item = new LinkedHashMap<String, Object>();
+        return matches.stream().<Map<String, Object>>map(m -> {
+            Map<String, Object> item = new LinkedHashMap<>();
             item.put("id", m.getId());
             item.put("symbol", m.getSymbol());
             item.put("name", nameMap.getOrDefault(m.getSymbol(), ""));

@@ -93,7 +93,11 @@ public class TigerStockServiceImpl implements StockScannerStrategy {
             return objectMapper.writeValueAsString(response.getKlineItems());
         } catch (Exception e) {
             log.warn("获取K线数据时出错: {}", e.getMessage());
-            return objectMapper.writeValueAsString(new KLineData());
+            try {
+                return objectMapper.writeValueAsString(new KLineData());
+            } catch (Exception ex) {
+                return "{}";
+            }
         }
     }
     public KLineData getDailyKLineDataAsObject(String symbol) {
