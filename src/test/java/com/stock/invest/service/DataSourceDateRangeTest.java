@@ -36,7 +36,6 @@ import static org.mockito.Mockito.*;
  * 数据源精确日期范围查询测试 + fetchAndPersist 统一调用测试。
  */
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class DataSourceDateRangeTest {
 
     private static final String SYMBOL = "TEST";
@@ -215,7 +214,7 @@ class DataSourceDateRangeTest {
         // If source1 succeeded for the first date, filled > 0. Verify by checking the outcome.
         // We can't easily verify invocations since we're using anonymous classes.
         // But the test passing (no exception) + filled > 0 means source1 was used correctly.
-        assertTrue(true, "fillGaps completed without error - source1 should have handled all dates");
+        // 注：匿名实现类无法用 Mockito.verify 验证调用，此用例仅验证不抛异常
     }
 
     // ============================================================
@@ -291,7 +290,7 @@ class DataSourceDateRangeTest {
 
         // Test passes if fillGaps completes without error.
         // Source1 returns null, so source2 should be tried.
-        assertTrue(true, "fillGaps completed - source1 null, source2 should have been reached");
+        // 注：匿名实现类无法用 Mockito.verify 验证调用，此用例仅验证不抛异常
     }
 
     // ============================================================

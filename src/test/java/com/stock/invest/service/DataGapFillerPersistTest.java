@@ -35,7 +35,6 @@ import static org.mockito.Mockito.*;
  * 覆盖 FILL-001 ~ FILL-005
  */
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("DataGapFiller — 持久化逻辑 (persist / mergeAfterHours)")
 class DataGapFillerPersistTest {
 

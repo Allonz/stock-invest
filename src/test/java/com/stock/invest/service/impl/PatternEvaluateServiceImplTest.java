@@ -103,4 +103,46 @@ class PatternEvaluateServiceImplTest {
     void nullList_returnsFalse() {
         assertFalse(service.matchesIncreasingVolumePatternFromKLine(null, 7));
     }
+
+    @Test
+    @DisplayName("PE-008: matchesIncreasingVolumePattern StockDailyBar version - increasing volumes")
+    void test_matchesIncreasingVolumePattern_stockDailyBar_increasing() {
+        java.util.List<com.stock.invest.entity.StockDailyBar> bars = 
+            com.stock.invest.support.TestDataFactory.createContinuousBars("AAPL", 7, 100000, 200000);
+        assertTrue(patternEvaluateService.matchesIncreasingVolumePattern(bars, 7));
+    }
+
+    @Test
+    @DisplayName("PE-009: matchesIncreasingVolumePattern StockDailyBar version - non-increasing")
+    void test_matchesIncreasingVolumePattern_stockDailyBar_nonIncreasing() {
+        java.util.List<com.stock.invest.entity.StockDailyBar> bars = 
+            com.stock.invest.support.TestDataFactory.createContinuousBars("AAPL", 7, 200000, 100000);
+        assertFalse(patternEvaluateService.matchesIncreasingVolumePattern(bars, 7));
+    }
+
+    @Test
+    @DisplayName("PE-010: multi-window days=2 matches")
+    void test_multiWindow_2days() {
+        java.util.List<com.stock.invest.entity.StockDailyBar> bars = 
+            com.stock.invest.support.TestDataFactory.createContinuousBars("AAPL", 2, 100000, 200000);
+        assertTrue(patternEvaluateService.matchesIncreasingVolumePattern(bars, 2));
+    }
+
+    @Test
+    @DisplayName("PE-011: multi-window days=3 matches")
+    void test_multiWindow_3days() {
+        java.util.List<com.stock.invest.entity.StockDailyBar> bars = 
+            com.stock.invest.support.TestDataFactory.createContinuousBars("AAPL", 3, 100000, 300000);
+        assertTrue(patternEvaluateService.matchesIncreasingVolumePattern(bars, 3));
+    }
+
+    @Test
+    @DisplayName("PE-012: multi-window days=5 volume spike")
+    void test_multiWindow_5days_spike() {
+        java.util.List<com.stock.invest.entity.StockDailyBar> bars = 
+            com.stock.invest.support.TestDataFactory.createContinuousBars("AAPL", 5, 50000, 50000);
+        // Last day has volume spike (5x average)
+        assertTrue(patternEvaluateService.matchesVolumeSpikePattern(bars, 5));
+    }
+
 }

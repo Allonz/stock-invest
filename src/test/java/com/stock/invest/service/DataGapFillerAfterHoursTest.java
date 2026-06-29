@@ -37,7 +37,6 @@ import static org.mockito.Mockito.*;
  * 覆盖 AH-001 ~ AH-007（AH-006 标记 @Tag("integration") 跳过）
  */
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("DataGapFiller — 盘后价逻辑 (mergeAfterHours)")
 class DataGapFillerAfterHoursTest {
 

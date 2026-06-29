@@ -32,7 +32,6 @@ import com.stock.invest.datasource.rule.YFinanceAvailabilityRule;
  */
 @ActiveProfiles("test")
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class DataSourceAvailabilityCheckerTest {
 
     @Mock private TigerAvailabilityRule tigerRule;

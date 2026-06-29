@@ -28,7 +28,6 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class DataGapFillerServiceImplTest {
 
     private static final ZoneId AMERICA_NY = ZoneId.of("America/New_York");
