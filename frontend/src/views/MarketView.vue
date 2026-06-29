@@ -64,25 +64,57 @@
         <NButton type="primary" size="small" @click="loadData">🔄 刷新</NButton>
       </div>
 
-      <!-- 数据表格 -->
-      <div class="table-container">
-        <div class="table-header">
-          <span class="title">📋 筛选结果 · {{ screeningDate || '—' }}</span>
-          <div class="actions">
-            <NButton size="tiny" @click="handleExport">📥 导出 CSV</NButton>
+      <!-- 紧凑股票列表（横向滚动） -->
+      <div class="compact-view">
+        <div class="compact-scroll">
+          <table class="compact-table">
+            <tbody>
+              <tr>
+                <td class="row-label-cell">名称</td>
+                <td v-for="stock in filteredMatches" :key="'n-' + stock.id" class="stock-col" @click="onSymbolClick(stock.symbol)">
+                  <span class="cell-name">{{ stock.name || '—' }}</span>
+                </td>
+              </tr>
+              <tr>
+                <td class="row-label-cell">代码</td>
+                <td v-for="stock in filteredMatches" :key="'c-' + stock.id" class="stock-col" @click="onSymbolClick(stock.symbol)">
+                  <span class="cell-symbol">{{ stock.symbol }}</span>
+                </td>
+              </tr>
+              <tr>
+                <td class="row-label-cell"></td>
+                <td v-for="stock in filteredMatches" :key="'cp-' + stock.id" class="copy-col">
+                  <span v-if="copiedSymbol === stock.symbol" style="color:#52c41a;font-size:11px">✓ 已复制</span>
+                  <a v-else
+                    style="font-size:11px;cursor:pointer;color:#1890ff"
+                    @click.stop="copySymbol(stock.symbol)">复制</a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="compact-footer">
+          <span class="info">共 {{ filteredMatches.length }} 条·点击查看K线</span>
+        </div>
+      </div>
+
+      <!-- K线图表卡片 -->
+      <div v-if="showCandleChart" class="candle-chart-card">
+        <div class="candle-chart-header">
+          <span class="candle-chart-title">📈 {{ selectedSymbol }} K线图（近30天）</span>
+          <div class="candle-chart-actions">
+            <NButton size="tiny" quaternary @click="showCandleChart = false">✕ 关闭</NButton>
           </div>
         </div>
-        <NDataTable
-          :columns="tableColumns"
-          :data="filteredMatches"
-          :pagination="pagination"
-          :bordered="false"
-          :single-line="false"
-          size="small"
-          :row-key="(row: any) => row.id"
-        />
-        <div class="table-footer">
-          <span class="info">共 {{ filteredMatches.length }} 条记录</span>
+        <div class="candle-chart-body">
+          <div v-if="candleLoading" style="text-align:center;padding:40px;">
+            <NSpin size="small" />
+            <p style="margin-top:8px;color:#999;font-size:13px;">加载K线数据中...</p>
+          </div>
+          <VChart v-else-if="candleData.length > 0" :option="candleChartOption" autoresize style="width:100%;height:400px;" />
+          <div v-else style="text-align:center;padding:40px;color:#999;">
+            暂无 K 线数据
+          </div>
         </div>
       </div>
     </template>
@@ -90,11 +122,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, h } from 'vue'
-import { NSpin, NButton, NDataTable, useNotification, NTag } from 'naive-ui'
+import { ref, computed, onMounted } from 'vue'
+import { NSpin, NButton, useNotification } from 'naive-ui'
 import StatCard from '../components/StatCard.vue'
 import { fetchLatestNotification, fetchLatestScreening } from '../api/screening'
 import type { ScreeningMatch, NotificationResult, LatestScreening } from '../api/screening'
+
+import { use } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { CandlestickChart, BarChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent, DataZoomComponent, TitleComponent } from 'echarts/components'
+import VChart from 'vue-echarts'
+
+use([CanvasRenderer, CandlestickChart, BarChart, GridComponent, TooltipComponent, DataZoomComponent, TitleComponent])
+
+import { fetchCandles } from '../api/bars'
+import type { CandleData } from '../api/bars'
 
 const notification = useNotification()
 
@@ -149,7 +192,7 @@ const algoCount = computed(() => {
   return Object.entries(algoMap).map(([k, v]) => `${k}=${v}`).join(', ')
 })
 
-// ============ 表格 ============
+// ============ 股票筛选 ============
 /** 筛选后的匹配列表 */
 const filteredMatches = computed(() => {
   const matches = screeningData.value?.matches || []
@@ -160,73 +203,174 @@ const filteredMatches = computed(() => {
   })
 })
 
-/** 分页配置 */
-const pagination = reactive({
-  page: 1,
-  pageSize: 10,
-  showSizePicker: true,
-  pageSizes: [5, 10, 20, 50],
-  onChange: (page: number) => { pagination.page = page },
-  onUpdatePageSize: (size: number) => {
-    pagination.pageSize = size
-    pagination.page = 1
+// ===================== K线图表状态 =====================
+const selectedSymbol = ref<string | null>(null)
+const candleLoading = ref(false)
+const candleData = ref<CandleData[]>([])
+const showCandleChart = ref(false)
+
+/** 点击股票代码查看 K 线图 */
+async function onSymbolClick(symbol: string) {
+  selectedSymbol.value = symbol
+  showCandleChart.value = true
+  candleLoading.value = true
+  try {
+    const res = await fetchCandles(symbol, 30)
+    if (res.data.success) {
+      candleData.value = res.data.data
+    } else {
+      notification.warning({ title: 'K线数据加载失败', duration: 3000 })
+      candleData.value = []
+    }
+  } catch (err: any) {
+    notification.error({ title: 'K线数据异常', content: err.message, duration: 3000 })
+    candleData.value = []
+  } finally {
+    candleLoading.value = false
+  }
+}
+
+/** K线图表配置 */
+const candleChartOption = computed(() => {
+  const data = candleData.value
+  if (!data || data.length === 0) return {}
+
+  const dates = data.map(d => d.date)
+  const ohlc = data.map(d => [d.open, d.close, d.low, d.high])
+  const volumes = data.map(d => d.volume)
+
+  return {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: (params: any[]) => {
+        try {
+          if (!params || params.length === 0) return ''
+          const idx = params[0].dataIndex
+          const d = data[idx]
+          if (!d) return ''
+          // 成交量格式化：万/亿
+          const fmtVolume = (v: number) => {
+            if (v >= 1e8) return (v / 1e8).toFixed(2) + '亿'
+            if (v >= 1e4) return (v / 1e4).toFixed(2) + '万'
+            return v.toLocaleString()
+          }
+          return [
+            `<div style="font-weight:600;margin-bottom:4px;">${d.date}</div>`,
+            `开盘: <b>${d.open.toFixed(4)}</b>`,
+            `收盘: <b>${d.close.toFixed(4)}</b>`,
+            `最高: <b>${d.high.toFixed(4)}</b>`,
+            `最低: <b>${d.low.toFixed(4)}</b>`,
+            `涨跌幅: <b>${d.changePercent != null ? d.changePercent.toFixed(2) + '%' : '—'}</b>`,
+            `成交量: <b>${fmtVolume(d.volume)}</b>`,
+            d.afterHours != null ? `盘后价: <b>${d.afterHours.toFixed(4)}</b>` : '',
+            d.afterHoursChangePercent != null ? `盘后涨跌幅: <b>${d.afterHoursChangePercent.toFixed(2)}%</b>` : ''
+          ].filter(Boolean).join('<br/>')
+        } catch {
+          return ''
+        }
+      }
+    },
+    grid: [
+      { left: '8%', right: '8%', top: '10%', height: '60%' },
+      { left: '8%', right: '8%', top: '78%', height: '12%' }
+    ],
+    xAxis: [
+      {
+        type: 'category',
+        data: dates,
+        axisLine: { onZero: false },
+        axisTick: { alignWithLabel: true },
+        splitLine: { show: false },
+        axisLabel: { rotate: 30, fontSize: 10 },
+        gridIndex: 0
+      },
+      {
+        type: 'category',
+        data: dates,
+        axisLabel: { show: false },
+        axisTick: { show: false },
+        splitLine: { show: false },
+        gridIndex: 1
+      }
+    ],
+    yAxis: [
+      {
+        type: 'value',
+        scale: true,
+        gridIndex: 0
+      },
+      {
+        type: 'value',
+        scale: true,
+        splitNumber: 2,
+        name: 'VOL',
+        nameLocation: 'start',
+        nameGap: 2,
+        nameTextStyle: { fontSize: 10, color: '#999' },
+        axisLabel: {
+          show: true,
+          fontSize: 9,
+          color: '#999',
+          formatter: (v: number) => {
+            if (v >= 1e8) return (v / 1e8).toFixed(1) + '亿'
+            if (v >= 1e4) return (v / 1e4).toFixed(0) + '万'
+            return v.toLocaleString()
+          }
+        },
+        splitLine: { show: false },
+        gridIndex: 1
+      }
+    ],
+    dataZoom: [
+      {
+        type: 'inside',
+        xAxisIndex: [0, 1],
+        zoomOnMouseWheel: true,
+        moveOnMouseMove: true
+      },
+      {
+        type: 'slider',
+        xAxisIndex: [0, 1],
+        bottom: 8, height: 16,
+        realtime: true,
+        brushSelect: false,
+        showDataShadow: false
+      }
+    ],
+    animation: false,
+    series: [
+      {
+        type: 'candlestick',
+        data: ohlc,
+        xAxisIndex: 0,
+        yAxisIndex: 0,
+        barWidth: '25%',
+        barMaxWidth: 30,
+        itemStyle: {
+          color: '#ef232a',
+          color0: '#14b143',
+          borderColor: '#ef232a',
+          borderColor0: '#14b143'
+        }
+      },
+      {
+        type: 'bar',
+        data: volumes,
+        xAxisIndex: 1,
+        yAxisIndex: 1,
+        barWidth: '35%',
+        barMaxWidth: 20,
+        itemStyle: {
+          color: (params: any) => {
+            const d = data[params.dataIndex]
+            return d ? (d.close >= d.open ? '#14b143' : '#ef232a') : '#999'
+          }
+        }
+      }
+    ]
   }
 })
-
-/** 创建表格列定义 */
-const tableColumns = computed(() => [
-  { title: '代码', key: 'symbol', width: 120, align: 'center' as const, defaultSortOrder: 'ascend' as const, sorter: (a: ScreeningMatch, b: ScreeningMatch) => a.symbol.localeCompare(b.symbol), render: (row: ScreeningMatch) => {
-        const copied = copiedSymbol.value === row.symbol
-        return [
-          h('span', { class: 'symbol-cell' }, row.symbol),
-          copied
-            ? h('span', { style: 'color:#52c41a;font-size:12px;margin-left:24px' }, '✓ 复制成功')
-            : h('a', {
-                style: 'margin-left:24px;cursor:pointer;color:#1890ff;font-size:12px',
-                onClick: () => { copySymbol(row.symbol); return false; }
-              }, '复制')
-        ]
-      } },
-  { title: '名称', key: 'name', width: 180, align: 'center' as const, render: (row: ScreeningMatch) => row.name || '—' },
-  { title: '最新价', key: 'lastClose', width: 120, align: 'center' as const, defaultSortOrder: 'descend' as const, sorter: (a: ScreeningMatch, b: ScreeningMatch) => a.lastClose - b.lastClose, render: (row: ScreeningMatch) => h('span', { class: 'price-cell' }, `$${row.lastClose.toFixed(4)}`) },
-  { title: '最高价', key: 'highPrice', width: 110, align: 'center' as const, sorter: (a: ScreeningMatch, b: ScreeningMatch) => (a.highPrice || 0) - (b.highPrice || 0), render: (row: ScreeningMatch) => row.highPrice != null ? h('span', { class: 'price-cell' }, `$${row.highPrice.toFixed(4)}`) : '—' },
-  { title: '最低价', key: 'lowPrice', width: 110, align: 'center' as const, sorter: (a: ScreeningMatch, b: ScreeningMatch) => (a.lowPrice || 0) - (b.lowPrice || 0), render: (row: ScreeningMatch) => row.lowPrice != null ? h('span', { class: 'price-cell' }, `$${row.lowPrice.toFixed(4)}`) : '—' },
-  { title: '涨跌幅', key: 'changePercent', width: 100, align: 'center' as const, sorter: (a: ScreeningMatch, b: ScreeningMatch) => (a.changePercent || 0) - (b.changePercent || 0), render: (row: ScreeningMatch) => {
-    const val = row.changePercent
-    if (val == null) return '—'
-    const color = val >= 0 ? '#ef232a' : '#14b143'
-    return h('span', { style: `color:${color};font-weight:600;` }, `${val >= 0 ? '+' : ''}${val.toFixed(2)}%`)
-  } },
-  { title: '盘后价', key: 'afterHours', width: 110, align: 'center' as const, sorter: (a: ScreeningMatch, b: ScreeningMatch) => (a.afterHours || 0) - (b.afterHours || 0), render: (row: ScreeningMatch) => row.afterHours != null ? h('span', { class: 'price-cell' }, `$${row.afterHours.toFixed(4)}`) : '—' },
-  { title: '盘后涨跌幅', key: 'afterHoursChangePercent', width: 110, align: 'center' as const, sorter: (a: ScreeningMatch, b: ScreeningMatch) => (a.afterHoursChangePercent || 0) - (b.afterHoursChangePercent || 0), render: (row: ScreeningMatch) => {
-    const val = row.afterHoursChangePercent
-    if (val == null) return '—'
-    const color = val >= 0 ? '#ef232a' : '#14b143'
-    return h('span', { style: `color:${color};font-weight:600;` }, `${val >= 0 ? '+' : ''}${val.toFixed(2)}%`)
-  } },
-  {
-    title: '涨幅', key: 'rise', width: 100, align: 'center' as const,
-    render: (row: ScreeningMatch) => {
-      return h(NTag, {
-        type: row.rise ? 'error' : 'success',
-        size: 'small',
-        bordered: false
-      }, { default: () => row.rise ? '↑ 上涨' : '↓ 下跌' })
-    }
-  },
-  { title: '算法', key: 'algorithm', width: 150, align: 'center' as const,
-    render: (row: ScreeningMatch) => {
-      return h(NTag, {
-        color: { color: '#f9f0ff', textColor: '#722ed1' },
-        size: 'small',
-        bordered: false
-      }, { default: () => row.algorithm === 'increasing_volume' ? '📈 放量上涨' : '⚡ 量能异动' })
-    }
-  },
-  { title: '窗口', key: 'windowDays', width: 80, align: 'center' as const,
-    render: (row: ScreeningMatch) => `${row.windowDays}天`
-  }
-])
 
 // ============ 复制反馈 ============
 const copiedSymbol = ref<string | null>(null)
@@ -262,32 +406,6 @@ async function loadData() {
   } finally {
     loading.value = false
   }
-}
-
-/** 导出 CSV */
-function handleExport() {
-  const matches = filteredMatches.value
-  if (matches.length === 0) {
-    notification.warning({ title: '无数据可导出', duration: 2000 })
-    return
-  }
-  const headers = ['代码', '名称', '最新价', '最高价', '最低价', '涨跌幅', '盘后价', '盘后涨跌幅', '上涨', '算法', '窗口']
-  const rows = matches.map(m => [
-    m.symbol, m.name || '', m.lastClose,
-    m.highPrice ?? '', m.lowPrice ?? '',
-    m.changePercent != null ? m.changePercent.toFixed(2) + '%' : '',
-    m.afterHours ?? '', m.afterHoursChangePercent != null ? m.afterHoursChangePercent.toFixed(2) + '%' : '',
-    m.rise ? '是' : '否', m.algorithm, m.windowDays
-  ])
-  const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `screening_${screeningData.value?.tradeDate || 'data'}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
-  notification.success({ title: '导出成功', duration: 2000 })
 }
 
 // 初始化加载
@@ -361,15 +479,104 @@ onMounted(loadData)
   min-width: 8px;
 }
 
-/* 表格容器 */
-.table-container {
+/* 紧凑股票列表（横向滚动） */
+.compact-view {
   background: var(--bg-card);
   border-radius: 10px;
   box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
 
-.table-header {
+.compact-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px 0;
+}
+
+.compact-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+.compact-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.compact-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+  border-radius: 4px;
+}
+
+.compact-table {
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+
+.compact-table th,
+.compact-table td {
+  padding: 6px 14px;
+  text-align: center;
+  font-size: 13px;
+}
+
+.row-label-cell {
+  font-weight: 600;
+  color: var(--text-secondary);
+  position: sticky;
+  left: 0;
+  background: var(--bg-card);
+  z-index: 1;
+  min-width: 44px;
+  text-align: center;
+}
+
+.stock-col {
+  cursor: pointer;
+  transition: background 0.15s;
+  user-select: none;
+}
+.stock-col:hover {
+  background: var(--hover-bg);
+}
+
+.cell-symbol {
+  font-weight: 600;
+  color: #1890ff;
+  font-family: 'Menlo', 'Consolas', monospace;
+}
+
+.cell-name {
+  color: var(--text-primary);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.compact-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 8px 20px;
+  border-top: 1px solid var(--border-color);
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.copy-col {
+  text-align: center;
+  padding: 2px 14px 6px;
+  font-size: 11px;
+}
+
+/* === K线图表卡片 === */
+.candle-chart-card {
+  background: var(--bg-card);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+  margin-top: 20px;
+  overflow: hidden;
+}
+
+.candle-chart-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -377,38 +584,18 @@ onMounted(loadData)
   border-bottom: 1px solid var(--border-color);
 }
 
-.table-header .title {
+.candle-chart-title {
   font-size: 15px;
   font-weight: 600;
   color: var(--text-primary);
 }
 
-.table-header .actions {
+.candle-chart-actions {
   display: flex;
   gap: 8px;
 }
 
-.table-footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding: 12px 20px;
-  border-top: 1px solid var(--border-color);
-}
-
-.table-footer .info {
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-
-/* 表格内样式 */
-:deep(.symbol-cell) {
-  font-weight: 600;
-  color: #1890ff;
-}
-
-:deep(.price-cell) {
-  font-family: 'Menlo', 'Consolas', monospace;
-  font-weight: 600;
+.candle-chart-body {
+  padding: 16px;
 }
 </style>

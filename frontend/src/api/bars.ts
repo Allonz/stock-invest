@@ -10,6 +10,11 @@ export interface BarRecord {
   tradeDate: string
   openPrice: number
   closePrice: number
+  highPrice?: number
+  lowPrice?: number
+  changePercent?: number | null
+  afterHours?: number | null
+  afterHoursChangePercent?: number | null
   volume: number
   source: string
 }

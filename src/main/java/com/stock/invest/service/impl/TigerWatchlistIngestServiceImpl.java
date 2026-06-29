@@ -70,6 +70,11 @@ public class TigerWatchlistIngestServiceImpl implements TigerWatchlistIngestServ
                 reasons.add(sym + ": lastPrice invalid");
                 continue;
             }
+            if (row.openPrice() == null || row.openPrice() <= 0D) {
+                skipped++;
+                reasons.add(sym + ": openPrice invalid (required, must be > 0)");
+                continue;
+            }
             long vol;
             try {
                 vol = WatchlistVolumeParser.parseVolumeLong(volumeToParseString(row.volume()));
@@ -94,8 +99,16 @@ public class TigerWatchlistIngestServiceImpl implements TigerWatchlistIngestServ
 
             bar.setSymbol(sym);
             bar.setTradeDate(tradeDate);
-            bar.setOpenPrice(px);
+            // closePrice = lastPrice (or explicit closePrice via @JsonAlias)
             bar.setClosePrice(px);
+            // open/high/low: use real value if provided, fallback to lastPrice for backward compat
+            bar.setOpenPrice(row.openPrice());
+            bar.setHighPrice(row.highPrice() != null ? row.highPrice() : px);
+            bar.setLowPrice(row.lowPrice() != null ? row.lowPrice() : px);
+            // nullable fields: pass through as-is (null is valid)
+            bar.setChangePercent(row.changePercent());
+            bar.setAfterHours(row.afterHours());
+            bar.setAfterHoursChangePercent(row.afterHoursChangePercent());
             bar.setVolume(vol);
             bar.setSource(SNAPSHOT_SOURCE);
             if (row.name() != null && !row.name().trim().isEmpty()) {
@@ -106,8 +119,10 @@ public class TigerWatchlistIngestServiceImpl implements TigerWatchlistIngestServ
                 bar.setName(n);
             }
             stockDailyBarRepository.save(bar);
-            log.info("[TigerIngest] importScreenCapture: save symbol={}, price={}, volume={}, date={}, high=null, low=null, changePct=null (screenshot source has no OHLC data)",
-                    sym, px, vol, tradeDate);
+            log.info("[TigerIngest] importScreenCapture: save symbol={}, closePrice={}, openPrice={}, high={}, low={}, changePct={}, afterHours={}, afterHoursChangePct={}, volume={}, date={}",
+                    sym, px, bar.getOpenPrice(), bar.getHighPrice(), bar.getLowPrice(),
+                    bar.getChangePercent(), bar.getAfterHours(), bar.getAfterHoursChangePercent(),
+                    vol, tradeDate);
             imported++;
         }
 

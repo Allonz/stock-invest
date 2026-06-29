@@ -18,7 +18,7 @@
 | 项目 | 值 |
 |------|-----|
 | 默认地址 | `http://127.0.0.1:8090` |
-| 截图列 | 代码 / 名称 / 最新价 / 成交量 |
+| 截图列 | 代码 / 名称 / 收盘价 / 开盘价 / 最高价 / 最低价 / 涨跌幅 / 盘后价 / 盘后涨跌幅 / 成交量 |
 | 数据源标识 | `source=tiger_snap` |
 | 鉴权 | 若配置 `INGEST_API_KEY`，须在请求头携带 `X-INGEST-API-KEY`；未配置时不校验 |
 
@@ -32,10 +32,10 @@ Content-Type: application/json
 ```
 
 按 `tradeDate` 对每行 upsert 一条 `StockDailyBar`：
-- `open = close = lastPrice`
+- 所有价格字段均接受真实值传入（不再默认 open=close=lastPrice）
 - `volume` 经解析后写入（支持 `7.33万`、`1.47亿` 等中文单位）
 - `source` 固定为 `tiger_snap`
-- `stockName` 可选写入
+- 后向兼容：未传的 OHLC 字段自动 fallback 到 `lastPrice`；未传的可空字段保持 null
 
 ### 请求体
 
@@ -52,7 +52,13 @@ Content-Type: application/json
 |------|------|------|------|
 | `symbol` / `code` | string | ✅ 二选一 | 美股代码，大写字母 + 数字 |
 | `name` | string | 否 | 股票名称，最长 128 字符 |
-| `lastPrice` | number | ✅ | 最新价，须 > 0 |
+| `lastPrice` / `closePrice` | number | ✅ | 收盘价 / 最新价，须 > 0 |
+| `openPrice` | number | 否 | 开盘价，须 > 0；不传则 fallback 到 `lastPrice` |
+| `highPrice` | number | 否 | 最高价，须 > 0；不传则 fallback 到 `lastPrice` |
+| `lowPrice` | number | 否 | 最低价，须 > 0；不传则 fallback 到 `lastPrice` |
+| `changePercent` | number | 否 | 涨跌幅（百分比），如 `3.25` 表示 +3.25% |
+| `afterHours` | number | 否 | 盘后价，须 > 0 |
+| `afterHoursChangePercent` | number | 否 | 盘后涨跌幅（百分比） |
 | `volume` | string \| number | ✅ | 成交量：纯数字 / `7.33万` / `1.47亿` 等 |
 
 ### 响应 `TigerWatchlistIngestResponseDto`
@@ -70,12 +76,32 @@ Content-Type: application/json
 ```bash
 curl -sS -X POST 'http://127.0.0.1:8090/api/ingest/tiger-watchlist' \
   -H 'Content-Type: application/json' \
-  -H 'X-INGEST-API-KEY: your-secret' \
+  -H 'X-INGEST-API-KEY: *** \
   -d '{
     "tradeDate": "2026-04-26",
     "rows": [
-      { "symbol": "JOB",  "name": "Gee Group", "lastPrice": 0.2364, "volume": "7.33万" },
-      { "code":   "CHSN", "name": "香颂国际",   "lastPrice": 0.1837, "volume": "1.47亿" }
+      {
+        "symbol": "JOB",
+        "name": "Gee Group",
+        "lastPrice": 0.2364,
+        "openPrice": 0.2400,
+        "highPrice": 0.2450,
+        "lowPrice": 0.2300,
+        "changePercent": -1.50,
+        "volume": "7.33万"
+      },
+      {
+        "code": "CHSN",
+        "name": "香颂国际",
+        "closePrice": 0.1837,
+        "openPrice": 0.1800,
+        "highPrice": 0.1900,
+        "lowPrice": 0.1780,
+        "changePercent": 2.10,
+        "afterHours": 0.1850,
+        "afterHoursChangePercent": 0.71,
+        "volume": "1.47亿"
+      }
     ]
   }'
 ```

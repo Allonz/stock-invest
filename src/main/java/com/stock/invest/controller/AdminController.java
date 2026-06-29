@@ -224,6 +224,24 @@ public class AdminController {
     }
 
     /**
+     * GET /api/admin/retry-progress
+     * 返回历史任务重试的当前进度（暂未接入进度追踪，始终返回 IDLE）。
+     */
+    @GetMapping("/retry-progress")
+    public ResponseEntity<ApiResponse<?>> getRetryProgress() {
+        Map<String, Object> idle = new LinkedHashMap<>();
+        idle.put("running", false);
+        idle.put("stage", "IDLE");
+        idle.put("total", 0);
+        idle.put("processed", 0);
+        idle.put("succeeded", 0);
+        idle.put("failed", 0);
+        idle.put("elapsedSeconds", 0);
+        idle.put("startTime", 0);
+        return ResponseEntity.ok(ApiResponse.ok(idle));
+    }
+
+    /**
      * GET /api/admin/data-fill-progress
      * 返回当前异步补缺的进度。
      */

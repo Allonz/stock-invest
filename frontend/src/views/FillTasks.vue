@@ -26,56 +26,110 @@
 
     <!-- 进度区域 -->
     <n-card title="补缺进度" size="small" style="margin-bottom: 16px;">
-      <n-space vertical>
-        <n-space justify="space-between" align="center">
-          <n-space>
-            <n-tag :type="progressStageTagType" size="small" :bordered="false">
-              {{ progressStageLabel }}
-            </n-tag>
-            <span v-if="progress.running" class="progress-time">已耗时 {{ progress.elapsedSeconds }}秒</span>
-            <span v-else-if="progress.stage === 'COMPLETED'" class="progress-complete">已完成</span>
-          </n-space>
-          <n-button
-            type="warning"
-            size="small"
-            :loading="triggerLoading"
-            :disabled="triggerLoading || progress.running"
-            @click="handleTriggerFill"
-          >
-            触发补缺
-          </n-button>
-        </n-space>
+      <div style="display:flex;gap:0;">
+        <!-- 左：触发补缺 -->
+        <div style="flex:1; border-right: 1px solid var(--border-color); padding-right: 16px;">
+          <div style="text-align:center;margin-bottom:8px;font-size:13px;font-weight:600;">当天任务</div>
+          <n-space vertical>
+            <n-space justify="space-between" align="center">
+              <n-space>
+                <n-tag :type="progressStageTagType" size="small" :bordered="false">
+                  {{ progressStageLabel }}
+                </n-tag>
+                <span v-if="progress.running" class="progress-time">已耗时 {{ progress.elapsedSeconds }}秒</span>
+                <span v-else-if="progress.stage === 'COMPLETED'" class="progress-complete">已完成</span>
+              </n-space>
+              <n-button
+                type="warning"
+                size="small"
+                :loading="triggerLoading"
+                :disabled="triggerLoading || progress.running"
+                @click="handleTriggerFill"
+              >
+                触发补缺
+              </n-button>
+            </n-space>
 
-        <!-- 4阶段进度展示（按规划图样式） -->
-        <div class="stages-container">
-          <div
-            v-for="(stage, idx) in stages"
-            :key="idx"
-            class="stage-block"
-            :class="{ active: stage.active, done: stage.done, waiting: !stage.active && !stage.done }"
-          >
-            <div class="stage-header">
-              <div class="stage-icon-box">
-                <span v-if="stage.done" class="stage-icon">✓</span>
-                <span v-else-if="stage.active" class="stage-icon spin">⏳</span>
-                <span v-else class="stage-icon">○</span>
+            <!-- 4阶段进度展示 -->
+            <div class="stages-container">
+              <div
+                v-for="(stage, idx) in stages"
+                :key="idx"
+                class="stage-block"
+                :class="{ active: stage.active, done: stage.done, waiting: !stage.active && !stage.done }"
+              >
+                <div class="stage-header">
+                  <div class="stage-icon-box">
+                    <span v-if="stage.done" class="stage-icon">✓</span>
+                    <span v-else-if="stage.active" class="stage-icon spin">⏳</span>
+                    <span v-else class="stage-icon">○</span>
+                  </div>
+                  <div class="stage-title">阶段 {{ idx + 1 }}：{{ stage.label }}</div>
+                  <span v-if="stage.done" class="stage-status done-text">完成</span>
+                  <span v-else-if="stage.active" class="stage-status active-text">进行中</span>
+                  <span v-else class="stage-status waiting-text">待开始</span>
+                </div>
+                <div class="stage-detail">{{ stage.detail }}</div>
+                <!-- 阶段3补填数据时显示进度条 -->
+                <div v-if="stage.label === '补填数据' && stage.active" class="stage-progress-bar">
+                  <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" :style="{ width: fillPercent + '%' }"></div>
+                  </div>
+                  <span class="stage-pct">{{ fillPercent }}%</span>
+                </div>
               </div>
-              <div class="stage-title">阶段 {{ idx + 1 }}：{{ stage.label }}</div>
-              <span v-if="stage.done" class="stage-status done-text">完成</span>
-              <span v-else-if="stage.active" class="stage-status active-text">进行中</span>
-              <span v-else class="stage-status waiting-text">待开始</span>
             </div>
-            <div class="stage-detail">{{ stage.detail }}</div>
-            <!-- 阶段3补填数据时显示进度条 -->
-            <div v-if="stage.label === '补填数据' && stage.active" class="stage-progress-bar">
-              <div class="progress-bar-bg">
-                <div class="progress-bar-fill" :style="{ width: fillPercent + '%' }"></div>
+          </n-space>
+        </div>
+        <!-- 右：历史任务 -->
+        <div style="flex:1; padding-left: 16px;">
+          <div style="text-align:center;margin-bottom:8px;">
+            <span style="font-size:13px;font-weight:600;">历史任务</span>
+          </div>
+          <div style="margin-bottom:8px;">
+            <n-space justify="space-between" align="center">
+              <n-space>
+                <n-tag :type="retryStageTagType" size="small" :bordered="false">
+                  {{ retryStageLabel }}
+                </n-tag>
+                <span v-if="retryProgress.running" class="progress-time">已耗时 {{ retryProgress.elapsedSeconds }}秒</span>
+                <span v-else-if="retryProgress.stage === 'COMPLETED'" class="progress-complete">已完成</span>
+              </n-space>
+              <n-button
+                type="warning"
+                size="small"
+                :loading="retryLoading"
+                :disabled="retryLoading || retryProgress.running"
+                @click="handleTriggerRetry"
+              >
+                触发历史任务
+              </n-button>
+            </n-space>
+          </div>
+          <!-- 3阶段进度展示 -->
+          <div class="stages-container">
+            <div
+              v-for="(stage, idx) in retryStages"
+              :key="idx"
+              class="stage-block"
+              :class="{ active: stage.active, done: stage.done, waiting: !stage.active && !stage.done }"
+            >
+              <div class="stage-header">
+                <div class="stage-icon-box">
+                  <span v-if="stage.done" class="stage-icon">✓</span>
+                  <span v-else-if="stage.active" class="stage-icon spin">⏳</span>
+                  <span v-else class="stage-icon">○</span>
+                </div>
+                <div class="stage-title">阶段 {{ idx + 1 }}：{{ stage.label }}</div>
+                <span v-if="stage.done" class="stage-status done-text">完成</span>
+                <span v-else-if="stage.active" class="stage-status active-text">进行中</span>
+                <span v-else class="stage-status waiting-text">待开始</span>
               </div>
-              <span class="stage-pct">{{ fillPercent }}%</span>
+              <div class="stage-detail">{{ stage.detail }}</div>
             </div>
           </div>
         </div>
-      </n-space>
+      </div>
     </n-card>
 
     <!-- 任务列表 -->
@@ -149,7 +203,7 @@ import {
   NPagination, NInput, NDatePicker,
   useNotification
 } from 'naive-ui'
-import { triggerDataFill, triggerRetryTasks, fetchDataFillProgress, fetchFillTasks, fetchFillTaskCount } from '../api/admin'
+import { triggerDataFill, triggerRetryTasks, fetchDataFillProgress, fetchFillTasks, fetchFillTaskCount, fetchRetryProgress } from '../api/admin'
 
 const notification = useNotification()
 
@@ -176,6 +230,18 @@ const progress = reactive({
 
 const triggerLoading = ref(false)
 const retryLoading = ref(false)
+
+const retryProgress = reactive({
+  running: false,
+  stage: 'IDLE',
+  total: 0,
+  processed: 0,
+  succeeded: 0,
+  failed: 0,
+  elapsedSeconds: 0,
+  startTime: 0
+})
+const retryPollingTimer = ref<ReturnType<typeof setInterval> | null>(null)
 
 // 阶段定义（按规划图，增加详情文字）
 const stages = computed(() => [
@@ -238,6 +304,49 @@ const progressStageTagType = computed(() => {
 const fillPercent = computed(() => {
   if (progress.gapsFound === 0) return 0
   return Math.round((progress.filled / progress.gapsFound) * 100)
+})
+
+// ============ 历史重试进度 ============
+const retryStages = computed(() => [
+  {
+    label: '接收任务',
+    active: retryProgress.stage === 'RECEIVING',
+    done: retryProgress.stage === 'RETRYING' || retryProgress.stage === 'COMPLETED',
+    detail: retryProgress.stage !== 'IDLE' ? '后台已收到请求' : '等待触发'
+  },
+  {
+    label: '重试处理',
+    active: retryProgress.stage === 'RETRYING',
+    done: retryProgress.stage === 'COMPLETED',
+    detail: retryProgress.stage === 'RETRYING' ? `已处理 ${retryProgress.processed}/${retryProgress.total} 个` :
+           retryProgress.stage === 'COMPLETED' ? `完成：成功 ${retryProgress.succeeded}，失败 ${retryProgress.failed}` : '等待中'
+  },
+  {
+    label: '完成',
+    active: retryProgress.stage === 'COMPLETED' && !retryProgress.running,
+    done: retryProgress.stage === 'COMPLETED',
+    detail: retryProgress.stage === 'COMPLETED' && !retryProgress.running ? '历史重试任务已完成' : '等待中'
+  }
+])
+
+const retryStageLabel = computed(() => {
+  const labelMap: Record<string, string> = {
+    IDLE: '空闲',
+    RECEIVING: '接收中',
+    RETRYING: '重试中',
+    COMPLETED: '完成'
+  }
+  return labelMap[retryProgress.stage] || retryProgress.stage
+})
+
+const retryStageTagType = computed(() => {
+  const typeMap: Record<string, 'default' | 'info' | 'success' | 'warning' | 'error'> = {
+    IDLE: 'default',
+    RECEIVING: 'info',
+    RETRYING: 'warning',
+    COMPLETED: 'success'
+  }
+  return typeMap[retryProgress.stage] || 'default'
 })
 
 // ============ 任务列表 ============
@@ -404,6 +513,25 @@ async function loadProgress() {
   }
 }
 
+async function loadRetryProgress() {
+  try {
+    const res = await fetchRetryProgress()
+    if (res.data.success && res.data.data) {
+      const p = res.data.data
+      retryProgress.running = p.running
+      retryProgress.stage = p.stage
+      retryProgress.total = p.total
+      retryProgress.processed = p.processed
+      retryProgress.succeeded = p.succeeded
+      retryProgress.failed = p.failed
+      retryProgress.elapsedSeconds = p.elapsedSeconds
+      retryProgress.startTime = p.startTime
+    }
+  } catch (e) {
+    // ignore
+  }
+}
+
 // ============ 操作 ============
 
 async function handleTriggerRetry() {
@@ -412,6 +540,8 @@ async function handleTriggerRetry() {
     const res = await triggerRetryTasks()
     if (res.data.success) {
       notification.success({ title: '触发历史重试', content: '历史任务重试已异步启动', duration: 3000 })
+      await loadRetryProgress()
+      startRetryPolling()
     } else {
       notification.error({ title: '触发失败', content: res.data.data?.message || '未知错误', duration: 3000 })
     }
@@ -492,6 +622,26 @@ function stopPolling() {
   }
 }
 
+// ============ 历史重试轮询 ============
+function startRetryPolling() {
+  stopRetryPolling()
+  retryPollingTimer.value = setInterval(async () => {
+    await loadRetryProgress()
+    if (!retryProgress.running || retryProgress.stage === 'COMPLETED') {
+      stopRetryPolling()
+      loadTaskCount()
+      loadTasks()
+    }
+  }, 2000)
+}
+
+function stopRetryPolling() {
+  if (retryPollingTimer.value !== null) {
+    clearInterval(retryPollingTimer.value)
+    retryPollingTimer.value = null
+  }
+}
+
 onMounted(() => {
   loadTaskCount()
   loadProgress()
@@ -500,10 +650,17 @@ onMounted(() => {
   if (progress.running) {
     startPolling()
   }
+  // 加载历史重试进度
+  loadRetryProgress().then(() => {
+    if (retryProgress.running) {
+      startRetryPolling()
+    }
+  })
 })
 
 onUnmounted(() => {
   stopPolling()
+  stopRetryPolling()
 })
 </script>
 

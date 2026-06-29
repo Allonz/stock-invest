@@ -88,7 +88,7 @@ class KLineIteratorTest {
 
     @Test
     void constructorWithAllFieldsShouldWork() {
-        KLineIterator it = new KLineIterator("AAPL", 1700000000000L, 150.0, 155.0, 148.0, 152.0, 1000000L, 5000000.0);
+        KLineIterator it = new KLineIterator("AAPL", 1700000000000L, 150.0, 155.0, 148.0, 152.0, 1000000L, 5000000.0, 0.0, 0.0, 0.0);
         
         assertEquals("AAPL", it.getSymbol());
         assertEquals(1700000000000L, it.getTime());

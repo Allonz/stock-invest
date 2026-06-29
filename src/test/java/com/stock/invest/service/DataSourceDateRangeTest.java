@@ -320,7 +320,7 @@ class DataSourceDateRangeTest {
         long epochMillis = tradeDate.atStartOfDay(AMERICA_NY).toInstant().toEpochMilli();
         KLineData kd = new KLineData();
         kd.setSymbol(SYMBOL);
-        KLineIterator item = new KLineIterator(SYMBOL, epochMillis, open, close + 1, close - 1, close, volume, 0);
+        KLineIterator item = new KLineIterator(SYMBOL, epochMillis, open, close + 1, close - 1, close, volume, 0, 0.0, 0.0, 0.0);
         item.setTimeString(tradeDate.toString());
         kd.setItems(List.of(item));
         return kd;

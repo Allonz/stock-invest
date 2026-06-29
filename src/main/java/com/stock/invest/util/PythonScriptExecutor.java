@@ -110,9 +110,7 @@ public class PythonScriptExecutor {
                 }
 
                 String result = output.toString().trim();
-                // 记录执行结果摘要（取前200字符，避免刷屏）
-                String preview = result.length() > 200 ? result.substring(0, 200) + "..." : result;
-                log.info("Python脚本 stdout (script={}): {}", scriptName, preview);
+                log.info("Python脚本 stdout (script={}): {}", scriptName, result);
                 return result;
             } finally {
                 process.destroy();

@@ -84,8 +84,7 @@ public class NotificationController {
             payload.put("screenDate", screenDate.toString());
             payload.put("results", resultByAlgo);
 
-            log.info("[Notification] latest: batchId={}, screenDate={}, totalHits={}",
-                    latestBatchId, screenDate, resultByAlgo);
+            log.info("[Notification] latest batchId={} date={}", latestBatchId, screenDate);
             return ResponseEntity.ok(ApiResponse.ok(payload));
         } catch (Exception e) {
             log.error("getLatestNotification failed", e);

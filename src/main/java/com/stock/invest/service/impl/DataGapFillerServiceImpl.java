@@ -207,15 +207,17 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         int failed = 0;
         for (LocalDate date : missingDates) {
             // 进入 fetchAndPersist 会打印分隔线和补缺信息
-            boolean success = fetchAndPersist(symbol, date);
-            if (success) {
+            int result = fetchAndPersist(symbol, date);
+            if (result == 1) {
                 filled++;
                 if (progress != null) {
                     progress.incrementFilled();
                 }
             } else {
-                log.warn("[DataGapFiller] fillGaps: all sources exhausted symbol={}, date={}", symbol, date);
-                createRetryTask(symbol, date, "all fallbacks failed");
+                log.warn("[DataGapFiller] fillGaps: all sources exhausted symbol={}, date={} result={}", symbol, date, result);
+                if (result == 0) {
+                    createRetryTask(symbol, date, "all fallbacks failed");
+                }
                 failed++;
                 if (progress != null) {
                     progress.incrementFailed();
@@ -289,7 +291,11 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         return missing;
     }
 
-    private boolean fetchAndPersist(String symbol, LocalDate tradeDate) {
+    /**
+     * 补缺指定股票指定日期的数据。
+     * @return 1=成功, 0=失败但未入黑名单, -1=失败且已入黑名单
+     */
+    private int fetchAndPersist(String symbol, LocalDate tradeDate) {
         log.info("");
         log.info("[DataGapFiller] ================================================");
         log.info("[DataGapFiller] === 补缺 {}，日期 {} ===", symbol, tradeDate);
@@ -344,7 +350,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
                         log.info("");
                         // 补缺成功，重置黑名单计数
                         symbolBlacklistService.resetCount(symbol);
-                        return true;
+                        return 1;
                     }
                 }
                 log.warn("[DataGapFiller] fillWithFallback: date mismatch symbol={}, source={}, targetDate={}",
@@ -390,17 +396,13 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
 
             log.warn("[DataGapFiller] [blacklist] symbol={} added to blacklist: {} sources returned not-found",
                     symbol, notFoundCount);
+            return -1;
         }
 
         log.warn("[DataGapFiller] fillWithFallback: all sources failed symbol={}, date={}, notFoundCount={}",
                 symbol, tradeDate, notFoundCount);
 
-        // 只有在 notFoundCount < 2 时才创建 retrying 任务
-        if (notFoundCount < 2) {
-            createRetryTask(symbol, tradeDate, "all fallbacks failed");
-        }
-
-        return false;
+        return 0;
     }
 
     private void persist(String symbol, LocalDate tradeDate, KLineIterator item, String source) {
@@ -583,31 +585,24 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
             log.info("\033[31m[DataGapFiller] {}\033[0m", retryMsg);
             log.info("[DataGapFiller] {}", retrySep);
 
-            boolean success = fetchAndPersist(symbol, tradeDate);
-            if (success) {
+            int retResult = fetchAndPersist(symbol, tradeDate);
+            if (retResult == 1) {
                 task.setStatus("completed");
                 dataFillTaskRepository.save(task);
                 log.info("[DataGapFiller] processRetryingTasks: retry success taskId={}, symbol={}, date={}",
                         task.getId(), symbol, tradeDate);
                 retried++;
+            } else if (retResult == -1) {
+                log.info("[DataGapFiller] processRetryingTasks: symbol blacklisted taskId={}, symbol={}, date={}",
+                        task.getId(), symbol, tradeDate);
             } else {
-                // fetchAndPersist 内部可能已将 symbol 加入黑名单并 stop 了 retry 任务
-                // 但 processRetryingTasks 持有的 task 对象未更新，需重新检查
-                if (symbolBlacklistService.isBlacklisted(symbol)) {
-                    task.setStatus("stopped");
-                    task.setLastError("blacklisted after all sources exhausted");
-                    dataFillTaskRepository.save(task);
-                    log.info("[DataGapFiller] processRetryingTasks: task stopped (newly blacklisted) taskId={}, symbol={}, date={}",
-                            task.getId(), symbol, tradeDate);
-                } else {
-                    task.setRetryCount(task.getRetryCount() + 1);
-                    task.setDayCount(task.getDayCount() + 1);
-                    task.setStatus("retrying");
-                    task.setLastError("retry attempt failed again");
-                    dataFillTaskRepository.save(task);
-                    log.warn("[DataGapFiller] processRetryingTasks: retry failed taskId={}, symbol={}, date={}, retryCount={}, dayCount={}",
-                            task.getId(), symbol, tradeDate, task.getRetryCount(), task.getDayCount());
-                }
+                task.setRetryCount(task.getRetryCount() + 1);
+                task.setDayCount(task.getDayCount() + 1);
+                task.setStatus("retrying");
+                task.setLastError("retry attempt failed again");
+                dataFillTaskRepository.save(task);
+                log.warn("[DataGapFiller] processRetryingTasks: retry failed taskId={}, symbol={}, date={}, retryCount={}, dayCount={}",
+                        task.getId(), symbol, tradeDate, task.getRetryCount(), task.getDayCount());
             }
         }
 

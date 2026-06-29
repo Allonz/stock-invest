@@ -71,6 +71,7 @@ def _cmd_bars(client, symbol: str, lim: int):
                     "close": float(row["close"]),
                     "volume": int(vol),
                     "amount": float(amt),
+                    "changePercent": ((float(row["close"]) - float(row["open"])) / float(row["open"]) * 100) if float(row["open"]) != 0 else 0.0,
                 }
             )
     items.sort(key=lambda x: x["time"], reverse=True)
@@ -107,6 +108,7 @@ def _cmd_afterhours_bars(client, symbol: str, lim: int):
                     "close": float(row["close"]),
                     "volume": int(vol),
                     "amount": float(amt),
+                    "changePercent": ((float(row["close"]) - float(row["open"])) / float(row["open"]) * 100) if float(row["open"]) != 0 else 0.0,
                 }
             )
     items.sort(key=lambda x: x["time"], reverse=True)

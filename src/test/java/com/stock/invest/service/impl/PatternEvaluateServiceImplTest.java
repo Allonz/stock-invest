@@ -31,7 +31,10 @@ class PatternEvaluateServiceImplTest {
                     95.0 + i,         // low
                     102.0 + i,        // close
                     volumes[i],       // volume
-                    0L                // amount
+                    0.0,              // amount
+                    0.0,              // changePercent
+                    0.0,              // afterHours
+                    0.0               // afterHoursChangePercent
             );
             list.add(bar);
         }

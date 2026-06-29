@@ -110,7 +110,7 @@ public class TestDataFactory {
                 .toInstant().toEpochMilli();
         KLineData kd = new KLineData();
         kd.setSymbol(symbol);
-        KLineIterator item = new KLineIterator(symbol, epochMillis, open, close + 1, close - 1, close, volume, 0);
+        KLineIterator item = new KLineIterator(symbol, epochMillis, open, close + 1, close - 1, close, volume, 0, 0.0, 0.0, 0.0);
         List<KLineIterator> itemsList = new ArrayList<>();
         itemsList.add(item);
         kd.setItems(itemsList);
@@ -131,7 +131,7 @@ public class TestDataFactory {
                     .toInstant().toEpochMilli();
             KLineIterator item = new KLineIterator(symbol, epochMillis,
                     basePrice + i, basePrice + i + 1, basePrice + i - 1,
-                    basePrice + i, baseVolume + i * 1000L, 0);
+                    basePrice + i, baseVolume + i * 1000L, 0, 0.0, 0.0, 0.0);
             itemsList.add(item);
         }
         kd.setItems(itemsList);

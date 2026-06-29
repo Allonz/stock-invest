@@ -74,6 +74,20 @@ export function fetchDataFillProgress() {
   }>>('/api/admin/data-fill-progress')
 }
 
+/** 查询历史任务重试进度 */
+export function fetchRetryProgress() {
+  return request.get<ApiResponse<{
+    running: boolean
+    stage: string
+    total: number
+    processed: number
+    succeeded: number
+    failed: number
+    elapsedSeconds: number
+    startTime: number
+  }>>('/api/admin/retry-progress')
+}
+
 /** 获取补缺任务列表 */
 export function fetchFillTasks(params: {
   status?: string

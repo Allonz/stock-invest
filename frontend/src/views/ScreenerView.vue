@@ -257,11 +257,11 @@ import type { WindowProgress } from '../api/admin'
 
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { CandlestickChart } from 'echarts/charts'
+import { CandlestickChart, BarChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, DataZoomComponent, TitleComponent } from 'echarts/components'
 import VChart from 'vue-echarts'
 
-use([CanvasRenderer, CandlestickChart, GridComponent, TooltipComponent, DataZoomComponent, TitleComponent])
+use([CanvasRenderer, CandlestickChart, BarChart, GridComponent, TooltipComponent, DataZoomComponent, TitleComponent])
 
 import { fetchCandles } from '../api/bars'
 import type { CandleData } from '../api/bars'
@@ -591,28 +591,37 @@ const candleChartOption = computed(() => {
   const dates = data.map(d => d.date)
   const ohlc = data.map(d => [d.open, d.close, d.low, d.high])
   const volumes = data.map(d => d.volume)
-  const changes = data.map(d => d.changePercent)
 
   return {
     tooltip: {
       trigger: 'axis',
-      axisPointer: { type: 'cross' },
+      axisPointer: { type: 'shadow' },
       formatter: (params: any[]) => {
-        if (!params || params.length === 0) return ''
-        const idx = params[0].dataIndex
-        const d = data[idx]
-        if (!d) return ''
-        return [
-          `<div style="font-weight:600;margin-bottom:4px;">${d.date}</div>`,
-          `开盘: <b>${d.open.toFixed(4)}</b>`,
-          `收盘: <b>${d.close.toFixed(4)}</b>`,
-          `最高: <b>${d.high.toFixed(4)}</b>`,
-          `最低: <b>${d.low.toFixed(4)}</b>`,
-          `涨跌幅: <b>${d.changePercent.toFixed(2)}%</b>`,
-          `成交量: <b>${d.volume.toLocaleString()}</b>`,
-          d.afterHours != null ? `盘后价: <b>${d.afterHours.toFixed(4)}</b>` : '',
-          d.afterHoursChangePercent != null ? `盘后涨跌幅: <b>${d.afterHoursChangePercent.toFixed(2)}%</b>` : ''
-        ].filter(Boolean).join('<br/>')
+        try {
+          if (!params || params.length === 0) return ''
+          const idx = params[0].dataIndex
+          const d = data[idx]
+          if (!d) return ''
+          // 成交量格式化：万/亿
+          const fmtVolume = (v: number) => {
+            if (v >= 1e8) return (v / 1e8).toFixed(2) + '亿'
+            if (v >= 1e4) return (v / 1e4).toFixed(2) + '万'
+            return v.toLocaleString()
+          }
+          return [
+            `<div style="font-weight:600;margin-bottom:4px;">${d.date}</div>`,
+            `开盘: <b>${d.open.toFixed(4)}</b>`,
+            `收盘: <b>${d.close.toFixed(4)}</b>`,
+            `最高: <b>${d.high.toFixed(4)}</b>`,
+            `最低: <b>${d.low.toFixed(4)}</b>`,
+            `涨跌幅: <b>${d.changePercent != null ? d.changePercent.toFixed(2) + '%' : '—'}</b>`,
+            `成交量: <b>${fmtVolume(d.volume)}</b>`,
+            d.afterHours != null ? `盘后价: <b>${d.afterHours.toFixed(4)}</b>` : '',
+            d.afterHoursChangePercent != null ? `盘后涨跌幅: <b>${d.afterHoursChangePercent.toFixed(2)}%</b>` : ''
+          ].filter(Boolean).join('<br/>')
+        } catch {
+          return ''
+        }
       }
     },
     grid: [
@@ -642,28 +651,55 @@ const candleChartOption = computed(() => {
       {
         type: 'value',
         scale: true,
-        splitArea: { show: true },
         gridIndex: 0
       },
       {
         type: 'value',
         scale: true,
         splitNumber: 2,
-        axisLabel: { show: false },
+        name: 'VOL',
+        nameLocation: 'start',
+        nameGap: 2,
+        nameTextStyle: { fontSize: 10, color: '#999' },
+        axisLabel: {
+          show: true,
+          fontSize: 9,
+          color: '#999',
+          formatter: (v: number) => {
+            if (v >= 1e8) return (v / 1e8).toFixed(1) + '亿'
+            if (v >= 1e4) return (v / 1e4).toFixed(0) + '万'
+            return v.toLocaleString()
+          }
+        },
         splitLine: { show: false },
         gridIndex: 1
       }
     ],
     dataZoom: [
-      { type: 'inside', xAxisIndex: [0, 1], start: 50, end: 100 },
-      { type: 'slider', xAxisIndex: [0, 1], start: 50, end: 100, bottom: 8, height: 16 }
+      {
+        type: 'inside',
+        xAxisIndex: [0, 1],
+        zoomOnMouseWheel: true,
+        moveOnMouseMove: true
+      },
+      {
+        type: 'slider',
+        xAxisIndex: [0, 1],
+        bottom: 8, height: 16,
+        realtime: true,
+        brushSelect: false,
+        showDataShadow: false
+      }
     ],
+    animation: false,
     series: [
       {
         type: 'candlestick',
         data: ohlc,
         xAxisIndex: 0,
         yAxisIndex: 0,
+        barWidth: '25%',
+        barMaxWidth: 30,
         itemStyle: {
           color: '#ef232a',
           color0: '#14b143',
@@ -676,6 +712,8 @@ const candleChartOption = computed(() => {
         data: volumes,
         xAxisIndex: 1,
         yAxisIndex: 1,
+        barWidth: '35%',
+        barMaxWidth: 20,
         itemStyle: {
           color: (params: any) => {
             const d = data[params.dataIndex]

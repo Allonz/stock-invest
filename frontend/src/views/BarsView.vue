@@ -139,20 +139,42 @@ const columns = [
     render: (row: BarRecord) => formatPrice(row.closePrice)
   },
   {
-    title: '涨跌幅', key: 'changePercent', width: 110,
-    sorter: (a: BarRecord, b: BarRecord) => {
-      const pa = a.openPrice > 0 ? (a.closePrice - a.openPrice) / a.openPrice : 0
-      const pb = b.openPrice > 0 ? (b.closePrice - b.openPrice) / b.openPrice : 0
-      return pa - pb
-    },
+    title: '最高价', key: 'highPrice', width: 110,
+    sorter: (a: BarRecord, b: BarRecord) => (a.highPrice || 0) - (b.highPrice || 0),
+    render: (row: BarRecord) => row.highPrice != null ? formatPrice(row.highPrice) : '—'
+  },
+  {
+    title: '最低价', key: 'lowPrice', width: 110,
+    sorter: (a: BarRecord, b: BarRecord) => (a.lowPrice || 0) - (b.lowPrice || 0),
+    render: (row: BarRecord) => row.lowPrice != null ? formatPrice(row.lowPrice) : '—'
+  },
+  {
+    title: '涨跌幅', key: 'changePercent', width: 100,
+    sorter: (a: BarRecord, b: BarRecord) => (a.changePercent || 0) - (b.changePercent || 0),
     render: (row: BarRecord) => {
-      const pct = row.openPrice > 0 ? ((row.closePrice - row.openPrice) / row.openPrice * 100).toFixed(2) : '0.00'
-      const isUp = row.closePrice >= row.openPrice
+      const val = row.changePercent
+      if (val == null) return '—'
+      const isUp = val >= 0
       return h(NTag, {
         type: isUp ? 'error' : 'success',
         size: 'small',
         bordered: false
-      }, { default: () => `${isUp ? '+' : ''}${pct}%` })
+      }, { default: () => `${isUp ? '+' : ''}${val.toFixed(2)}%` })
+    }
+  },
+  {
+    title: '盘后价', key: 'afterHours', width: 100,
+    sorter: (a: BarRecord, b: BarRecord) => (a.afterHours || 0) - (b.afterHours || 0),
+    render: (row: BarRecord) => row.afterHours != null ? formatPrice(row.afterHours) : '—'
+  },
+  {
+    title: '盘后涨跌幅', key: 'afterHoursChangePercent', width: 110,
+    sorter: (a: BarRecord, b: BarRecord) => (a.afterHoursChangePercent || 0) - (b.afterHoursChangePercent || 0),
+    render: (row: BarRecord) => {
+      const val = row.afterHoursChangePercent
+      if (val == null) return '—'
+      const isUp = val >= 0
+      return h('span', { style: `color:${isUp ? '#ef232a' : '#14b143'};font-weight:600;` }, `${isUp ? '+' : ''}${val.toFixed(2)}%`)
     }
   },
   {

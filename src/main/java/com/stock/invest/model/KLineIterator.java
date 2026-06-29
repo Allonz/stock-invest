@@ -21,6 +21,13 @@ public class KLineIterator {
     public KLineIterator() {
     }
 
+    /**
+     * 8 参数构造器（兼容旧代码），新增字段默认 0.0
+     */
+    public KLineIterator(String symbol, long time, double open, double high, double low, double close, long volume, double amount) {
+        this(symbol, time, open, high, low, close, volume, amount, 0.0, 0.0, 0.0);
+    }
+
     public KLineIterator(String symbol, long time, double open, double high, double low, double close, long volume, double amount,
                          double changePercent, double afterHours, double afterHoursChangePercent) {
         this.symbol = symbol;
