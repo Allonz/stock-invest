@@ -35,7 +35,6 @@ import com.stock.invest.repository.StockDailyBarRepository;
 import com.stock.invest.service.impl.DataGapFillerServiceImpl;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("DataGapFillerService - data fill task retry logic")
 class DataGapFillerServiceTest {
 

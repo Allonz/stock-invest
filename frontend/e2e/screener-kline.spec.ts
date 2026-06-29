@@ -26,7 +26,7 @@ async function setupMockRoutes(page: Page, candleData?: any[]) {
       body: JSON.stringify({ success: true, data: MOCK_BATCHES, timestamp: '' }),
     })
   })
-  await page.route('**/api/screening/notification/history', async (route) => {
+  await page.route('**/api/notification/history', async (route) => {
     return route.fulfill({
       status: 200, contentType: 'application/json',
       body: JSON.stringify({ success: true, data: [], timestamp: '' }),
@@ -123,7 +123,8 @@ test.describe('ScreenerView K线 E2E', () => {
     await page.goto('/screener', { waitUntil: 'domcontentloaded', timeout: 15000 })
     await page.waitForTimeout(1500)
     await openBatchAndClickSymbol(page, 'AAPL')
-    await page.waitForTimeout(2000)
+    // Verify error notification appears (naive-ui notification renders as .n-notification)
+    await page.waitForSelector('.n-notification', { timeout: 3000 })
   })
 
   test('E2E-005: should show empty state when data is empty', async ({ page }) => {
