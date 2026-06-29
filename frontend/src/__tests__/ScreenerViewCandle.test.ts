@@ -24,10 +24,10 @@ vi.mock('vue-echarts', () => ({
   default: { name: 'VChart', template: '<div class="mock-chart" />' },
 }))
 
-// Mock echarts core (used in ScreenerView)
+// Mock echarts core (used in useCandleChart composable)
 vi.mock('echarts/core', () => ({ use: vi.fn() }))
 vi.mock('echarts/renderers', () => ({ CanvasRenderer: {} }))
-vi.mock('echarts/charts', () => ({ CandlestickChart: {} }))
+vi.mock('echarts/charts', () => ({ CandlestickChart: {}, BarChart: {} }))
 vi.mock('echarts/components', () => ({
   GridComponent: {},
   TooltipComponent: {},

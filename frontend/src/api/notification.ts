@@ -1,9 +1,4 @@
 // 通知相关 API
-import request from './request'
-import type { ApiResponse } from './request'
-import type { NotificationResult } from './screening'
-
-/** 获取最新筛选通知 */
-export function fetchLatestNotification() {
-  return request.get<ApiResponse<NotificationResult>>('/api/notification/latest')
-}
+// fetchLatestNotification 已统一到 screening.ts 中导出，避免重复定义
+// 此文件保留供未来扩展其他通知相关 API
+export {}

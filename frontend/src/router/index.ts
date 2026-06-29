@@ -51,6 +51,17 @@ const routes: RouteRecordRaw[] = [
   }
 ]
 
+{
+  path: '/:pathMatch(.*)*',
+  redirect: '/'
+}
+,
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/'
+  }
+]
+
 const router = createRouter({
   history: createWebHistory(),
   routes

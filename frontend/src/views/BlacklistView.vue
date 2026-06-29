@@ -15,7 +15,7 @@
 <script setup lang="ts">
 import { ref, onMounted, h } from 'vue'
 import { NCard, NDataTable, NButton, useMessage, NSpin } from 'naive-ui'
-import { get, post } from '../api/request'
+import request from '../api/request'
 
 interface BlacklistRow {
   id: number
@@ -96,7 +96,7 @@ const columns = [
 async function loadData() {
   loading.value = true
   try {
-    const res = await get('/api/blacklist/list')
+    const res = await request.get('/api/blacklist/list').then(res => res.data)
     blacklistData.value = res as BlacklistRow[]
   } catch (e) {
     message.error('加载黑名单列表失败')
@@ -107,7 +107,7 @@ async function loadData() {
 
 async function handleClear(row: BlacklistRow) {
   try {
-    await post(`/api/blacklist/clear?symbol=${row.symbol}`, {})
+    await request.post(`/api/blacklist/clear?symbol=${encodeURIComponent(row.symbol)}`, {})
     message.success(`已解除 ${row.symbol} 的黑名单`)
     await loadData()
   } catch (e) {
