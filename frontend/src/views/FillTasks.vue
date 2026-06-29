@@ -642,20 +642,19 @@ function stopRetryPolling() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   loadTaskCount()
-  loadProgress()
+  await loadProgress()
   loadTasks()
   // 如果有正在运行的补缺，开始轮询
   if (progress.running) {
     startPolling()
   }
   // 加载历史重试进度
-  loadRetryProgress().then(() => {
-    if (retryProgress.running) {
-      startRetryPolling()
-    }
-  })
+  await loadRetryProgress()
+  if (retryProgress.running) {
+    startRetryPolling()
+  }
 })
 
 onUnmounted(() => {
