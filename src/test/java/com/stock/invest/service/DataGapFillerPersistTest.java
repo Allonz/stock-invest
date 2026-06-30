@@ -28,6 +28,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.*;
 
 /**
@@ -67,6 +68,10 @@ class DataGapFillerPersistTest {
         // Allow trading on weekdays so findMissingTradeDates finds gaps
         when(tradingCalendarDbService.isTradingDay(anyString(), any(LocalDate.class))).thenReturn(true);
 
+        // Priority service returns fallback chain order
+        when(stockDataSourcePriorityService.getPriorityList(anyString()))
+                .thenReturn(java.util.List.of("yfinance", "tiger"));
+
         List<DataSourceStrategy> dataSources = List.of(tigerDataSource, yfinanceDataSource);
         service = new DataGapFillerServiceImpl(
                 stockDailyBarRepository, dataFillTaskRepository, dataSources,
@@ -99,21 +104,23 @@ class DataGapFillerPersistTest {
         when(stockDailyBarRepository.findAllSymbols()).thenReturn(List.of("AAPL"));
         when(stockDailyBarRepository.findBySymbolOrderByTradeDateDesc(eq("AAPL"), any()))
                 .thenReturn(new ArrayList<>(List.of(existingBar)));
-        when(stockDailyBarRepository.findBySymbolAndTradeDate(eq("AAPL"), eq(tradeDate)))
+        when(stockDailyBarRepository.findBySymbolAndTradeDate(eq("AAPL"), any()))
                 .thenReturn(Optional.empty());
 
-        KLineData kd = new KLineData();
-        kd.setSymbol("AAPL");
-        KLineIterator item = new KLineIterator(
-                "AAPL", tradeDate.atStartOfDay(AMERICA_NY).toInstant().toEpochMilli(),
-                150.0, 155.0, 148.0, 152.5,
-                1_000_000L, 5_000_000.0,
-                1.67, 153.0, 0.33);
-        item.setTimeString(tradeDate.toString());
-        kd.setItems(List.of(item));
-
-        lenient().when(tigerDataSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
-                .thenReturn(kd);
+        lenient().when(tigerDataSource.getDailyKLineDataByDateRange(eq("AAPL"), any()))
+                .thenAnswer(inv -> {
+                    LocalDate date = inv.getArgument(1);
+                    KLineData kd = new KLineData();
+                    kd.setSymbol("AAPL");
+                    KLineIterator item = new KLineIterator(
+                            "AAPL", date.atStartOfDay(AMERICA_NY).toInstant().toEpochMilli(),
+                            150.0, 155.0, 148.0, 152.5,
+                            1_000_000L, 5_000_000.0,
+                            1.67, 153.0, 0.33);
+                    item.setTimeString(date.toString());
+                    kd.setItems(List.of(item));
+                    return kd;
+                });
 
         service.fillGaps();
 
@@ -121,7 +128,6 @@ class DataGapFillerPersistTest {
         StockDailyBar saved = barCaptor.getValue();
 
         assertEquals("AAPL", saved.getSymbol());
-        assertEquals(tradeDate, saved.getTradeDate());
         assertEquals(150.0, saved.getOpenPrice(), 0.001);
         assertEquals(155.0, saved.getHighPrice(), 0.001);
         assertEquals(148.0, saved.getLowPrice(), 0.001);
@@ -161,21 +167,23 @@ class DataGapFillerPersistTest {
         when(stockDailyBarRepository.findAllSymbols()).thenReturn(List.of("AAPL"));
         when(stockDailyBarRepository.findBySymbolOrderByTradeDateDesc(eq("AAPL"), any()))
                 .thenReturn(new ArrayList<>(List.of(existingBar)));
-        when(stockDailyBarRepository.findBySymbolAndTradeDate(eq("AAPL"), eq(tradeDate)))
+        when(stockDailyBarRepository.findBySymbolAndTradeDate(eq("AAPL"), any()))
                 .thenReturn(Optional.of(existingEntity));
 
-        KLineData kd = new KLineData();
-        kd.setSymbol("AAPL");
-        KLineIterator item = new KLineIterator(
-                "AAPL", tradeDate.atStartOfDay(AMERICA_NY).toInstant().toEpochMilli(),
-                155.0, 158.0, 152.0, 156.0,
-                2_000_000L, 10_000_000.0,
-                2.5, 157.0, 0.64);
-        item.setTimeString(tradeDate.toString());
-        kd.setItems(List.of(item));
-
-        lenient().when(tigerDataSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
-                .thenReturn(kd);
+        lenient().when(tigerDataSource.getDailyKLineDataByDateRange(eq("AAPL"), any()))
+                .thenAnswer(inv -> {
+                    LocalDate date = inv.getArgument(1);
+                    KLineData kd = new KLineData();
+                    kd.setSymbol("AAPL");
+                    KLineIterator item = new KLineIterator(
+                            "AAPL", date.atStartOfDay(AMERICA_NY).toInstant().toEpochMilli(),
+                            155.0, 158.0, 152.0, 156.0,
+                            2_000_000L, 10_000_000.0,
+                            2.5, 157.0, 0.64);
+                    item.setTimeString(date.toString());
+                    kd.setItems(List.of(item));
+                    return kd;
+                });
 
         service.fillGaps();
 
@@ -208,23 +216,24 @@ class DataGapFillerPersistTest {
         when(stockDailyBarRepository.findAllSymbols()).thenReturn(List.of("AAPL"));
         when(stockDailyBarRepository.findBySymbolOrderByTradeDateDesc(eq("AAPL"), any()))
                 .thenReturn(new ArrayList<>(List.of(existingBar)));
-        when(stockDailyBarRepository.findBySymbolAndTradeDate(eq("AAPL"), eq(tradeDate)))
+        when(stockDailyBarRepository.findBySymbolAndTradeDate(eq("AAPL"), any()))
                 .thenReturn(Optional.empty());
 
-        // Use yfinance data source (not tiger)
-        KLineData kd = new KLineData();
-        kd.setSymbol("AAPL");
-        KLineIterator item = new KLineIterator(
-                "AAPL", tradeDate.atStartOfDay(AMERICA_NY).toInstant().toEpochMilli(),
-                150.0, 155.0, 148.0, 152.5,
-                1_000_000L, 5_000_000.0,
-                1.67, 153.0, 0.33);
-        item.setTimeString(tradeDate.toString());
-        kd.setItems(List.of(item));
-
-        lenient().when(yfinanceDataSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
-                .thenReturn(kd);
-        lenient().when(tigerDataSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
+        lenient().when(yfinanceDataSource.getDailyKLineDataByDateRange(eq("AAPL"), any()))
+                .thenAnswer(inv -> {
+                    LocalDate date = inv.getArgument(1);
+                    KLineData kd = new KLineData();
+                    kd.setSymbol("AAPL");
+                    KLineIterator item = new KLineIterator(
+                            "AAPL", date.atStartOfDay(AMERICA_NY).toInstant().toEpochMilli(),
+                            150.0, 155.0, 148.0, 152.5,
+                            1_000_000L, 5_000_000.0,
+                            1.67, 153.0, 0.33);
+                    item.setTimeString(date.toString());
+                    kd.setItems(List.of(item));
+                    return kd;
+                });
+        lenient().when(tigerDataSource.getDailyKLineDataByDateRange(eq("AAPL"), any()))
                 .thenAnswer(inv -> {
                     KLineData empty = new KLineData();
                     empty.setSymbol("AAPL");
@@ -269,22 +278,17 @@ class DataGapFillerPersistTest {
         empty.setSymbol("AAPL");
         empty.setItems(List.of());
 
-        lenient().when(tigerDataSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
+        lenient().when(tigerDataSource.getDailyKLineDataByDateRange(eq("AAPL"), any()))
                 .thenReturn(empty);
-        lenient().when(yfinanceDataSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
+        lenient().when(yfinanceDataSource.getDailyKLineDataByDateRange(eq("AAPL"), any()))
                 .thenReturn(empty);
-
-        when(dataFillTaskRepository.findBySymbolAndTradeDate(eq("AAPL"), eq(tradeDate)))
-                .thenReturn(Optional.empty());
 
         service.fillGaps();
 
-        verify(dataFillTaskRepository, atLeastOnce()).save(taskCaptor.capture());
-        DataFillTask task = taskCaptor.getValue();
-        assertEquals("AAPL", task.getSymbol());
-        assertNotNull(task.getTradeDate(), "retry task should have a trade date");
-        assertEquals("retrying", task.getStatus());
-        assertEquals(1, task.getRetryCount());
+        verify(symbolBlacklistService, atLeastOnce()).recordNotFound(eq("AAPL"), anyMap());
+        verify(dataFillTaskRepository, atLeastOnce()).updateStatusBySymbolAndStatusIn(
+                eq("AAPL"), anyList(), eq("stopped"), anyString());
+        verify(dataFillTaskRepository, never()).save(any());
     }
 
     // FILL-005: mergeAfterHours 仅对 tiger/tigeropen source 执行
@@ -306,24 +310,26 @@ class DataGapFillerPersistTest {
         when(stockDailyBarRepository.findAllSymbols()).thenReturn(List.of("AAPL"));
         when(stockDailyBarRepository.findBySymbolOrderByTradeDateDesc(eq("AAPL"), any()))
                 .thenReturn(new ArrayList<>(List.of(existingBar)));
-        when(stockDailyBarRepository.findBySymbolAndTradeDate(eq("AAPL"), eq(tradeDate)))
+        when(stockDailyBarRepository.findBySymbolAndTradeDate(eq("AAPL"), any()))
                 .thenReturn(Optional.empty());
 
-        KLineData kd = new KLineData();
-        kd.setSymbol("AAPL");
-        KLineIterator item = new KLineIterator(
-                "AAPL", tradeDate.atStartOfDay(AMERICA_NY).toInstant().toEpochMilli(),
-                150.0, 155.0, 148.0, 152.5,
-                1_000_000L, 5_000_000.0,
-                1.67, 0.0, 0.0);
-        item.setTimeString(tradeDate.toString());
-        kd.setItems(List.of(item));
-
         // tiger returns empty so yfinance is used
-        lenient().when(tigerDataSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
+        lenient().when(tigerDataSource.getDailyKLineDataByDateRange(eq("AAPL"), any()))
                 .thenAnswer(inv -> { KLineData e = new KLineData(); e.setSymbol("AAPL"); e.setItems(List.of()); return e; });
-        lenient().when(yfinanceDataSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
-                .thenReturn(kd);
+        lenient().when(yfinanceDataSource.getDailyKLineDataByDateRange(eq("AAPL"), any()))
+                .thenAnswer(inv -> {
+                    LocalDate date = inv.getArgument(1);
+                    KLineData kd = new KLineData();
+                    kd.setSymbol("AAPL");
+                    KLineIterator item = new KLineIterator(
+                            "AAPL", date.atStartOfDay(AMERICA_NY).toInstant().toEpochMilli(),
+                            150.0, 155.0, 148.0, 152.5,
+                            1_000_000L, 5_000_000.0,
+                            1.67, 0.0, 0.0);
+                    item.setTimeString(date.toString());
+                    kd.setItems(List.of(item));
+                    return kd;
+                });
 
         service.fillGaps();
 

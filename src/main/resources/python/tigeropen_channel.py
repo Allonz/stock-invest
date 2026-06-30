@@ -46,8 +46,10 @@ def _cmd_scan(client, limit: int, min_p: float, max_p: float):
 
 def _cmd_bars(client, symbol: str, lim: int):
     import math
+    from datetime import datetime, timezone
 
     from tigeropen.common.consts import BarPeriod
+    from tigeropen.common.consts import TradingSession
 
     df = client.get_bars(symbol, period=BarPeriod.DAY, limit=int(lim))
     items = []
@@ -71,9 +73,25 @@ def _cmd_bars(client, symbol: str, lim: int):
                     "close": float(row["close"]),
                     "volume": int(vol),
                     "amount": float(amt),
-                    "changePercent": ((float(row["close"]) - float(row["open"])) / float(row["open"]) * 100) if float(row["open"]) != 0 else 0.0,
                 }
             )
+
+    # 获取盘后 K 线，按日期合并到日 K 线中
+    ah_df = client.get_bars(
+        symbol, period=BarPeriod.DAY, limit=int(lim), trade_session=TradingSession.AFTER_HOURS
+    )
+    if ah_df is not None and not ah_df.empty:
+        ah_by_date = {}
+        for _, row in ah_df.iterrows():
+            t = int(row["time"])
+            d = datetime.fromtimestamp(t / 1000, tz=timezone.utc).strftime("%Y-%m-%d")
+            ah_by_date[d] = float(row["close"])
+        for item in items:
+            t = item.get("time", 0)
+            d = datetime.fromtimestamp(t / 1000, tz=timezone.utc).strftime("%Y-%m-%d")
+            if d in ah_by_date:
+                item["afterHours"] = ah_by_date[d]
+
     items.sort(key=lambda x: x["time"], reverse=True)
     print(json.dumps({"symbol": symbol, "items": items}))
 
@@ -108,7 +126,6 @@ def _cmd_afterhours_bars(client, symbol: str, lim: int):
                     "close": float(row["close"]),
                     "volume": int(vol),
                     "amount": float(amt),
-                    "changePercent": ((float(row["close"]) - float(row["open"])) / float(row["open"]) * 100) if float(row["open"]) != 0 else 0.0,
                 }
             )
     items.sort(key=lambda x: x["time"], reverse=True)

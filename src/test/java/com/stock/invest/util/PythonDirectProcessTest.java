@@ -103,8 +103,10 @@ class PythonDirectProcessTest {
             Map<?, ?> result = mapper.readValue(output, Map.class);
             assertTrue(
                     result.containsKey("symbol") || result.containsKey("longName")
-                            || (result.containsKey("error") && result.get("error").toString().contains("dict")),
-                    "Response should contain 'symbol'/'longName' or a dict-callable error. Got: " + output);
+                            || (result.containsKey("error") && (result.get("error").toString().contains("dict")
+                                    || result.get("error").toString().contains("Rate")
+                                    || result.get("error").toString().contains("limit"))),
+                    "Response should contain 'symbol'/'longName' or a dict/Rate-limited error. Got: " + output);
         } catch (Exception e) {
             String msg = e.getMessage();
             assertTrue(msg.contains("yfinance") || msg.contains("ModuleNotFound") || msg.contains("No module"),

@@ -158,7 +158,7 @@ class DataSourceDateRangeTest {
 
         // source1: real implementation via anonymous class
         KLineData data1 = makeKLineData(TRADE_DATE, 10.0, 11.0, 1000L);
-        DataSourceStrategy source1 = new DataSourceStrategy() {
+        DataSourceStrategy source1 = new StockScannerStrategy() {
             @Override public String getSourceName() { return "source1"; }
             @Override public boolean isAvailable() { return true; }
             @Override public String getDailyKLineData(String s) { return null; }
@@ -180,7 +180,7 @@ class DataSourceDateRangeTest {
         };
 
         // source2: should NOT be reached
-        DataSourceStrategy source2 = new DataSourceStrategy() {
+        DataSourceStrategy source2 = new StockScannerStrategy() {
             @Override public String getSourceName() { return "source2"; }
             @Override public boolean isAvailable() { return true; }
             @Override public String getDailyKLineData(String s) { return null; }
@@ -206,8 +206,9 @@ class DataSourceDateRangeTest {
         when(barRepo.findBySymbolOrderByTradeDateDesc(eq(SYMBOL), any(PageRequest.class)))
                 .thenReturn(List.of(existingBar));
         when(barRepo.findAllSymbols()).thenReturn(List.of(SYMBOL));
-        when(barRepo.findBySymbolAndTradeDate(anyString(), any())).thenReturn(Optional.empty());
+        lenient().when(barRepo.findBySymbolAndTradeDate(anyString(), any())).thenReturn(Optional.empty());
         when(calendarService.isTradingDay(eq("US"), any())).thenReturn(true);
+        when(priorityService.getPriorityList(anyString())).thenReturn(java.util.List.of("source1", "source2"));
 
         service.fillGaps();
 
@@ -233,7 +234,7 @@ class DataSourceDateRangeTest {
         SymbolBlacklistService symbolBlacklistService = mock(SymbolBlacklistService.class);
 
         // source1: returns null (no data)
-        DataSourceStrategy source1 = new DataSourceStrategy() {
+        DataSourceStrategy source1 = new StockScannerStrategy() {
             @Override public String getSourceName() { return "source1"; }
             @Override public boolean isAvailable() { return true; }
             @Override public String getDailyKLineData(String s) { return null; }
@@ -253,7 +254,7 @@ class DataSourceDateRangeTest {
 
         // source2: has data for any date
         KLineData data2 = makeKLineData(TRADE_DATE, 10.0, 11.0, 1000L);
-        DataSourceStrategy source2 = new DataSourceStrategy() {
+        DataSourceStrategy source2 = new StockScannerStrategy() {
             @Override public String getSourceName() { return "source2"; }
             @Override public boolean isAvailable() { return true; }
             @Override public String getDailyKLineData(String s) { return null; }
@@ -283,8 +284,9 @@ class DataSourceDateRangeTest {
         when(barRepo.findBySymbolOrderByTradeDateDesc(eq(SYMBOL), any(PageRequest.class)))
                 .thenReturn(List.of(existingBar));
         when(barRepo.findAllSymbols()).thenReturn(List.of(SYMBOL));
-        when(barRepo.findBySymbolAndTradeDate(anyString(), any())).thenReturn(Optional.empty());
+        lenient().when(barRepo.findBySymbolAndTradeDate(anyString(), any())).thenReturn(Optional.empty());
         when(calendarService.isTradingDay(eq("US"), any())).thenReturn(true);
+        when(priorityService.getPriorityList(anyString())).thenReturn(java.util.List.of("source1", "source2"));
 
         service.fillGaps();
 

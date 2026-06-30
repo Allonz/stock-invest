@@ -110,7 +110,6 @@ def get_daily_kline(symbol: str) -> str:
                 "close": float(v["close"]),
                 "volume": int(v.get("volume", 0)),
                 "amount": float(v["close"]) * int(v.get("volume", 0)),
-                "changePercent": ((float(v["close"]) - float(v["open"])) / float(v["open"]) * 100) if float(v["open"]) != 0 else 0.0
             })
         return json.dumps({"symbol": symbol, "items": items})
     except Exception as e:
@@ -141,7 +140,6 @@ def get_daily_kline_range(symbol: str, start_date: str, end_date: str) -> str:
                 "close": float(v["close"]),
                 "volume": int(v.get("volume", 0)),
                 "amount": float(v["close"]) * int(v.get("volume", 0)),
-                "changePercent": ((float(v["close"]) - float(v["open"])) / float(v["open"]) * 100) if float(v["open"]) != 0 else 0.0
             })
         return json.dumps({"symbol": symbol, "items": items})
     except Exception as e:

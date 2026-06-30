@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -14,6 +15,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -38,6 +40,7 @@ class ScreeningServiceTest {
     @Mock private ScreeningMatchRepository screeningMatchRepository;
     @Mock private PatternEvaluateService patternEvaluateService;
     @Mock private ScannerProperties scannerProperties;
+    @Mock private TradingCalendarDbService tradingCalendarDbService;
 
     @InjectMocks
     private ScreeningServiceImpl screeningService;
@@ -57,6 +60,26 @@ class ScreeningServiceTest {
     @DisplayName("runScreening — 筛选流程")
     class RunScreeningTest {
 
+        @BeforeEach
+        void setUp() {
+            // Mock trading calendar: all weekdays are open trading days
+            lenient().when(tradingCalendarDbService.getRange(any(), any(), any())).thenAnswer(inv -> {
+                LocalDate first = inv.getArgument(1);
+                LocalDate last = inv.getArgument(2);
+                List<com.stock.invest.entity.TradingCalendarEntity> entries = new ArrayList<>();
+                for (LocalDate d = first; !d.isAfter(last); d = d.plusDays(1)) {
+                    if (d.getDayOfWeek().getValue() <= 5) {
+                        com.stock.invest.entity.TradingCalendarEntity e =
+                                new com.stock.invest.entity.TradingCalendarEntity();
+                        e.setTradeDate(d);
+                        e.setIsOpen(true);
+                        entries.add(e);
+                    }
+                }
+                return entries;
+            });
+        }
+
         @Test
         @DisplayName("正常筛选流程，结果写入 screening_match")
         void test_screening_success() {
@@ -74,6 +97,8 @@ class ScreeningServiceTest {
 
             when(patternEvaluateService.matchesIncreasingVolumePattern(anyList(), anyInt()))
                     .thenReturn(true);
+            // bars 是 oldest-first（循环从 i=13 到 i=0），但查询返回 newest-first
+            java.util.Collections.reverse(bars);
             when(stockDailyBarRepository.findByTradeDateBetweenOrderByTradeDateDesc(any(LocalDate.class), eq(tradeDate)))
                     .thenReturn(bars);
             when(screeningMatchRepository.saveAll(anyList()))
@@ -135,8 +160,6 @@ class ScreeningServiceTest {
 
             when(stockDailyBarRepository.findByTradeDateBetweenOrderByTradeDateDesc(any(LocalDate.class), eq(tradeDate)))
                     .thenReturn(bars);
-            when(patternEvaluateService.matchesIncreasingVolumePattern(anyList(), anyInt()))
-                    .thenReturn(false);
 
             screeningService.runScreening(tradeDate);
 

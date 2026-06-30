@@ -57,13 +57,13 @@ class DataGapFillerAfterHoursTest {
 
     @BeforeEach
     void setUp() {
-        when(tigerSource.getSourceName()).thenReturn("tiger");
-        when(tigerSource.isAvailable()).thenReturn(true);
+        lenient().when(tigerSource.getSourceName()).thenReturn("tiger");
+        lenient().when(tigerSource.isAvailable()).thenReturn(true);
 
-        when(gapFillProperties.getMinPriceThreshold()).thenReturn(1.0);
+        lenient().when(gapFillProperties.getMinPriceThreshold()).thenReturn(1.0);
 
         // Allow trading on weekdays so findMissingTradeDates finds gaps
-        when(tradingCalendarDbService.isTradingDay(anyString(), any(LocalDate.class))).thenReturn(true);
+        lenient().when(tradingCalendarDbService.isTradingDay(anyString(), any(LocalDate.class))).thenReturn(true);
 
         // TigerStockServiceImpl mock is the real TigerStockServiceImpl (instanceof check works)
         List<DataSourceStrategy> dataSources = List.of(tigerSource);
@@ -71,6 +71,8 @@ class DataGapFillerAfterHoursTest {
                 stockDailyBarRepository, dataFillTaskRepository, dataSources,
                 gapFillProperties, dataFillProgressService, tradingCalendarDbService,
                 stockDataSourcePriorityService, symbolBlacklistService);
+        lenient().when(stockDataSourcePriorityService.getPriorityList(anyString()))
+                .thenReturn(java.util.List.of("tiger", "yfinance"));
     }
 
     private LocalDate nyToday() {
@@ -90,17 +92,16 @@ class DataGapFillerAfterHoursTest {
         when(stockDailyBarRepository.findAllSymbols()).thenReturn(List.of("AAPL"));
         when(stockDailyBarRepository.findBySymbolOrderByTradeDateDesc(eq("AAPL"), any()))
                 .thenReturn(new ArrayList<>(List.of(existingBar)));
-        when(stockDailyBarRepository.findBySymbolAndTradeDate(eq("AAPL"), eq(tradeDate)))
+        when(stockDailyBarRepository.findBySymbolAndTradeDate(eq("AAPL"), any()))
                 .thenReturn(Optional.empty());
 
-        // Primary daily KLine data — make tiger data source return a regular bar first
-        KLineData dailyKd = createKLineData("AAPL", tradeDate, 150.0, 155.0, 148.0, 152.5, 1_000_000L);
-        when(tigerSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
-                .thenReturn(dailyKd);
+        // Primary daily KLine data — use Answer to match dynamic gap dates
+        when(tigerSource.getDailyKLineDataByDateRange(eq("AAPL"), any()))
+                .thenAnswer(inv -> createKLineData("AAPL", inv.getArgument(1), 150.0, 155.0, 148.0, 152.5, 1_000_000L));
 
         // After-hours data — tiger returns a separate after-hours bar
         KLineData ahKd = createKLineData("AAPL", tradeDate, 152.5, 153.5, 152.0, 153.0, 100_000L);
-        when(tigerSource.getAfterHoursKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
+        when(tigerSource.getAfterHoursKLineDataByDateRange(eq("AAPL"), any()))
                 .thenReturn(ahKd);
 
         service.fillGaps();
@@ -143,12 +144,11 @@ class DataGapFillerAfterHoursTest {
         when(stockDailyBarRepository.findAllSymbols()).thenReturn(List.of("AAPL"));
         when(stockDailyBarRepository.findBySymbolOrderByTradeDateDesc(eq("AAPL"), any()))
                 .thenReturn(new ArrayList<>(List.of(existingBar)));
-        when(stockDailyBarRepository.findBySymbolAndTradeDate(eq("AAPL"), eq(tradeDate)))
+        when(stockDailyBarRepository.findBySymbolAndTradeDate(eq("AAPL"), any()))
                 .thenReturn(Optional.empty());
 
-        KLineData kd = createKLineData("AAPL", tradeDate, 150.0, 155.0, 148.0, 152.5, 1_000_000L);
-        when(yfinanceSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
-                .thenReturn(kd);
+        when(yfinanceSource.getDailyKLineDataByDateRange(eq("AAPL"), any()))
+                .thenAnswer(inv -> createKLineData("AAPL", inv.getArgument(1), 150.0, 155.0, 148.0, 152.5, 1_000_000L));
 
         yService.fillGaps();
 
@@ -173,15 +173,14 @@ class DataGapFillerAfterHoursTest {
         when(stockDailyBarRepository.findAllSymbols()).thenReturn(List.of("AAPL"));
         when(stockDailyBarRepository.findBySymbolOrderByTradeDateDesc(eq("AAPL"), any()))
                 .thenReturn(new ArrayList<>(List.of(existingBar)));
-        when(stockDailyBarRepository.findBySymbolAndTradeDate(eq("AAPL"), eq(tradeDate)))
+        when(stockDailyBarRepository.findBySymbolAndTradeDate(eq("AAPL"), any()))
                 .thenReturn(Optional.empty());
 
-        KLineData dailyKd = createKLineData("AAPL", tradeDate, 150.0, 155.0, 148.0, 152.5, 1_000_000L);
-        when(tigerSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
-                .thenReturn(dailyKd);
+        when(tigerSource.getDailyKLineDataByDateRange(eq("AAPL"), any()))
+                .thenAnswer(inv -> createKLineData("AAPL", inv.getArgument(1), 150.0, 155.0, 148.0, 152.5, 1_000_000L));
 
         // After-hours returns null
-        when(tigerSource.getAfterHoursKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
+        when(tigerSource.getAfterHoursKLineDataByDateRange(eq("AAPL"), any()))
                 .thenReturn(null);
 
         service.fillGaps();
@@ -205,15 +204,14 @@ class DataGapFillerAfterHoursTest {
         when(stockDailyBarRepository.findAllSymbols()).thenReturn(List.of("AAPL"));
         when(stockDailyBarRepository.findBySymbolOrderByTradeDateDesc(eq("AAPL"), any()))
                 .thenReturn(new ArrayList<>(List.of(existingBar)));
-        when(stockDailyBarRepository.findBySymbolAndTradeDate(eq("AAPL"), eq(tradeDate)))
+        when(stockDailyBarRepository.findBySymbolAndTradeDate(eq("AAPL"), any()))
                 .thenReturn(Optional.empty());
 
-        KLineData dailyKd = createKLineData("AAPL", tradeDate, 150.0, 155.0, 148.0, 152.5, 1_000_000L);
-        when(tigerSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
-                .thenReturn(dailyKd);
+        when(tigerSource.getDailyKLineDataByDateRange(eq("AAPL"), any()))
+                .thenAnswer(inv -> createKLineData("AAPL", inv.getArgument(1), 150.0, 155.0, 148.0, 152.5, 1_000_000L));
 
         // After-hours throws exception
-        when(tigerSource.getAfterHoursKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
+        when(tigerSource.getAfterHoursKLineDataByDateRange(eq("AAPL"), any()))
                 .thenThrow(new RuntimeException("API timeout"));
 
         // Should not throw — the exception is caught
@@ -239,17 +237,16 @@ class DataGapFillerAfterHoursTest {
         when(stockDailyBarRepository.findAllSymbols()).thenReturn(List.of("AAPL"));
         when(stockDailyBarRepository.findBySymbolOrderByTradeDateDesc(eq("AAPL"), any()))
                 .thenReturn(new ArrayList<>(List.of(existingBar)));
-        when(stockDailyBarRepository.findBySymbolAndTradeDate(eq("AAPL"), eq(tradeDate)))
+        when(stockDailyBarRepository.findBySymbolAndTradeDate(eq("AAPL"), any()))
                 .thenReturn(Optional.empty());
 
         // closePrice = 100.0
-        KLineData dailyKd = createKLineData("AAPL", tradeDate, 99.0, 101.0, 98.0, 100.0, 1_000_000L);
-        when(tigerSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
-                .thenReturn(dailyKd);
+        when(tigerSource.getDailyKLineDataByDateRange(eq("AAPL"), any()))
+                .thenAnswer(inv -> createKLineData("AAPL", inv.getArgument(1), 99.0, 101.0, 98.0, 100.0, 1_000_000L));
 
         // after-hours close = 103.0
         KLineData ahKd = createKLineData("AAPL", tradeDate, 100.0, 104.0, 99.5, 103.0, 50_000L);
-        when(tigerSource.getAfterHoursKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
+        when(tigerSource.getAfterHoursKLineDataByDateRange(eq("AAPL"), any()))
                 .thenReturn(ahKd);
 
         service.fillGaps();
@@ -287,22 +284,21 @@ class DataGapFillerAfterHoursTest {
         when(stockDailyBarRepository.findAllSymbols()).thenReturn(List.of("AAPL"));
         when(stockDailyBarRepository.findBySymbolOrderByTradeDateDesc(eq("AAPL"), any()))
                 .thenReturn(new ArrayList<>(List.of(existingBar)));
-        when(stockDailyBarRepository.findBySymbolAndTradeDate(eq("AAPL"), eq(tradeDate)))
+        when(stockDailyBarRepository.findBySymbolAndTradeDate(eq("AAPL"), any()))
                 .thenReturn(Optional.empty());
 
-        KLineData dailyKd = createKLineData("AAPL", tradeDate, 150.0, 155.0, 148.0, 152.5, 1_000_000L);
-        when(tigerSource.getDailyKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
-                .thenReturn(dailyKd);
+        when(tigerSource.getDailyKLineDataByDateRange(eq("AAPL"), any()))
+                .thenAnswer(inv -> createKLineData("AAPL", inv.getArgument(1), 150.0, 155.0, 148.0, 152.5, 1_000_000L));
 
         // After hours data available
         KLineData ahKd = createKLineData("AAPL", tradeDate, 152.5, 153.5, 152.0, 153.0, 100_000L);
-        when(tigerSource.getAfterHoursKLineDataByDateRange(eq("AAPL"), eq(tradeDate)))
+        when(tigerSource.getAfterHoursKLineDataByDateRange(eq("AAPL"), any()))
                 .thenReturn(ahKd);
 
         service.fillGaps();
 
         // Verify getAfterHoursKLineDataByDateRange was called (meaning findTigerSource succeeded)
-        verify(tigerSource, atLeastOnce()).getAfterHoursKLineDataByDateRange(eq("AAPL"), eq(tradeDate));
+        verify(tigerSource, atLeastOnce()).getAfterHoursKLineDataByDateRange(eq("AAPL"), any());
     }
 
     // ========== Helper Methods ==========

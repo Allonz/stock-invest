@@ -132,8 +132,10 @@ class PythonScriptExecutorTest {
             // Accept either successful fields or the error message.
             assertTrue(
                     result.containsKey("symbol") || result.containsKey("longName")
-                            || (result.containsKey("error") && result.get("error").toString().contains("dict")),
-                    "yfinance response should contain 'symbol'/'longName' or a dict-callable error. Got: " + output);
+                            || (result.containsKey("error") && (result.get("error").toString().contains("dict")
+                                    || result.get("error").toString().contains("Rate")
+                                    || result.get("error").toString().contains("limit"))),
+                    "yfinance response should contain 'symbol'/'longName' or a dict/Rate-limited error. Got: " + output);
         } catch (IOException e) {
             String msg = e.getMessage();
             assertTrue(msg.contains("yfinance") || msg.contains("ModuleNotFound"),

@@ -80,7 +80,6 @@ def get_stock_info(symbol: str) -> str:
             "lowPrice": float(hist["Low"].iloc[-1]),
             "volume": int(hist["Volume"].iloc[-1]),
             "change": float(hist["Close"].iloc[-1] - hist["Open"].iloc[-1]),
-            "changePercent": ((float(hist["Close"].iloc[-1]) - float(hist["Open"].iloc[-1])) / float(hist["Open"].iloc[-1]) * 100) if float(hist["Open"].iloc[-1]) != 0 else 0.0,
         }
         # 盘后交易数据（部分股票无盘后交易）
         if info.get("postMarketPrice") is not None:
@@ -143,7 +142,6 @@ def get_daily_kline(symbol: str, days: int = 7) -> str:
                 "close": float(row['Close']),
                 "volume": int(row['Volume']),
                 "amount": float(row['Close'] * row['Volume']),
-                "changePercent": ((float(row['Close']) - float(row['Open'])) / float(row['Open']) * 100) if float(row['Open']) != 0 else 0.0
             }
             kline_data["items"].append(item)
         return json.dumps(kline_data)
@@ -176,7 +174,6 @@ def get_daily_kline_range(symbol: str, start_date: str, end_date: str) -> str:
                 "close": float(row['Close']),
                 "volume": int(row['Volume']),
                 "amount": float(row['Close'] * row['Volume']),
-                "changePercent": ((float(row['Close']) - float(row['Open'])) / float(row['Open']) * 100) if float(row['Open']) != 0 else 0.0
             }
             kline_data["items"].append(item)
         return json.dumps(kline_data)

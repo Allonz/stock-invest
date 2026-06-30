@@ -118,10 +118,14 @@ class PatternEvaluateServiceImplTest {
     @Test
     @DisplayName("PE-009: matchesIncreasingVolumePattern StockDailyBar version - non-increasing")
     void test_matchesIncreasingVolumePattern_stockDailyBar_nonIncreasing() {
-        // 构造递减序列: baseVolume 很大但不递增，尾巴反而小，pattern 应不匹配
-        java.util.List<com.stock.invest.entity.StockDailyBar> bars =
-            com.stock.invest.support.TestDataFactory.createContinuousBars(
-                "AAPL", java.time.LocalDate.of(2026, 6, 22), 7, 100.0, 200000L, "test");
+        // 手动构造递减 volume: 前大后小，pattern 不应匹配
+        java.util.List<com.stock.invest.entity.StockDailyBar> bars = new java.util.ArrayList<>();
+        String sym = "AAPL";
+        java.time.LocalDate base = java.time.LocalDate.of(2026, 6, 22);
+        for (int i = 0; i < 7; i++) {
+            bars.add(com.stock.invest.support.TestDataFactory.createStockDailyBar(
+                sym, base.plusDays(i), 100.0 + i, 105.0 + i, (7 - i) * 100000L, "test"));
+        }
         assertFalse(service.matchesIncreasingVolumePattern(bars, 7));
     }
 

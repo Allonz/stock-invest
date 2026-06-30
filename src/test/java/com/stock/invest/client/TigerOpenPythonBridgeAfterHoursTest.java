@@ -67,7 +67,7 @@ class TigerOpenPythonBridgeAfterHoursTest {
                 + "  {\"symbol\":\"AAPL\",\"time\":1719331200000,\"close\":151.0,\"volume\":1100000}"
                 + "]}";
         lenient().when(pythonScriptExecutor.executeScriptWithEnvironment(
-                anyMap(), anyString(), anyString(), anyString())).thenReturn(json);
+                anyMap(), anyString(), anyString(), anyString(), anyString())).thenReturn(json);
 
         KLineData result = bridge.fetchAfterHoursBars("AAPL", 5);
 
@@ -115,7 +115,7 @@ class TigerOpenPythonBridgeAfterHoursTest {
     @DisplayName("BRIDGE-002b: fetchAfterHoursBars propagates script exception")
     void fetchAfterHoursBars_scriptException_propagates() throws Exception {
         lenient().when(pythonScriptExecutor.executeScriptWithEnvironment(
-                anyMap(), anyString(), anyString(), anyString()))
+                anyMap(), anyString(), anyString(), anyString(), anyString()))
                 .thenThrow(new RuntimeException("Script failed"));
 
         assertThrows(RuntimeException.class, () -> bridge.fetchAfterHoursBars("AAPL", 5));
@@ -126,7 +126,7 @@ class TigerOpenPythonBridgeAfterHoursTest {
     void fetchAfterHoursBars_minBarLimit() throws Exception {
         String json = "{\"symbol\":\"AAPL\",\"items\":[]}";
         lenient().when(pythonScriptExecutor.executeScriptWithEnvironment(
-                anyMap(), anyString(), anyString(), anyString()))
+                anyMap(), anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(json);
 
         // barLimit < 1, code uses Math.max(1, barLimit) => 1

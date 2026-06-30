@@ -25,6 +25,12 @@ public interface StockDailyBarRepository extends JpaRepository<StockDailyBar, Lo
     Optional<StockDailyBar> findBySymbolAndTradeDate(String symbol, LocalDate tradeDate);
 
     /**
+     * 查某股票前一个交易日的数据（用于 changePercent 自动计算）
+     */
+    Optional<StockDailyBar> findTopBySymbolAndTradeDateBeforeOrderByTradeDateDesc(
+            String symbol, LocalDate tradeDate);
+
+    /**
      * 批量查询 - 优化 N+1 问题，使用 IN 子句一次性查询多个 symbol 的数据
      */
     @Query("SELECT b FROM StockDailyBar b WHERE b.symbol IN :symbols AND b.source = :src "
