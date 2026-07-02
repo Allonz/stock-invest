@@ -241,6 +241,50 @@ public class YFinanceStockServiceImpl implements StockScannerStrategy {
         }
     }
 
+    /**
+     * 重写 getAfterHoursKLineDataByDateRange，调用 Python 的 get_stock_info 获取盘后价。
+     * yfinance 的 afterHours 数据来自 stock.info 的 postMarketPrice / postMarketChangePercent，
+     * 而非独立的 K 线端点，因此需要单独调用 get_stock_info 获取。
+     */
+    @Override
+    public KLineData getAfterHoursKLineDataByDateRange(String symbol, LocalDate tradeDate) {
+        try {
+            // 调用 Python get_stock_info 获取盘后价
+            String result = pythonScriptExecutor.executeScript(getScriptName(), "get_stock_info", symbol);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> infoMap = objectMapper.readValue(result, Map.class);
+
+            Object ahPrice = infoMap.get("afterHours");
+            Object ahChangePct = infoMap.get("afterHoursChangePercent");
+
+            if (ahPrice == null) {
+                log.debug("[YFinanceStockServiceImpl] afterHours: no after-hours data for symbol={}, date={}", symbol, tradeDate);
+                return new KLineData();
+            }
+
+            double ahClose = ((Number) ahPrice).doubleValue();
+            double ahChangePctVal = ahChangePct != null ? ((Number) ahChangePct).doubleValue() : 0.0;
+
+            KLineData ahData = new KLineData();
+            ahData.setSymbol(symbol);
+
+            KLineIterator item = new KLineIterator();
+            item.setSymbol(symbol);
+            item.setTime(tradeDate.atStartOfDay(java.time.ZoneId.of("America/New_York")).toInstant().toEpochMilli());
+            item.setTimeString(tradeDate.toString());
+            item.setClose(ahClose);
+            item.setChangePercent(ahChangePctVal);
+            ahData.setItems(List.of(item));
+
+            log.info("[YFinanceStockServiceImpl] afterHours: symbol={}, date={}, afterHours={}, afterHoursChangePct={}",
+                    symbol, tradeDate, ahClose, ahChangePctVal);
+            return ahData;
+        } catch (Exception e) {
+            log.warn("[YFinanceStockServiceImpl] afterHours fetch failed for {}: {}", symbol, e.getMessage());
+            return new KLineData();
+        }
+    }
+
     public List<String> scanStocks(Market market, int limit, Double minPrice, Double maxPrice) {
         try {
             String minPriceStr = minPrice != null ? minPrice.toString() : "";

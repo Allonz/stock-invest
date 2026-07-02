@@ -27,6 +27,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.stock.invest.config.GapFillProperties;
 import com.stock.invest.entity.DataFillTask;
@@ -39,7 +40,6 @@ import com.stock.invest.service.DataFillProgressService;
 import com.stock.invest.service.DataGapFillerService;
 import com.stock.invest.service.DataSourceStrategy;
 import com.stock.invest.service.TradingCalendarDbService;
-import com.stock.invest.service.impl.TigerStockServiceImpl;
 import com.stock.invest.service.StockDataSourcePriorityService;
 import com.stock.invest.service.SymbolBlacklistService;
 import com.stock.invest.entity.SymbolBlacklist;
@@ -76,6 +76,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
     private final TradingCalendarDbService tradingCalendarDbService;
     private final StockDataSourcePriorityService stockDataSourcePriorityService;
     private final SymbolBlacklistService symbolBlacklistService;
+    private final TransactionTemplate transactionTemplate;
 
     public DataGapFillerServiceImpl(
             StockDailyBarRepository stockDailyBarRepository,
@@ -85,7 +86,8 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
             DataFillProgressService dataFillProgressService,
             TradingCalendarDbService tradingCalendarDbService,
             StockDataSourcePriorityService stockDataSourcePriorityService,
-            SymbolBlacklistService symbolBlacklistService) {
+            SymbolBlacklistService symbolBlacklistService,
+            TransactionTemplate transactionTemplate) {
         this.stockDailyBarRepository = stockDailyBarRepository;
         this.dataFillTaskRepository = dataFillTaskRepository;
         this.dataSources = dataSources;
@@ -94,6 +96,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         this.tradingCalendarDbService = tradingCalendarDbService;
         this.stockDataSourcePriorityService = stockDataSourcePriorityService;
         this.symbolBlacklistService = symbolBlacklistService;
+        this.transactionTemplate = transactionTemplate;
     }
 
     @Override
@@ -119,15 +122,8 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
                 .collect(java.util.stream.Collectors.toList());
         if (!blacklistedSymbols.isEmpty()) {
             log.info("[DataGapFiller] [blacklist] filtered symbols: {}, count={}", blacklistedSymbols, blacklistedSymbols.size());
-            // 清理已入黑 symbol 的 retry 任务
-            for (String s : blacklistedSymbols) {
-                dataFillTaskRepository.updateStatusBySymbolAndStatusIn(
-                        s,
-                        java.util.List.of("pending", "retrying"),
-                        "stopped",
-                        "symbol is blacklisted, stop retry"
-                );
-            }
+            // 清理已入黑 symbol 的 retry 任务（JPQL UPDATE 需要事务）
+            stopRetryTasksForBlacklistedSymbols(blacklistedSymbols);
         }
         log.info("[DataGapFiller] fillGaps: scanning totalSymbols={}, afterBlacklistFilter={}, skipped={}",
                 allSymbols.size(), filteredSymbols.size(), allSymbols.size() - filteredSymbols.size());
@@ -202,7 +198,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         String sep = "=".repeat(msg.length());
         log.info("");
         log.info("[DataGapFiller] {}", sep);
-        log.info("[DataGapFiller] {}", msg);
+        log.info("\033[31m[DataGapFiller] {}\033[0m", msg);
         log.info("[DataGapFiller] {}", sep);
 
         int filled = 0;
@@ -299,9 +295,9 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
      */
     private int fetchAndPersist(String symbol, LocalDate tradeDate) {
         log.info("");
-        log.info("[DataGapFiller] ================================================");
-        log.info("[DataGapFiller] === 补缺 {}，日期 {} ===", symbol, tradeDate);
-        log.info("[DataGapFiller] ================================================");
+        log.info("\033[31m[DataGapFiller] ================================================\033[0m");
+        log.info("\033[31m[DataGapFiller] === 补缺 {}，日期 {} ===\033[0m", symbol, tradeDate);
+        log.info("\033[31m[DataGapFiller] ================================================\033[0m");
         log.info("");
 
         // 使用该股票专属的数据源优先级列表（含历史成功记录排序 + fallback）
@@ -312,21 +308,21 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
 
         for (FallbackSource source : fallbacks) {
             log.info("");
-            log.info("[DataGapFiller] {} source start", source.name);
-            log.info("[DataGapFiller] {} source now send request: dateRange symbol={}, TradeDate={}", source.name, symbol, tradeDate);
+            log.info("\033[32m[DataGapFiller] {} source start\033[0m", source.name);
+            log.info("\033[34m[DataGapFiller] {} source now send request:\033[0m dateRange symbol={}, TradeDate={}", source.name, symbol, tradeDate);
 
             KLineData klineData = null;
             try {
                 klineData = source.fetcher.fetch(symbol, tradeDate);
                 if (isKLineDataEmpty(klineData)) {
                     sourceNotFoundResults.put(source.name, true);
-                    log.warn("[DataGapFiller] {} source then received response: returned empty result for symbol={}",
+                    log.warn("\033[34m[DataGapFiller] {} source then received response:\033[0m returned empty result for symbol={}",
                             source.name, symbol);
-                    log.info("[DataGapFiller] {} source end", source.name);
+                    log.info("\033[32m[DataGapFiller] {} source end\033[0m", source.name);
                     log.info("");
                     continue;
                 }
-                log.info("[DataGapFiller] {} source then received response: itemsCount={}", source.name, klineData.getItems().size());
+                log.info("\033[34m[DataGapFiller] {} source then received response:\033[0m itemsCount={}", source.name, klineData.getItems().size());
                 for (KLineIterator item : klineData.getItems()) {
                     // 优先使用 timeString 解析日期（数据源自身返回的），避免 epoch 时区转换不统一的问题
                     LocalDate itemDate = item.getTimeString() != null && !item.getTimeString().isEmpty()
@@ -342,13 +338,13 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
                         continue;
                     }
                     if (itemDate.equals(tradeDate)) {
-                        log.info("[DataGapFiller] {} source then received response: matched targetDate={}", source.name, tradeDate);
+                        log.info("\033[34m[DataGapFiller] {} source then received response:\033[0m matched targetDate={}", source.name, tradeDate);
                         persist(symbol, tradeDate, item, source.name);
                         // 更新该股票的该数据源优先级
                         stockDataSourcePriorityService.updatePriority(
                                 symbol, source.name, java.time.LocalDateTime.now());
                         log.info("[DataGapFiller] fillWithFallback: success symbol={}, source={}", symbol, source.name);
-                        log.info("[DataGapFiller] {} source end", source.name);
+                        log.info("\033[32m[DataGapFiller] {} source end\033[0m", source.name);
                         log.info("");
                         // 补缺成功，重置黑名单计数
                         symbolBlacklistService.resetCount(symbol);
@@ -357,7 +353,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
                 }
                 log.warn("[DataGapFiller] fillWithFallback: date mismatch symbol={}, source={}, targetDate={}",
                         symbol, source.name, tradeDate);
-                log.info("[DataGapFiller] {} source end", source.name);
+                log.info("\033[32m[DataGapFiller] {} source end\033[0m", source.name);
                 log.info("");
             } catch (Exception e) {
                 String errorMsg = e.getMessage();
@@ -366,7 +362,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
 
                 log.error("[DataGapFiller] fillWithFallback: error symbol={}, source={}, error={}",
                         symbol, source.name, errorMsg);
-                log.info("[DataGapFiller] {} source end", source.name);
+                log.info("\033[32m[DataGapFiller] {} source end\033[0m", source.name);
                 log.info("");
             }
         }
@@ -389,12 +385,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
             symbolBlacklistService.recordNotFound(symbol, sourceErrors);
 
             // 将 data_fill_task 中该 symbol 的 pending/retrying 任务改为 stopped
-            dataFillTaskRepository.updateStatusBySymbolAndStatusIn(
-                    symbol,
-                    java.util.List.of("pending", "retrying"),
-                    "stopped",
-                    "双数据源以上报 404，已进黑名单"
-            );
+            updateFillTaskStatus(symbol, "stopped", "双数据源以上报 404，已进黑名单");
 
             log.warn("[DataGapFiller] [blacklist] symbol={} added to blacklist: {} sources returned not-found",
                     symbol, notFoundCount);
@@ -456,37 +447,37 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         stockDailyBarRepository.save(bar);
         log.info("[DataGapFiller] persist: symbol={}, date={}, open={}, high={}, low={}, close={}, changePct={}, afterHours={}, afterHoursChg={}, vol={}",
                 symbol, tradeDate, item.getOpen(), item.getHigh(), item.getLow(), item.getClose(),
-                item.getChangePercent(), item.getAfterHours(), item.getAfterHoursChangePercent(), item.getVolume());
+                bar.getChangePercent(), bar.getAfterHours(), bar.getAfterHoursChangePercent(), item.getVolume());
         
         // 如果是 Tiger/TigerOpen 数据源，尝试合并盘后价
         mergeAfterHoursIfAvailable(symbol, tradeDate, bar);
     }
 
     /**
-     * 尝试从 Tiger/TigerOpen 数据源获取盘后 K 线数据，更新 after_hours / after_hours_change_percent。
-     * <p>仅当当前数据源为 tiger 或 tigeropen 时执行，其他数据源跳过。</p>
+     * 尝试从数据源获取盘后 K 线数据，更新 after_hours / after_hours_change_percent。
+     * <p>通过 {@link DataSourceStrategy#getAfterHoursKLineDataByDateRange} 获取盘后数据，
+     * 各数据源各自实现获取逻辑：Tiger 调 API，yfinance 调 get_stock_info，Tiingo/TwelveData 走默认回退（无盘后数据）。</p>
      *
      * @param symbol    股票代码
      * @param tradeDate 交易日
      * @param bar       已持久化的 StockDailyBar 实体
      */
     private void mergeAfterHoursIfAvailable(String symbol, LocalDate tradeDate, StockDailyBar bar) {
-        String source = bar.getSource();
-        if (!"tiger".equals(source) && !"tigeropen".equals(source)) {
-            return;  // 只有 Tiger/TigerOpen 支持盘后数据
-        }
+        String barSource = bar.getSource();
 
         try {
-            // 查找 Tiger SDK 数据源
-            TigerStockServiceImpl tigerSource = findTigerSource();
-            if (tigerSource == null) {
-                log.debug("[DataGapFiller] mergeAfterHours: no Tiger source found for symbol={}, date={}", symbol, tradeDate);
+            // 找到对应数据源的 DataSourceStrategy 实例
+            DataSourceStrategy source = findDataSourceBySourceName(barSource);
+            if (source == null) {
+                log.debug("[DataGapFiller] mergeAfterHours: no DataSourceStrategy found for source={}, symbol={}, date={}",
+                        barSource, symbol, tradeDate);
                 return;
             }
 
-            KLineData ahData = tigerSource.getAfterHoursKLineDataByDateRange(symbol, tradeDate);
+            KLineData ahData = source.getAfterHoursKLineDataByDateRange(symbol, tradeDate);
             if (ahData == null || ahData.getItems() == null || ahData.getItems().isEmpty()) {
-                log.debug("[DataGapFiller] mergeAfterHours: no after-hours data for symbol={}, date={}", symbol, tradeDate);
+                log.debug("[DataGapFiller] mergeAfterHours: no after-hours data for symbol={}, date={}, source={}",
+                        symbol, tradeDate, barSource);
                 return;
             }
 
@@ -500,25 +491,64 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
             }
 
             stockDailyBarRepository.save(bar);
-            log.info("[DataGapFiller] mergeAfterHours: symbol={}, date={}, afterHours={}, afterHoursChangePct={}",
-                    symbol, tradeDate, ahClose, bar.getAfterHoursChangePercent());
+            log.info("[DataGapFiller] mergeAfterHours: symbol={}, date={}, source={}, afterHours={}, afterHoursChangePct={}",
+                    symbol, tradeDate, barSource, ahClose, bar.getAfterHoursChangePercent());
         } catch (Exception e) {
-            log.warn("[DataGapFiller] mergeAfterHours failed for symbol={}, date={}: {}", symbol, tradeDate, e.getMessage());
+            log.warn("[DataGapFiller] mergeAfterHours failed for symbol={}, date={}, source={}: {}",
+                    symbol, tradeDate, barSource, e.getMessage());
         }
     }
 
     /**
-     * 从注入的 dataSources 列表中查找 TigerStockServiceImpl 实例。
+     * 根据数据源名称查找对应的 DataSourceStrategy 实例。
      *
-     * @return TigerStockServiceImpl 实例，未找到时返回 null
+     * @param sourceName 数据源名称（如 "yfinance", "tiger", "tigeropen", "tiingo", "twelvedata"）
+     * @return DataSourceStrategy 实例，未找到时返回 null
      */
-    private TigerStockServiceImpl findTigerSource() {
+    private DataSourceStrategy findDataSourceBySourceName(String sourceName) {
         for (DataSourceStrategy ds : dataSources) {
-            if (ds instanceof TigerStockServiceImpl) {
-                return (TigerStockServiceImpl) ds;
+            if (ds.getSourceName().equals(sourceName)) {
+                return ds;
             }
         }
         return null;
+    }
+
+    /**
+     * 停止已入黑名单 symbol 的 pending/retrying 任务。
+     * JPQL UPDATE 需要事务上下文，通过 TransactionTemplate 确保。
+     * 使用 TransactionTemplate 而非 @Transactional 是因为此类方法被同类方法内部调用，
+     * Spring AOP 代理在自调用时不生效。
+     */
+    public void stopRetryTasksForBlacklistedSymbols(Set<String> blacklistedSymbols) {
+        transactionTemplate.executeWithoutResult(status -> {
+            for (String s : blacklistedSymbols) {
+                updateFillTaskStatusInTransaction(s, "stopped", "symbol is blacklisted, stop retry");
+            }
+        });
+    }
+
+    /**
+     * 在事务中更新指定 symbol 的 data_fill_task 状态。
+     * 将 pending/retrying 状态的任务改为目标状态并记录错误原因。
+     */
+    private void updateFillTaskStatusInTransaction(String symbol, String newStatus, String error) {
+        dataFillTaskRepository.updateStatusBySymbolAndStatusIn(
+                symbol,
+                java.util.List.of("pending", "retrying"),
+                newStatus,
+                error
+        );
+    }
+
+    /**
+     * 在事务中更新指定 symbol 的 data_fill_task 状态。
+     * 将 pending/retrying 状态的任务改为目标状态并记录错误原因。
+     */
+    private void updateFillTaskStatus(String symbol, String newStatus, String error) {
+        transactionTemplate.executeWithoutResult(status -> {
+            updateFillTaskStatusInTransaction(symbol, newStatus, error);
+        });
     }
 
     private void createRetryTask(String symbol, LocalDate tradeDate, String error) {
@@ -551,10 +581,10 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
     @Override
     public void processRetryingTasks() {
         log.info("");
-        log.info("[DataGapFiller] processRetryingTasks: === BEGIN ===");
+        log.info("\033[31m[DataGapFiller] processRetryingTasks: === BEGIN ===\033[0m");
 
         List<DataFillTask> retryable = dataFillTaskRepository.findRetryableTasks();
-        log.info("[DataGapFiller] processRetryingTasks: found retryingTasks={}", retryable.size());
+        log.info("\033[31m[DataGapFiller] processRetryingTasks: found retryingTasks={}\033[0m", retryable.size());
 
         LocalDate today = ZonedDateTime.now(AMERICA_NY).toLocalDate();
         int retried = 0;
@@ -610,7 +640,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
             String retrySep = "=".repeat(retryMsg.length());
             log.info("");
             log.info("[DataGapFiller] {}", retrySep);
-            log.info("[DataGapFiller] {}", retryMsg);
+            log.info("\033[31m[DataGapFiller] {}\033[0m", retryMsg);
             log.info("[DataGapFiller] {}", retrySep);
 
             int retResult = fetchAndPersist(symbol, tradeDate);
