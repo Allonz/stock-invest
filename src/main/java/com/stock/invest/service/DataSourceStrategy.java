@@ -1,16 +1,14 @@
 package com.stock.invest.service;
 
 import com.stock.invest.model.KLineData;
-import com.stock.invest.model.StockInfo;
-import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
 
-import java.util.List;
 import java.time.LocalDate;
-import java.util.Map;
 
 /**
- * 统一数据源策略接口 - 每种数据源实现此接口的所有操作。
- * 各实现通过 @Order 注解定义优先级，PriorityStockServiceImpl 按顺序依次尝试。
+ * 核心数据源策略接口 — 只包含数据补缺所需的最小方法集。
+ * <p>
+ * DataGapFillerServiceImpl 只依赖此接口，无需关心扫描/批量等能力。
+ * </p>
  */
 public interface DataSourceStrategy {
 
@@ -19,33 +17,6 @@ public interface DataSourceStrategy {
 
     /** 是否为该数据源配置了有效凭证 */
     boolean isAvailable();
-
-    /** 获取股票的每日K线数据（字符串格式） */
-    String getDailyKLineData(String symbol);
-
-    /** 获取股票的每日K线数据（对象格式） */
-    KLineData getDailyKLineDataAsObject(String symbol);
-
-    /** 获取股票信息 */
-    StockInfo getStockInfo(String symbol);
-
-    /** 获取股票列表 */
-    List<String> getStockList();
-
-    /** 获取股票每日K线数据 */
-    KLineData getDailyKLine(String symbol);
-
-    /** 批量获取K线数据 */
-    List<KLineData> getBatchKline(List<String> symbols, String period, int count);
-
-    /** 筛选股票（Market 枚举版本） */
-    List<String> scanStocks(Market market, int limit, Double minPrice, Double maxPrice);
-
-    /** 筛选股票（字符串版本） */
-    List<String> scanStocks(String market, int limit, String minPrice, String maxPrice);
-
-    /** 查询低价股票并根据成交量筛选（带数量限制） */
-    Map<String, Object> scanLowPriceStocksWithVolumePattern(int limit);
 
     /**
      * 按指定交易日获取 K 线数据（精确查询）。
@@ -72,4 +43,10 @@ public interface DataSourceStrategy {
     default KLineData getAfterHoursKLineDataByDateRange(String symbol, LocalDate tradeDate) {
         return getDailyKLineDataByDateRange(symbol, tradeDate);
     }
+
+    /**
+     * 获取股票的每日K线数据（对象格式）。
+     * <p>核心接口需要此方法作为 getDailyKLineDataByDateRange 的默认回退实现。</p>
+     */
+    KLineData getDailyKLineDataAsObject(String symbol);
 }

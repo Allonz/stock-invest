@@ -22,7 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stock.invest.model.KLineData;
 import com.stock.invest.model.KLineIterator;
 import com.stock.invest.model.StockInfo;
-import com.stock.invest.service.DataSourceStrategy;
+import com.stock.invest.service.StockScannerStrategy;
 import com.stock.invest.service.PatternEvaluateService;
 import com.tigerbrokers.stock.openapi.client.https.client.TigerHttpClient;
 import com.tigerbrokers.stock.openapi.client.https.domain.quote.item.KlineItem;
@@ -43,7 +43,7 @@ import com.tigerbrokers.stock.openapi.client.struct.enums.TradeSession;
  * @see <a href="https://quant.itigerup.com/openapi/zh/java/operation/quotation/stock.html">老虎证券API文档</a>
  */
 @Service("tigerStockService")
-public class TigerStockServiceImpl implements DataSourceStrategy {
+public class TigerStockServiceImpl implements StockScannerStrategy {
     
     private static final Logger log = LoggerFactory.getLogger(TigerStockServiceImpl.class);
 
@@ -70,9 +70,6 @@ public class TigerStockServiceImpl implements DataSourceStrategy {
         return client != null;
     }
 
-    public boolean isClientAvailable() {
-        return true;
-    }
     public String getDailyKLineData(String symbol) {
         try {
             
@@ -90,12 +87,16 @@ public class TigerStockServiceImpl implements DataSourceStrategy {
             // 检查响应
             if (response == null || !response.isSuccess()) {
                 log.error("获取K线数据失败: {}", response == null ? "响应为空" : response.getMessage());
-                return "{}";
+                return objectMapper.writeValueAsString(new KLineData());
             }
             return objectMapper.writeValueAsString(response.getKlineItems());
         } catch (Exception e) {
             log.warn("获取K线数据时出错: {}", e.getMessage());
-            return "{}";
+            try {
+                return objectMapper.writeValueAsString(new KLineData());
+            } catch (Exception ex) {
+                return "{}";
+            }
         }
     }
     public KLineData getDailyKLineDataAsObject(String symbol) {

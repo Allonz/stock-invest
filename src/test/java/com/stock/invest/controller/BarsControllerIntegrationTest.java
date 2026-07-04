@@ -10,8 +10,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDate;
@@ -31,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("integration")
 @Tag("integration")
+@SuppressWarnings("unchecked")
 class BarsControllerIntegrationTest {
 
     private static final Logger log = LoggerFactory.getLogger(BarsControllerIntegrationTest.class);
@@ -46,11 +49,12 @@ class BarsControllerIntegrationTest {
     @Test
     @DisplayName("INT-CTRL-001: GET /api/bars/AAPL/candles?days=7 → 200, 返回 candle 字段")
     void testGetCandles_returnsCandleData() {
-        ResponseEntity<Map> response = restTemplate.getForEntity(
-                "/api/bars/AAPL/candles?days=7", Map.class);
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                "/api/bars/AAPL/candles?days=7", HttpMethod.GET, null,
+                new ParameterizedTypeReference<Map<String, Object>>() {});
         assertEquals(HttpStatus.OK, response.getStatusCode());
 
-        Map body = response.getBody();
+        Map<String, Object> body = response.getBody();
         assertNotNull(body);
         assertTrue((Boolean) body.get("success"), "success should be true");
 
@@ -81,11 +85,12 @@ class BarsControllerIntegrationTest {
             return;
         }
 
-        ResponseEntity<Map> response = restTemplate.getForEntity(
-                "/api/bars/" + symbol + "/candles?days=7", Map.class);
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                "/api/bars/" + symbol + "/candles?days=7", HttpMethod.GET, null,
+                new ParameterizedTypeReference<Map<String, Object>>() {});
         assertEquals(HttpStatus.OK, response.getStatusCode());
 
-        Map body = response.getBody();
+        Map<String, Object> body = response.getBody();
         assertNotNull(body);
 
         List<Map<String, Object>> data = (List<Map<String, Object>>) body.get("data");
@@ -116,11 +121,12 @@ class BarsControllerIntegrationTest {
     @Test
     @DisplayName("INT-CTRL-003: GET /api/bars/ZZZZZ/candles → 200, data=[]")
     void testGetCandles_unknownSymbol() {
-        ResponseEntity<Map> response = restTemplate.getForEntity(
-                "/api/bars/ZZZZZ/candles", Map.class);
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                "/api/bars/ZZZZZ/candles", HttpMethod.GET, null,
+                new ParameterizedTypeReference<Map<String, Object>>() {});
         assertEquals(HttpStatus.OK, response.getStatusCode());
 
-        Map body = response.getBody();
+        Map<String, Object> body = response.getBody();
         assertNotNull(body);
         assertTrue((Boolean) body.get("success"));
 
@@ -134,11 +140,12 @@ class BarsControllerIntegrationTest {
     @Test
     @DisplayName("INT-CTRL-004: GET /api/bars/AAPL/candles?days=3 → data.length ≤ 3")
     void testGetCandles_respectsDaysParam() {
-        ResponseEntity<Map> response = restTemplate.getForEntity(
-                "/api/bars/AAPL/candles?days=3", Map.class);
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                "/api/bars/AAPL/candles?days=3", HttpMethod.GET, null,
+                new ParameterizedTypeReference<Map<String, Object>>() {});
         assertEquals(HttpStatus.OK, response.getStatusCode());
 
-        Map body = response.getBody();
+        Map<String, Object> body = response.getBody();
         assertNotNull(body);
 
         List<Map<String, Object>> data = (List<Map<String, Object>>) body.get("data");
@@ -158,11 +165,12 @@ class BarsControllerIntegrationTest {
             return;
         }
 
-        ResponseEntity<Map> response = restTemplate.getForEntity(
-                "/api/bars/" + symbol + "/candles?days=7", Map.class);
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                "/api/bars/" + symbol + "/candles?days=7", HttpMethod.GET, null,
+                new ParameterizedTypeReference<Map<String, Object>>() {});
         assertEquals(HttpStatus.OK, response.getStatusCode());
 
-        Map body = response.getBody();
+        Map<String, Object> body = response.getBody();
         assertNotNull(body);
 
         List<Map<String, Object>> data = (List<Map<String, Object>>) body.get("data");

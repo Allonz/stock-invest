@@ -88,6 +88,7 @@ public class DataSourceStatusApiController {
     }
 
     /** 将 capabilities 枚举转为字符串列表 */
+    @SuppressWarnings("null")
     private List<String> capabilityStrings(Set<DataSourceCapability> caps) {
         if (caps == null || caps.isEmpty()) return Collections.emptyList();
         return caps.stream().map(Enum::name).toList();

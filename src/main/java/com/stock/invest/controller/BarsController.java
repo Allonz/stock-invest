@@ -1,9 +1,8 @@
 package com.stock.invest.controller;
 
-import com.stock.invest.entity.StockDailyBar;
 import com.stock.invest.enums.dto.ApiResponse;
 import com.stock.invest.enums.dto.StockDailyBarCandleDto;
-import com.stock.invest.repository.StockDailyBarRepository;
+import com.stock.invest.enums.dto.StockDailyBarDto;
 import com.stock.invest.service.StockDailyBarService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,12 +31,9 @@ public class BarsController {
 
     private static final Logger log = LoggerFactory.getLogger(BarsController.class);
 
-    private final StockDailyBarRepository stockDailyBarRepository;
     private final StockDailyBarService stockDailyBarService;
 
-    public BarsController(StockDailyBarRepository stockDailyBarRepository,
-                          StockDailyBarService stockDailyBarService) {
-        this.stockDailyBarRepository = stockDailyBarRepository;
+    public BarsController(StockDailyBarService stockDailyBarService) {
         this.stockDailyBarService = stockDailyBarService;
     }
 
@@ -48,8 +44,7 @@ public class BarsController {
     @GetMapping("/single/query")
     public ResponseEntity<Map<String, Object>> getBars(@RequestParam String symbol) {
         String code = symbol.trim().toUpperCase();
-        List<StockDailyBar> bars = stockDailyBarRepository
-                .findBySymbolOrderByTradeDateDesc(code, PageRequest.of(0, 500));
+        List<StockDailyBarDto> bars = stockDailyBarService.getBarsBySymbol(code);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("symbol", code);
@@ -81,7 +76,7 @@ public class BarsController {
         String src = (source != null && !source.isBlank()) ? source : null;
 
         Pageable pageable = PageRequest.of(page, pageSize, sort);
-        Page<StockDailyBar> barPage = stockDailyBarRepository.findFiltered(sym, date, src, pageable);
+        Page<StockDailyBarDto> barPage = stockDailyBarService.queryBars(pageable, sym, date, src);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("total", barPage.getTotalElements());
@@ -98,7 +93,7 @@ public class BarsController {
      */
     @GetMapping("/sources")
     public ResponseEntity<Map<String, Object>> getSources() {
-        List<String> sources = stockDailyBarRepository.findAllSources();
+        List<String> sources = stockDailyBarService.getAllSources();
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("sources", sources);
         return ResponseEntity.ok(result);

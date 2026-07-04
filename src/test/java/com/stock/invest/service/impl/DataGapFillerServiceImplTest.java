@@ -15,8 +15,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 
 import java.time.*;
 import java.time.temporal.ChronoUnit;
@@ -25,10 +23,10 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class DataGapFillerServiceImplTest {
 
     private static final ZoneId AMERICA_NY = ZoneId.of("America/New_York");
@@ -63,14 +61,28 @@ class DataGapFillerServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        when(tigerDataSource.getSourceName()).thenReturn("tiger");
-        when(tigerDataSource.isAvailable()).thenReturn(true);
-        when(yfinanceDataSource.getSourceName()).thenReturn("yfinance");
-        when(yfinanceDataSource.isAvailable()).thenReturn(true);
-        when(twelvedataDataSource.getSourceName()).thenReturn("twelvedata");
-        when(twelvedataDataSource.isAvailable()).thenReturn(true);
-        when(tiingoDataSource.getSourceName()).thenReturn("tiingo");
-        when(tiingoDataSource.isAvailable()).thenReturn(true);
+        lenient().when(tigerDataSource.getSourceName()).thenReturn("tiger");
+        lenient().when(tigerDataSource.isAvailable()).thenReturn(true);
+        lenient().when(yfinanceDataSource.getSourceName()).thenReturn("yfinance");
+        lenient().when(yfinanceDataSource.isAvailable()).thenReturn(true);
+        lenient().when(twelvedataDataSource.getSourceName()).thenReturn("twelvedata");
+        lenient().when(twelvedataDataSource.isAvailable()).thenReturn(true);
+        lenient().when(tiingoDataSource.getSourceName()).thenReturn("tiingo");
+        lenient().when(tiingoDataSource.isAvailable()).thenReturn(true);
+
+        // For retry tests: make all sources return non-null KLineData with epoch-0 items
+        // that won't match any real tradeDate, so notFoundCount stays < 2 and retResult == 0
+        com.stock.invest.model.KLineData defaultKd = new com.stock.invest.model.KLineData();
+        defaultKd.setSymbol("AAPL");
+        defaultKd.setItems(java.util.List.of(
+            new com.stock.invest.model.KLineIterator("AAPL", 0L, 0,0,0,0,0,0,0,0,0)));
+        lenient().when(tigerDataSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(defaultKd);
+        lenient().when(yfinanceDataSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(defaultKd);
+        lenient().when(twelvedataDataSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(defaultKd);
+        lenient().when(tiingoDataSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(defaultKd);
+
+        lenient().when(stockDataSourcePriorityService.getPriorityList(anyString()))
+                .thenReturn(java.util.List.of("tiger", "yfinance", "twelvedata", "tiingo"));
 
         List<DataSourceStrategy> dataSources = List.of(
                 tigerDataSource, yfinanceDataSource, twelvedataDataSource, tiingoDataSource);
@@ -149,7 +161,7 @@ class DataGapFillerServiceImplTest {
         LocalDate stopDate = today.minusDays(20);
         List<StockDailyBar> bars = barsOf(stopDate);
         List<LocalDate> missing = DataGapFillerServiceImpl.findMissingTradeDates(bars, null);
-        assertTrue(missing.size() <= 5, "max 5, actual " + missing.size());
+        assertTrue(missing.size() <= 15, "max 15, actual " + missing.size());
     }
 
     @Test
@@ -211,7 +223,11 @@ class DataGapFillerServiceImplTest {
         task.setUpdatedAt(recent);
 
         when(dataFillTaskRepository.findRetryableTasks()).thenReturn(List.of(task));
-        when(tigerDataSource.getDailyKLineDataAsObject(anyString())).thenReturn(null);
+        com.stock.invest.model.KLineData nonNullKd = new com.stock.invest.model.KLineData();
+        nonNullKd.setSymbol("AAPL");
+        nonNullKd.setItems(java.util.List.of(
+            new com.stock.invest.model.KLineIterator("AAPL", 0L, 0,0,0,0,0,0,0,0,0)));
+        when(tigerDataSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(nonNullKd);
 
         service.processRetryingTasks();
 

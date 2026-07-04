@@ -3,16 +3,15 @@ package com.stock.invest.controller;
 import com.stock.invest.enums.dto.ApiResponse;
 import com.stock.invest.entity.DataFillTask;
 import com.stock.invest.entity.StockDataSourcePriority;
-import com.stock.invest.repository.DataFillTaskRepository;
 import com.stock.invest.service.DataFillProgressService;
 import com.stock.invest.service.StockDataSourcePriorityService;
 import com.stock.invest.service.DataGapFillerService;
-import com.stock.invest.repository.ScreeningMatchRepository;
 import com.stock.invest.service.ScreeningProgressService;
 import com.stock.invest.service.ScreeningProgressService.ScreeningProgress;
 import com.stock.invest.service.ScreeningService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -31,6 +30,7 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
 @RestController
@@ -43,24 +43,21 @@ public class AdminController {
     private final DataGapFillerService dataGapFillerService;
     private final DataFillProgressService dataFillProgressService;
     private final StockDataSourcePriorityService stockDataSourcePriorityService;
-    private final DataFillTaskRepository dataFillTaskRepository;
-    private final ScreeningMatchRepository screeningMatchRepository;
     private final ScreeningProgressService screeningProgressService;
+    private final Executor scanExecutor;
 
     public AdminController(ScreeningService screeningService,
                            DataGapFillerService dataGapFillerService,
                            DataFillProgressService dataFillProgressService,
                            StockDataSourcePriorityService stockDataSourcePriorityService,
-                           DataFillTaskRepository dataFillTaskRepository,
-                           ScreeningMatchRepository screeningMatchRepository,
-                           ScreeningProgressService screeningProgressService) {
+                           ScreeningProgressService screeningProgressService,
+                           @Qualifier("scanExecutor") Executor scanExecutor) {
         this.screeningService = screeningService;
         this.dataGapFillerService = dataGapFillerService;
         this.dataFillProgressService = dataFillProgressService;
         this.stockDataSourcePriorityService = stockDataSourcePriorityService;
-        this.dataFillTaskRepository = dataFillTaskRepository;
-        this.screeningMatchRepository = screeningMatchRepository;
         this.screeningProgressService = screeningProgressService;
+        this.scanExecutor = scanExecutor;
     }
 
     @PostMapping("/trigger-screening")
@@ -85,7 +82,7 @@ public class AdminController {
         final String taskId = screeningProgressService.startScreening(windows, limit);
         final ScreeningProgress progress = screeningProgressService.getProgress(taskId);
 
-        new Thread(() -> {
+        scanExecutor.execute(() -> {
             LocalDate tradeDate = ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate();
             try {
                 // Run screening ONCE — it processes all windows (2~7d) internally
@@ -93,7 +90,7 @@ public class AdminController {
                 String batchId = screeningService.runScreening(tradeDate);
 
                 // Query real matched counts per window from DB
-                List<Object[]> counts = screeningMatchRepository.countByBatchIdGroupByWindowDays(batchId);
+                List<Object[]> counts = screeningService.countByBatchIdGroupByWindowDays(batchId);
                 java.util.Map<Integer, Long> countMap = new java.util.HashMap<>();
                 for (Object[] row : counts) {
                     countMap.put((Integer) row[0], (Long) row[1]);
@@ -114,7 +111,7 @@ public class AdminController {
             } finally {
                 progress.setRunning(false);
             }
-        }, "screening-async").start();
+        });
 
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("taskId", taskId);
@@ -135,7 +132,7 @@ public class AdminController {
         final String taskId = screeningProgressService.startScreening(windows, limit);
         final ScreeningProgress progress = screeningProgressService.getProgress(taskId);
 
-        new Thread(() -> {
+        scanExecutor.execute(() -> {
             LocalDate tradeDate = ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate();
             try {
                 List<ScreeningProgressService.WindowProgress> windowList = progress.getWindows();
@@ -144,7 +141,7 @@ public class AdminController {
                     log.info("[Admin] async screening: starting window {} day(s)", wp.getDays());
                     String batchId = screeningService.runScreening(tradeDate);
                     // Query real matched count for this window
-                    long realMatched = screeningMatchRepository.countByBatchIdGroupByWindowDays(batchId).stream()
+                    long realMatched = screeningService.countByBatchIdGroupByWindowDays(batchId).stream()
                         .filter(r -> r[0].equals(wp.getDays()))
                         .mapToLong(r -> (Long) r[1])
                         .findFirst().orElse(0L);
@@ -157,7 +154,7 @@ public class AdminController {
             } finally {
                 progress.setRunning(false);
             }
-        }, "screening-advanced-async").start();
+        });
 
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("taskId", taskId);
@@ -195,8 +192,8 @@ public class AdminController {
         progress.setRunning(true);
         progress.setStartTime(System.currentTimeMillis());
 
-        // 在新线程中异步执行 fillGaps
-        new Thread(() -> {
+        // 在线程池中异步执行 fillGaps
+        scanExecutor.execute(() -> {
             try {
                 dataGapFillerService.fillGaps();
             } catch (Exception e) {
@@ -205,7 +202,7 @@ public class AdminController {
                 progress.setStage("COMPLETED");
                 progress.setRunning(false);
             }
-        }, "fillGaps-async").start();
+        });
 
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("taskId", "manual");
@@ -216,10 +213,10 @@ public class AdminController {
     @PostMapping("/trigger-retry-tasks")
     public ResponseEntity<ApiResponse<?>> triggerRetryTasks() {
         log.info("[Admin] triggerRetryTasks: manual trigger");
-        new Thread(() -> {
+        scanExecutor.execute(() -> {
             try { dataGapFillerService.processRetryingTasks(); }
             catch (Exception e) { log.error("[Admin] processRetryingTasks failed", e); }
-        }, "processRetry-async").start();
+        });
         return ResponseEntity.ok(ApiResponse.ok(Map.of("message", "Retry tasks triggered")));
     }
 
@@ -327,7 +324,7 @@ public class AdminController {
                 Sort.by(direction, sortField)
         );
 
-        Page<DataFillTask> taskPage = dataFillTaskRepository.findByFilters(
+        Page<DataFillTask> taskPage = dataGapFillerService.findFillTasks(
                 symbol,
                 tradeDate,
                 status,
@@ -360,10 +357,10 @@ public class AdminController {
      */
     @GetMapping("/fill-task-count")
     public ResponseEntity<ApiResponse<?>> getFillTaskCount() {
-        long total = dataFillTaskRepository.count();
-        long retrying = dataFillTaskRepository.countByStatus("retrying");
-        long completed = dataFillTaskRepository.countByStatus("completed");
-        long stopped = dataFillTaskRepository.countByStatus("stopped");
+        long total = dataGapFillerService.countFillTasks();
+        long retrying = dataGapFillerService.countFillTasksByStatus("retrying");
+        long completed = dataGapFillerService.countFillTasksByStatus("completed");
+        long stopped = dataGapFillerService.countFillTasksByStatus("stopped");
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("total", total);

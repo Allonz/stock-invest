@@ -58,7 +58,7 @@ class NotificationControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.batchId").value(batchId))
                 .andExpect(jsonPath("$.data.screenDate").value("2026-05-18"))
-                .andExpect(jsonPath("$.data.results.increasing_volume['7d']").value(2));
+                .andExpect(jsonPath("$.data.results.increasing_volume['7d'].count").value(2));
     }
 
     @Test

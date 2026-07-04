@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 
 // ========== Mock all external dependencies FIRST ==========
 
@@ -24,10 +24,10 @@ vi.mock('vue-echarts', () => ({
   default: { name: 'VChart', template: '<div class="mock-chart" />' },
 }))
 
-// Mock echarts core (used in ScreenerView)
+// Mock echarts core (used in useCandleChart composable)
 vi.mock('echarts/core', () => ({ use: vi.fn() }))
 vi.mock('echarts/renderers', () => ({ CanvasRenderer: {} }))
-vi.mock('echarts/charts', () => ({ CandlestickChart: {} }))
+vi.mock('echarts/charts', () => ({ CandlestickChart: {}, BarChart: {} }))
 vi.mock('echarts/components', () => ({
   GridComponent: {},
   TooltipComponent: {},
@@ -78,7 +78,7 @@ describe('ScreenerView.vue — K线交互逻辑', () => {
     expect(wrapper.exists()).toBe(true)
     // After mount, loadHistory runs which sets loading=false on success
     // But initially loading is true, then set to false after async
-    await new Promise(resolve => setTimeout(resolve, 100))
+    await flushPromises()
   })
 
   // FE-VIEW-002: 点击 symbol 触发 fetchCandles，candleData 被更新
@@ -95,7 +95,7 @@ describe('ScreenerView.vue — K线交互逻辑', () => {
     const wrapper = mount(ScreenerView, {
       global: { stubs: { VChart: true } },
     })
-    await new Promise(resolve => setTimeout(resolve, 50))
+    await flushPromises()
 
     const vm = wrapper.vm as any
     await vm.onSymbolClick('AAPL')
@@ -117,7 +117,7 @@ describe('ScreenerView.vue — K线交互逻辑', () => {
     const wrapper = mount(ScreenerView, {
       global: { stubs: { VChart: true } },
     })
-    await new Promise(resolve => setTimeout(resolve, 50))
+    await flushPromises()
 
     const vm = wrapper.vm as any
     await vm.onSymbolClick('EMPTY')
@@ -137,7 +137,7 @@ describe('ScreenerView.vue — K线交互逻辑', () => {
     const wrapper = mount(ScreenerView, {
       global: { stubs: { VChart: true } },
     })
-    await new Promise(resolve => setTimeout(resolve, 50))
+    await flushPromises()
 
     const vm = wrapper.vm as any
     await vm.onSymbolClick('FAIL')
@@ -155,7 +155,7 @@ describe('ScreenerView.vue — K线交互逻辑', () => {
     const wrapper = mount(ScreenerView, {
       global: { stubs: { VChart: true } },
     })
-    await new Promise(resolve => setTimeout(resolve, 50))
+    await flushPromises()
 
     const vm = wrapper.vm as any
     await vm.onSymbolClick('ERROR')
@@ -176,7 +176,7 @@ describe('ScreenerView.vue — K线交互逻辑', () => {
     const wrapper = mount(ScreenerView, {
       global: { stubs: { VChart: true } },
     })
-    await new Promise(resolve => setTimeout(resolve, 50))
+    await flushPromises()
 
     const vm = wrapper.vm as any
     await vm.onSymbolClick('SYM1')
@@ -201,7 +201,7 @@ describe('ScreenerView.vue — K线交互逻辑', () => {
     const wrapper = mount(ScreenerView, {
       global: { stubs: { VChart: true } },
     })
-    await new Promise(resolve => setTimeout(resolve, 50))
+    await flushPromises()
 
     const vm = wrapper.vm as any
     await vm.onSymbolClick('AAPL')
@@ -222,7 +222,7 @@ describe('ScreenerView.vue — K线交互逻辑', () => {
     const wrapper = mount(ScreenerView, {
       global: { stubs: { VChart: true } },
     })
-    await new Promise(resolve => setTimeout(resolve, 50))
+    await flushPromises()
 
     const vm = wrapper.vm as any
     const option = vm.candleChartOption
@@ -239,7 +239,7 @@ describe('ScreenerView.vue — K线交互逻辑', () => {
     const wrapper = mount(ScreenerView, {
       global: { stubs: { VChart: true } },
     })
-    await new Promise(resolve => setTimeout(resolve, 50))
+    await flushPromises()
 
     const vm = wrapper.vm as any
     // Open the chart

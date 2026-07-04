@@ -48,6 +48,10 @@ const routes: RouteRecordRaw[] = [
     name: 'Blacklist',
     component: () => import('../views/BlacklistView.vue'),
     meta: { title: '股票黑名单', breadcrumb: '管理', icon: '🚫' }
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/'
   }
 ]
 

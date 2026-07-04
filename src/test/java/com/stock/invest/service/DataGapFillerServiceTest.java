@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
@@ -25,8 +26,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 
 import com.stock.invest.config.GapFillProperties;
 import com.stock.invest.entity.DataFillTask;
@@ -35,7 +34,6 @@ import com.stock.invest.repository.StockDailyBarRepository;
 import com.stock.invest.service.impl.DataGapFillerServiceImpl;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("DataGapFillerService - data fill task retry logic")
 class DataGapFillerServiceTest {
 
@@ -71,14 +69,14 @@ class DataGapFillerServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(tigerDataSource.getSourceName()).thenReturn("tiger");
-        when(tigerDataSource.isAvailable()).thenReturn(true);
-        when(yfinanceDataSource.getSourceName()).thenReturn("yfinance");
-        when(yfinanceDataSource.isAvailable()).thenReturn(true);
-        when(twelvedataDataSource.getSourceName()).thenReturn("twelvedata");
-        when(twelvedataDataSource.isAvailable()).thenReturn(true);
-        when(tiingoDataSource.getSourceName()).thenReturn("tiingo");
-        when(tiingoDataSource.isAvailable()).thenReturn(true);
+        lenient().when(tigerDataSource.getSourceName()).thenReturn("tiger");
+        lenient().when(tigerDataSource.isAvailable()).thenReturn(true);
+        lenient().when(yfinanceDataSource.getSourceName()).thenReturn("yfinance");
+        lenient().when(yfinanceDataSource.isAvailable()).thenReturn(true);
+        lenient().when(twelvedataDataSource.getSourceName()).thenReturn("twelvedata");
+        lenient().when(twelvedataDataSource.isAvailable()).thenReturn(true);
+        lenient().when(tiingoDataSource.getSourceName()).thenReturn("tiingo");
+        lenient().when(tiingoDataSource.isAvailable()).thenReturn(true);
 
         List<DataSourceStrategy> dataSources = List.of(tigerDataSource, yfinanceDataSource, twelvedataDataSource, tiingoDataSource);
         service = new DataGapFillerServiceImpl(
@@ -90,6 +88,18 @@ class DataGapFillerServiceTest {
                 tradingCalendarDbService,
                 stockDataSourcePriorityService,
                 symbolBlacklistService);
+
+        // Priority service returns fallback chain order
+        lenient().when(stockDataSourcePriorityService.getPriorityList(anyString()))
+                .thenReturn(java.util.List.of("yfinance", "tiger"));
+
+        // All data sources return non-null KLineData to avoid blacklist (date mismatch is fine)
+        com.stock.invest.model.KLineData nonNullKd = new com.stock.invest.model.KLineData();
+        nonNullKd.setSymbol("TEST");
+        nonNullKd.setItems(java.util.List.of(
+            new com.stock.invest.model.KLineIterator("TEST", 0L, 0,0,0,0,0,0,0,0,0)));
+        lenient().when(twelvedataDataSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(nonNullKd);
+        lenient().when(tiingoDataSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(nonNullKd);
     }
 
     private DataFillTask createTask(String symbol, LocalDate tradeDate,
@@ -142,7 +152,16 @@ class DataGapFillerServiceTest {
                 Instant.now(), Instant.now().minus(2, ChronoUnit.HOURS)
         );
         when(dataFillTaskRepository.findRetryableTasks()).thenReturn(List.of(task));
-        when(tigerDataSource.getDailyKLineDataAsObject(anyString())).thenReturn(null);
+        // yfinance 返回包含 item 的数据（日期不匹配），避免两个数据源都 null 导致 blacklist
+        com.stock.invest.model.KLineData yfKd = new com.stock.invest.model.KLineData();
+        yfKd.setSymbol("AAPL");
+        yfKd.setItems(java.util.List.of(new com.stock.invest.model.KLineIterator("AAPL", 0L, 0,0,0,0,0,0,0,0,0)));
+        when(yfinanceDataSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(yfKd);
+        com.stock.invest.model.KLineData tgKd = new com.stock.invest.model.KLineData();
+        tgKd.setSymbol("AAPL");
+        tgKd.setItems(java.util.List.of(
+            new com.stock.invest.model.KLineIterator("AAPL", 0L, 0,0,0,0,0,0,0,0,0)));
+        when(tigerDataSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(tgKd);
 
         service.processRetryingTasks();
 
@@ -203,7 +222,16 @@ class DataGapFillerServiceTest {
                 recent, Instant.now().minus(40, ChronoUnit.MINUTES)
         );
         when(dataFillTaskRepository.findRetryableTasks()).thenReturn(List.of(task));
-        when(tigerDataSource.getDailyKLineDataAsObject(anyString())).thenReturn(null);
+        // yfinance 返回包含 item 的数据（日期不匹配），避免 blacklist
+        com.stock.invest.model.KLineData yfKd = new com.stock.invest.model.KLineData();
+        yfKd.setSymbol("AAPL");
+        yfKd.setItems(java.util.List.of(new com.stock.invest.model.KLineIterator("AAPL", 0L, 0,0,0,0,0,0,0,0,0)));
+        when(yfinanceDataSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(yfKd);
+        com.stock.invest.model.KLineData tgKd2 = new com.stock.invest.model.KLineData();
+        tgKd2.setSymbol("AAPL");
+        tgKd2.setItems(java.util.List.of(
+            new com.stock.invest.model.KLineIterator("AAPL", 0L, 0,0,0,0,0,0,0,0,0)));
+        when(tigerDataSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(tgKd2);
 
         service.processRetryingTasks();
 

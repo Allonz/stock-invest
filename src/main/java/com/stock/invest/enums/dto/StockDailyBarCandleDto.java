@@ -1,7 +1,5 @@
 package com.stock.invest.enums.dto;
 
-import java.time.LocalDate;
-
 public record StockDailyBarCandleDto(
     String date,           // 格式: yyyy-MM-dd
     Double open,           // 开盘价

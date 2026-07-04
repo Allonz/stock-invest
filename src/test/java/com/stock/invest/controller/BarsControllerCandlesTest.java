@@ -1,6 +1,5 @@
 package com.stock.invest.controller;
 
-import com.stock.invest.enums.dto.ApiResponse;
 import com.stock.invest.enums.dto.StockDailyBarCandleDto;
 import com.stock.invest.repository.StockDailyBarRepository;
 import com.stock.invest.service.StockDailyBarService;

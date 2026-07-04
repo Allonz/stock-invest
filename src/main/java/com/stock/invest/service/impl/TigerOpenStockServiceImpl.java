@@ -6,6 +6,7 @@ import com.stock.invest.client.TigerOpenPythonBridge;
 import com.stock.invest.model.KLineData;
 import com.stock.invest.model.StockInfo;
 import com.stock.invest.service.DataSourceStrategy;
+import com.stock.invest.service.StockScannerStrategy;
 import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,7 +25,7 @@ import java.util.Map;
  * </p>
  */
 @Service("tigerOpenStockService")
-public class TigerOpenStockServiceImpl implements DataSourceStrategy {
+public class TigerOpenStockServiceImpl implements StockScannerStrategy {
 
     private static final Logger log = LoggerFactory.getLogger(TigerOpenStockServiceImpl.class);
 

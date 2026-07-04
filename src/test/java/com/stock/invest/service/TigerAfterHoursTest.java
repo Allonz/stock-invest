@@ -1,7 +1,6 @@
 package com.stock.invest.service;
 
 import com.stock.invest.model.KLineData;
-import com.stock.invest.model.KLineIterator;
 import com.stock.invest.service.impl.TigerStockServiceImpl;
 import com.tigerbrokers.stock.openapi.client.https.client.TigerHttpClient;
 import com.tigerbrokers.stock.openapi.client.https.domain.quote.item.KlineItem;

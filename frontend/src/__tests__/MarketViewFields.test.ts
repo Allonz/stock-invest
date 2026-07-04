@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 
 // ========== Mock all external dependencies FIRST ==========
 
@@ -113,7 +113,7 @@ describe('MarketView.vue — 字段列展示', () => {
     })
 
     // Wait for onMounted/loadData to resolve
-    await new Promise(resolve => setTimeout(resolve, 100))
+    await flushPromises()
 
     const statCards = wrapper.findAllComponents({ name: 'StatCard' })
     expect(statCards.length).toBe(4)
@@ -125,7 +125,7 @@ describe('MarketView.vue — 字段列展示', () => {
     const wrapper = mount(MarketView, {
       global: { stubs: { StatCard: true, NSpin: true, NButton: true } },
     })
-    await new Promise(resolve => setTimeout(resolve, 100))
+    await flushPromises()
 
     // Check that compact-table exists
     const table = wrapper.find('.compact-table')
@@ -151,7 +151,7 @@ describe('MarketView.vue — 字段列展示', () => {
     const wrapper = mount(MarketView, {
       global: { stubs: { StatCard: true, NSpin: true, NButton: true } },
     })
-    await new Promise(resolve => setTimeout(resolve, 100))
+    await flushPromises()
 
     const vm = wrapper.vm as any
     // Spy on onSymbolClick
@@ -169,7 +169,7 @@ describe('MarketView.vue — 字段列展示', () => {
     const wrapper = mount(MarketView, {
       global: { stubs: { StatCard: true, NSpin: true, NButton: true } },
     })
-    await new Promise(resolve => setTimeout(resolve, 100))
+    await flushPromises()
 
     const nameCells = wrapper.findAll('tbody tr').at(0)!.findAll('td.stock-col')
     // AAPL has name 'Apple Inc.', AMZN has undefined name → '—'
@@ -182,7 +182,7 @@ describe('MarketView.vue — 字段列展示', () => {
     const wrapper = mount(MarketView, {
       global: { stubs: { StatCard: true, NSpin: true, NButton: true } },
     })
-    await new Promise(resolve => setTimeout(resolve, 100))
+    await flushPromises()
 
     const rowLabels = wrapper.findAll('.row-label-cell')
     expect(rowLabels.length).toBe(3) // 名称 + 代码 + (复制行空标签)
@@ -197,7 +197,7 @@ describe('MarketView.vue — 字段列展示', () => {
     const wrapper = mount(MarketView, {
       global: { stubs: { StatCard: true, NSpin: true, NButton: true } },
     })
-    await new Promise(resolve => setTimeout(resolve, 100))
+    await flushPromises()
 
     const footer = wrapper.find('.compact-footer')
     expect(footer.exists()).toBe(true)
@@ -210,7 +210,7 @@ describe('MarketView.vue — 字段列展示', () => {
     const wrapper = mount(MarketView, {
       global: { stubs: { StatCard: true, NSpin: true, NButton: true } },
     })
-    await new Promise(resolve => setTimeout(resolve, 100))
+    await flushPromises()
 
     const vm = wrapper.vm as any
 
