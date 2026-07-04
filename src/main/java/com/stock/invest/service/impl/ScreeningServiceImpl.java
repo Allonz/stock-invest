@@ -60,6 +60,7 @@ public class ScreeningServiceImpl implements ScreeningService {
 
     @Override
     @Transactional
+    @SuppressWarnings("null")
     public String runScreening(LocalDate tradeDate) {
         LocalDate targetDate = tradeDate == null ? ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate() : tradeDate;
         String batchId = UUID.randomUUID().toString();
@@ -203,6 +204,7 @@ public class ScreeningServiceImpl implements ScreeningService {
     /**
      * 为匹配列表批量补充 stock name，构建带 name 的匹配项列表。
      */
+    @SuppressWarnings("null")
     private List<Map<String, Object>> buildMatchesWithName(List<ScreeningMatch> matches) {
         if (matches == null || matches.isEmpty()) {
             return List.of();
@@ -262,6 +264,7 @@ public class ScreeningServiceImpl implements ScreeningService {
 
         // 从日历获取 range 内的开盘日（已升序）
         List<TradingCalendarEntity> calEntries = tradingCalendarDbService.getRange("US", firstDate, lastDate);
+        @SuppressWarnings("null")
         List<LocalDate> openDaysInRange = calEntries.stream()
                 .filter(TradingCalendarEntity::getIsOpen)
                 .map(TradingCalendarEntity::getTradeDate)
@@ -269,6 +272,7 @@ public class ScreeningServiceImpl implements ScreeningService {
                 .toList();
 
         // 窗口数据的日期（已升序，因为 bars 在外部已排序）
+        @SuppressWarnings("null")
         List<LocalDate> actualDates = windowSlice.stream()
                 .map(StockDailyBar::getTradeDate)
                 .toList();

@@ -3,7 +3,6 @@ package com.stock.invest.controller;
 import com.stock.invest.entity.SymbolBlacklist;
 import com.stock.invest.repository.SymbolBlacklistRepository;
 import com.stock.invest.service.SymbolBlacklistService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,11 +13,14 @@ import java.util.Map;
 @RequestMapping("/api/blacklist")
 public class BlacklistController {
 
-    @Autowired
-    private SymbolBlacklistService symbolBlacklistService;
+    private final SymbolBlacklistService symbolBlacklistService;
+    private final SymbolBlacklistRepository repository;
 
-    @Autowired
-    private SymbolBlacklistRepository repository;
+    public BlacklistController(SymbolBlacklistService symbolBlacklistService,
+                               SymbolBlacklistRepository repository) {
+        this.symbolBlacklistService = symbolBlacklistService;
+        this.repository = repository;
+    }
 
     /**
      * 获取所有黑名单记录

@@ -18,6 +18,7 @@ public final class KLineDataUtils {
     /**
      * 按时间降序排列（最新在前）。若时间为 0，则保持相对顺序不变。
      */
+    @SuppressWarnings("null")
     public static void sortItemsNewestFirst(KLineData data) {
         if (data == null || data.getItems() == null || data.getItems().isEmpty()) {
             return;

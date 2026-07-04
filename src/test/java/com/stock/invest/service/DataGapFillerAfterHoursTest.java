@@ -1,7 +1,6 @@
 package com.stock.invest.service;
 
 import com.stock.invest.config.GapFillProperties;
-import com.stock.invest.entity.DataFillTask;
 import com.stock.invest.entity.StockDailyBar;
 import com.stock.invest.model.KLineData;
 import com.stock.invest.model.KLineIterator;
@@ -18,8 +17,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -136,7 +133,6 @@ class DataGapFillerAfterHoursTest {
                 stockDataSourcePriorityService, symbolBlacklistService);
 
         LocalDate today = nyToday();
-        LocalDate tradeDate = today.minusDays(2);
         LocalDate stopDate = today.minusDays(5);
 
         StockDailyBar existingBar = createLowPriceBar("AAPL", stopDate);
@@ -165,7 +161,6 @@ class DataGapFillerAfterHoursTest {
     @DisplayName("AH-003: 盘后数据为空时跳过 mergeAfterHours")
     void mergeAfterHoursWithNullData() {
         LocalDate today = nyToday();
-        LocalDate tradeDate = today.minusDays(2);
         LocalDate stopDate = today.minusDays(5);
 
         StockDailyBar existingBar = createLowPriceBar("AAPL", stopDate);
@@ -196,7 +191,6 @@ class DataGapFillerAfterHoursTest {
     @DisplayName("AH-004: mergeAfterHours 异常时不中断")
     void mergeAfterHoursHandlesException() {
         LocalDate today = nyToday();
-        LocalDate tradeDate = today.minusDays(2);
         LocalDate stopDate = today.minusDays(5);
 
         StockDailyBar existingBar = createLowPriceBar("AAPL", stopDate);

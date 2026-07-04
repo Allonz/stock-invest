@@ -16,8 +16,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -88,7 +86,6 @@ class DataGapFillerPersistTest {
     @DisplayName("FILL-001: persist 保存全部字段（含 highPrice/lowPrice/changePercent/afterHours）")
     void persistSavesAllNewFields() {
         LocalDate today = nyToday();
-        LocalDate tradeDate = today.minusDays(2);
         LocalDate stopDate = today.minusDays(5);
 
         StockDailyBar existingBar = new StockDailyBar();
@@ -202,7 +199,6 @@ class DataGapFillerPersistTest {
     @DisplayName("FILL-003: persist 正确设置 source 字段")
     void persistSetsSourceCorrectly() {
         LocalDate today = nyToday();
-        LocalDate tradeDate = today.minusDays(2);
         LocalDate stopDate = today.minusDays(5);
 
         StockDailyBar existingBar = new StockDailyBar();
@@ -258,7 +254,6 @@ class DataGapFillerPersistTest {
     @DisplayName("FILL-004: 所有数据源失败时创建 retry 任务")
     void createsRetryTaskWhenAllSourcesFail() throws Exception {
         LocalDate today = nyToday();
-        LocalDate tradeDate = today.minusDays(2);
         LocalDate stopDate = today.minusDays(5);
 
         StockDailyBar existingBar = new StockDailyBar();
@@ -296,7 +291,6 @@ class DataGapFillerPersistTest {
     @DisplayName("FILL-005: mergeAfterHours 对非 tiger source 跳过")
     void mergeAfterHoursSkipsNonTigerSource() {
         LocalDate today = nyToday();
-        LocalDate tradeDate = today.minusDays(2);
         LocalDate stopDate = today.minusDays(5);
 
         StockDailyBar existingBar = new StockDailyBar();

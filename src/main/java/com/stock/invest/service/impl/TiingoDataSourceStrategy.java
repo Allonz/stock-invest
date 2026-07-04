@@ -3,7 +3,6 @@ package com.stock.invest.service.impl;
 import com.stock.invest.client.TiingoRestClient;
 import com.stock.invest.model.KLineData;
 import com.stock.invest.model.StockInfo;
-import com.stock.invest.service.DataSourceStrategy;
 import com.stock.invest.service.StockScannerStrategy;
 import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
 import org.slf4j.Logger;

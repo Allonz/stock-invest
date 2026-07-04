@@ -14,7 +14,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stock.invest.model.KLineData;
 import com.stock.invest.model.KLineIterator;
 import com.stock.invest.model.StockInfo;
-import com.stock.invest.service.DataSourceStrategy;
 import com.stock.invest.service.StockScannerStrategy;
 import com.stock.invest.util.PythonScriptExecutor;
 import com.tigerbrokers.stock.openapi.client.struct.enums.Market;

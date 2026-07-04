@@ -19,7 +19,7 @@
         <java.version>17</java.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
-        <spring-boot.version>3.5.15</spring-boot.version>
+        <spring-boot.version>3.5.16</spring-boot.version>
         <lombok.version>1.18.36</lombok.version>
         <tiger-api.version>2.2.6</tiger-api.version>
 

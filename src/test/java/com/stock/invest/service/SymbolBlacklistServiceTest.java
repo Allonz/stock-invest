@@ -1,6 +1,5 @@
 package com.stock.invest.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stock.invest.entity.SymbolBlacklist;
 import com.stock.invest.repository.SymbolBlacklistRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -11,7 +10,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
