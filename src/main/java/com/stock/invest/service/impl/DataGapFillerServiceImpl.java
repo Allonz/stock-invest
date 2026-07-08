@@ -420,10 +420,40 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         bar.setClosePrice(item.getClose());
         bar.setVolume(item.getVolume());
         bar.setChangePercent(item.getChangePercent());
+
+        // === fallback: 数据源未提供 changePercent 时自动计算（隔日涨跌幅） ===
+        if (bar.getChangePercent() != null && bar.getChangePercent() == 0.0
+                && bar.getClosePrice() != null && bar.getClosePrice() != 0.0) {
+            stockDailyBarRepository
+                    .findTopBySymbolAndTradeDateBeforeOrderByTradeDateDesc(symbol, tradeDate)
+                    .ifPresent(prev -> {
+                        Double prevClose = prev.getClosePrice();
+                        Double currClose = bar.getClosePrice();
+                        if (prevClose != null && prevClose != 0.0) {
+                            double pct = (currClose - prevClose) / prevClose * 100;
+                            pct = Math.round(pct * 10000.0) / 10000.0;
+                            bar.setChangePercent(pct);
+                        }
+                    });
+        }
+
         bar.setAfterHours(item.getAfterHours());
         bar.setAfterHoursChangePercent(item.getAfterHoursChangePercent());
+
+        // === fallback: 数据源提供了盘后价但未提供盘后涨跌幅时自动计算 ===
+        if (bar.getAfterHours() != null && bar.getAfterHours() != 0.0
+                && (bar.getAfterHoursChangePercent() == null || bar.getAfterHoursChangePercent() == 0.0)
+                && bar.getClosePrice() != null && bar.getClosePrice() != 0.0) {
+            double ahPct = (bar.getAfterHours() - bar.getClosePrice()) / bar.getClosePrice() * 100;
+            ahPct = Math.round(ahPct * 10000.0) / 10000.0;
+            bar.setAfterHoursChangePercent(ahPct);
+        }
+
         bar.setSource(source);
         stockDailyBarRepository.save(bar);
+        log.info("[DataGapFiller] persist: symbol={}, date={}, open={}, high={}, low={}, close={}, changePct={}, afterHours={}, afterHoursChg={}, vol={}",
+                symbol, tradeDate, item.getOpen(), item.getHigh(), item.getLow(), item.getClose(),
+                bar.getChangePercent(), bar.getAfterHours(), bar.getAfterHoursChangePercent(), item.getVolume());
         return bar;
     }
 
