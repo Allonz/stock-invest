@@ -47,4 +47,11 @@ public interface ScreeningService {
      * @return 每行 Object[]: [windowDays, count]
      */
     List<Object[]> countByBatchIdGroupByWindowDays(String batchId);
+
+    /**
+     * 获取最新筛选结果，按 algorithm + windowDays 分组统计（通知用）。
+     *
+     * @return 包含 batchId / screenDate / results 的 Map
+     */
+    Map<String, Object> getLatestNotificationGrouped();
 }

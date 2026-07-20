@@ -1,7 +1,6 @@
 package com.stock.invest.controller;
 
 import com.stock.invest.entity.SymbolBlacklist;
-import com.stock.invest.repository.SymbolBlacklistRepository;
 import com.stock.invest.service.SymbolBlacklistService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,13 +12,10 @@ import java.util.Map;
 @RequestMapping("/api/blacklist")
 public class BlacklistController {
 
-    private final SymbolBlacklistService symbolBlacklistService;
-    private final SymbolBlacklistRepository repository;
+    private final SymbolBlacklistService blacklistService;
 
-    public BlacklistController(SymbolBlacklistService symbolBlacklistService,
-                               SymbolBlacklistRepository repository) {
-        this.symbolBlacklistService = symbolBlacklistService;
-        this.repository = repository;
+    public BlacklistController(SymbolBlacklistService blacklistService) {
+        this.blacklistService = blacklistService;
     }
 
     /**
@@ -27,7 +23,7 @@ public class BlacklistController {
      */
     @GetMapping("/list")
     public List<SymbolBlacklist> list() {
-        return repository.findByStatus("active");
+        return blacklistService.listActiveEntries();
     }
 
     /**
@@ -35,7 +31,7 @@ public class BlacklistController {
      */
     @PostMapping("/clear")
     public ResponseEntity<?> clear(@RequestParam String symbol) {
-        symbolBlacklistService.clearSymbol(symbol);
+        blacklistService.clearSymbol(symbol);
         return ResponseEntity.ok(Map.of("status", "ok", "symbol", symbol));
     }
 }

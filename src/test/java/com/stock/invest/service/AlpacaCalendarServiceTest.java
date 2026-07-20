@@ -29,7 +29,7 @@ class AlpacaCalendarServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new AlpacaCalendarService(alpacaClient);
+        service = new AlpacaCalendarService(alpacaClient, java.util.concurrent.Executors.newSingleThreadExecutor());
     }
 
     @Test @DisplayName("UT-45: credentials 不存在时不可用")

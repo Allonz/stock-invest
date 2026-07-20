@@ -7,13 +7,17 @@ import com.stock.invest.model.TradingCalendarResult;
 import com.stock.invest.service.TradingCalendarService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * TigerOpen Python 交易日历查询实现（第2顺位）。
@@ -28,12 +32,14 @@ public class TigerOpenCalendarService implements TradingCalendarService {
 
     private final ObjectMapper objectMapper;
     private final TigerOpenPythonBridge bridge;
-    private final ExecutorService executor = Executors.newCachedThreadPool();
+    private final Executor executor;
 
     public TigerOpenCalendarService(ObjectMapper objectMapper,
-                                    TigerOpenPythonBridge bridge) {
+                                    TigerOpenPythonBridge bridge,
+                                    @Qualifier("scanExecutor") Executor executor) {
         this.objectMapper = objectMapper;
         this.bridge = bridge;
+        this.executor = executor;
     }
 
     @Override
@@ -54,7 +60,8 @@ public class TigerOpenCalendarService implements TradingCalendarService {
         }
 
         try {
-            return executor.submit(() -> doQuery(market, date))
+            return CompletableFuture
+                    .supplyAsync(() -> doQuery(market, date), executor)
                     .get(TIMEOUT.getSeconds(), TimeUnit.SECONDS);
         } catch (TimeoutException e) {
             log.warn("[tigeropen] 日历查询超时 ({}s)，触发 fallback", TIMEOUT.getSeconds());

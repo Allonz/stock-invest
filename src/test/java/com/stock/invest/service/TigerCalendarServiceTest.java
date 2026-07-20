@@ -35,7 +35,7 @@ class TigerCalendarServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new TigerCalendarService(client);
+        service = new TigerCalendarService(client, java.util.concurrent.Executors.newSingleThreadExecutor());
     }
 
     @Test @DisplayName("UT-27: SDK 返回交易日")

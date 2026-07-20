@@ -33,7 +33,7 @@ class TigerOpenCalendarServiceTest {
     void setUp() {
         objectMapper = new ObjectMapper();
         objectMapper.findAndRegisterModules();
-        service = new TigerOpenCalendarService(objectMapper, bridge);
+        service = new TigerOpenCalendarService(objectMapper, bridge, java.util.concurrent.Executors.newSingleThreadExecutor());
     }
 
     @Test @DisplayName("UT-38: credentials 不可用时返回 null")

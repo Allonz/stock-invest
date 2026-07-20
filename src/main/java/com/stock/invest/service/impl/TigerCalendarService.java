@@ -9,14 +9,17 @@ import com.tigerbrokers.stock.openapi.client.https.response.quote.QuoteTradeCale
 import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Tiger Java SDK 交易日历查询实现（第1顺位）。
@@ -29,10 +32,12 @@ public class TigerCalendarService implements TradingCalendarService {
     private static final Duration TIMEOUT = Duration.ofSeconds(60);
 
     private final TigerHttpClient client;
-    private final ExecutorService executor = Executors.newCachedThreadPool();
+    private final Executor executor;
 
-    public TigerCalendarService(@Autowired(required = true) TigerHttpClient client) {
+    public TigerCalendarService(TigerHttpClient client,
+                                 @Qualifier("scanExecutor") Executor executor) {
         this.client = client;
+        this.executor = executor;
     }
 
     @Override
@@ -48,7 +53,8 @@ public class TigerCalendarService implements TradingCalendarService {
     @Override
     public TradingCalendarResult isTradingDay(String market, LocalDate date) {
         try {
-            return executor.submit(() -> doQuery(market, date))
+            return CompletableFuture
+                    .supplyAsync(() -> doQuery(market, date), executor)
                     .get(TIMEOUT.getSeconds(), TimeUnit.SECONDS);
         } catch (TimeoutException e) {
             log.warn("[tiger] 日历查询超时 ({}s)，触发 fallback", TIMEOUT.getSeconds());

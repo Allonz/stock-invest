@@ -5,11 +5,15 @@ import com.stock.invest.model.TradingCalendarResult;
 import com.stock.invest.service.TradingCalendarService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDate;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Alpaca Markets 交易日历查询实现（第3顺位）。
@@ -23,10 +27,12 @@ public class AlpacaCalendarService implements TradingCalendarService {
     private static final Duration TIMEOUT = Duration.ofSeconds(60);
 
     private final AlpacaRestClient alpacaClient;
-    private final ExecutorService executor = Executors.newCachedThreadPool();
+    private final Executor executor;
 
-    public AlpacaCalendarService(AlpacaRestClient alpacaClient) {
+    public AlpacaCalendarService(AlpacaRestClient alpacaClient,
+                                  @Qualifier("scanExecutor") Executor executor) {
         this.alpacaClient = alpacaClient;
+        this.executor = executor;
     }
 
     @Override
@@ -46,14 +52,14 @@ public class AlpacaCalendarService implements TradingCalendarService {
             return null;
         }
 
-        // Alpaca 只支持 US 市场
         if (!"US".equals(market)) {
             log.debug("[alpaca] 日历查询跳过：不支持市场 {}", market);
             return null;
         }
 
         try {
-            return executor.submit(() -> doQuery(date))
+            return CompletableFuture
+                    .supplyAsync(() -> doQuery(date), executor)
                     .get(TIMEOUT.getSeconds(), TimeUnit.SECONDS);
         } catch (TimeoutException e) {
             log.warn("[alpaca] 日历查询超时 ({}s)，触发 fallback", TIMEOUT.getSeconds());
