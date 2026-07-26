@@ -40,6 +40,14 @@ public class SymbolBlacklistService {
     }
 
     /**
+     * 获取所有活跃的黑名单记录（完整实体列表）。
+     */
+    @SuppressWarnings("null")
+    public List<SymbolBlacklist> listActiveEntries() {
+        return repository.findByStatus("active");
+    }
+
+    /**
      * 记录一次"不存在"判定。
      * 如果该 symbol 首次入黑，创建记录；否则更新计数和日期。
      */

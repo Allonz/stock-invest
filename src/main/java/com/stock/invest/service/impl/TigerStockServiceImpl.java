@@ -15,7 +15,6 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -52,7 +51,7 @@ public class TigerStockServiceImpl implements StockScannerStrategy {
     private final PatternEvaluateService patternEvaluateService;
 
     public TigerStockServiceImpl(ObjectMapper objectMapper,
-                                 @Autowired(required = true) TigerHttpClient client,
+                                 TigerHttpClient client,
                                  PatternEvaluateService patternEvaluateService) {
         log.info("TigerStockServiceImpl: Service initialized");
         this.client = client;

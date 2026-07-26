@@ -201,6 +201,55 @@ public class ScreeningServiceImpl implements ScreeningService {
         return screeningMatchRepository.countByBatchIdGroupByWindowDays(batchId);
     }
 
+
+    @Override
+    public Map<String, Object> getLatestNotificationGrouped() {
+        java.util.Optional<ScreeningMatch> latest = screeningMatchRepository.findTopByOrderByTradeDateDescIdDesc();
+        if (!latest.isPresent()) {
+            Map<String, Object> empty = new HashMap<>();
+            empty.put("message", "暂无筛选数据");
+            return empty;
+        }
+
+        String batchId = latest.get().getBatchId();
+        java.time.LocalDate screenDate = latest.get().getTradeDate();
+
+        java.util.List<ScreeningMatch> allMatches = screeningMatchRepository
+                .findByBatchIdOrderByIdAsc(batchId);
+        Map<String, Map<String, Object>> resultByAlgo = new LinkedHashMap<>();
+        for (ScreeningMatch m : allMatches) {
+            String algo = m.getAlgorithm();
+            int wd = m.getWindowDays();
+            String windowKey = wd + "d";
+
+            Map<String, Object> windowData = resultByAlgo
+                    .computeIfAbsent(algo, k -> new LinkedHashMap<>());
+            @SuppressWarnings("unchecked")
+            Map<String, Object> windowGroup = (Map<String, Object>) windowData
+                    .computeIfAbsent(windowKey, k -> {
+                        Map<String, Object> g = new LinkedHashMap<>();
+                        g.put("count", 0L);
+                        g.put("stocks", new java.util.ArrayList<Map<String, Object>>());
+                        return g;
+                    });
+
+            @SuppressWarnings("unchecked")
+            java.util.List<Map<String, Object>> stocks = (java.util.List<Map<String, Object>>) windowGroup.get("stocks");
+            windowGroup.put("count", ((Long) windowGroup.get("count")) + 1L);
+
+            Map<String, Object> stockInfo = new LinkedHashMap<>();
+            stockInfo.put("symbol", m.getSymbol());
+            stockInfo.put("lastClose", m.getLastClose());
+            stockInfo.put("rise", m.getRise());
+            stocks.add(stockInfo);
+        }
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("batchId", batchId);
+        payload.put("screenDate", screenDate.toString());
+        payload.put("results", resultByAlgo);
+        return payload;
+    }
     /**
      * 为匹配列表批量补充 stock name，构建带 name 的匹配项列表。
      */
