@@ -23,11 +23,11 @@ public class StockDailyBarService {
     }
 
     public List<StockDailyBarCandleDto> getRecentCandles(String symbol, int days) {
-        List<StockDailyBar> bars = repository.findTop7BySymbolOrderByTradeDateDesc(symbol);
+        // P3-8：原硬编码 findTop7（days 仅 ≤7 时截断），改为页式查询取 min(days,365) 条
+        int limit = Math.min(Math.max(1, days), 365);
+        List<StockDailyBar> bars = repository.findBySymbolOrderByTradeDateDesc(
+                symbol, org.springframework.data.domain.PageRequest.of(0, limit));
         Collections.reverse(bars);
-        if (bars.size() > days) {
-            bars = bars.subList(bars.size() - days, bars.size());
-        }
         return bars.stream()
             .map(bar -> {
                 return new StockDailyBarCandleDto(

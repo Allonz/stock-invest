@@ -16,6 +16,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
@@ -50,7 +52,7 @@ class StockDailyBarServiceTest {
     @Test
     @DisplayName("SVC-001: 正常返回 DTO 列表（含全部字段）")
     void getRecentCandlesReturnsDtos() {
-        when(repository.findTop7BySymbolOrderByTradeDateDesc("AAPL"))
+        when(repository.findBySymbolOrderByTradeDateDesc(eq("AAPL"), any(org.springframework.data.domain.Pageable.class)))
                 .thenReturn(new java.util.ArrayList<>(List.of(bar1, bar2, bar3)));
 
         List<StockDailyBarCandleDto> result = service.getRecentCandles("AAPL", 7);
@@ -72,7 +74,7 @@ class StockDailyBarServiceTest {
     @Test
     @DisplayName("SVC-002: bars 少于 days 时返回全部")
     void getRecentCandlesLessThanRequestedDays() {
-        when(repository.findTop7BySymbolOrderByTradeDateDesc("AAPL"))
+        when(repository.findBySymbolOrderByTradeDateDesc(eq("AAPL"), any(org.springframework.data.domain.Pageable.class)))
                 .thenReturn(new ArrayList<>(List.of(bar1)));
 
         List<StockDailyBarCandleDto> result = service.getRecentCandles("AAPL", 7);
@@ -85,7 +87,7 @@ class StockDailyBarServiceTest {
     @Test
     @DisplayName("SVC-003: repository 为空时返回空列表")
     void getRecentCandlesEmptyRepository() {
-        when(repository.findTop7BySymbolOrderByTradeDateDesc("AAPL"))
+        when(repository.findBySymbolOrderByTradeDateDesc(eq("AAPL"), any(org.springframework.data.domain.Pageable.class)))
                 .thenReturn(new ArrayList<>(List.of()));
 
         List<StockDailyBarCandleDto> result = service.getRecentCandles("AAPL", 7);
@@ -97,7 +99,7 @@ class StockDailyBarServiceTest {
     @Test
     @DisplayName("SVC-004: DTO 映射保留所有新增字段")
     void dtoMappingPreservesAllFields() {
-        when(repository.findTop7BySymbolOrderByTradeDateDesc("AAPL"))
+        when(repository.findBySymbolOrderByTradeDateDesc(eq("AAPL"), any(org.springframework.data.domain.Pageable.class)))
                 .thenReturn(new ArrayList<>(List.of(bar1)));
 
         List<StockDailyBarCandleDto> result = service.getRecentCandles("AAPL", 7);
@@ -115,7 +117,7 @@ class StockDailyBarServiceTest {
     @Test
     @DisplayName("SVC-005: tradeDate 转换为 yyyy-MM-dd 字符串")
     void dateFormatIsYyyyMmDd() {
-        when(repository.findTop7BySymbolOrderByTradeDateDesc("AAPL"))
+        when(repository.findBySymbolOrderByTradeDateDesc(eq("AAPL"), any(org.springframework.data.domain.Pageable.class)))
                 .thenReturn(new ArrayList<>(List.of(bar1)));
 
         List<StockDailyBarCandleDto> result = service.getRecentCandles("AAPL", 7);
@@ -128,7 +130,7 @@ class StockDailyBarServiceTest {
     @Test
     @DisplayName("SVC-006: 结果按 tradeDate 升序排列")
     void resultIsAscendingOrder() {
-        when(repository.findTop7BySymbolOrderByTradeDateDesc("AAPL"))
+        when(repository.findBySymbolOrderByTradeDateDesc(eq("AAPL"), any(org.springframework.data.domain.Pageable.class)))
                 .thenReturn(new ArrayList<>(List.of(bar1, bar2, bar3))); // newest-first
 
         List<StockDailyBarCandleDto> result = service.getRecentCandles("AAPL", 7);
@@ -138,12 +140,16 @@ class StockDailyBarServiceTest {
         assertTrue(result.get(1).date().compareTo(result.get(2).date()) <= 0);
     }
 
-    // SVC-007: days 参数限制返回数量
+    // SVC-007: days 参数限制返回数量（P3-8：截断下沉到 repository 分页，mock 模拟分页行为）
     @Test
     @DisplayName("SVC-007: days 参数限制 DTO 返回数量")
     void daysParameterLimitsResult() {
-        when(repository.findTop7BySymbolOrderByTradeDateDesc("AAPL"))
-                .thenReturn(new ArrayList<>(List.of(bar1, bar2, bar3)));
+        when(repository.findBySymbolOrderByTradeDateDesc(eq("AAPL"), any(org.springframework.data.domain.Pageable.class)))
+                .thenAnswer(inv -> {
+                    org.springframework.data.domain.Pageable pageable = inv.getArgument(1);
+                    List<StockDailyBar> all = new ArrayList<>(List.of(bar1, bar2, bar3));
+                    return all.subList(0, Math.min(pageable.getPageSize(), all.size()));
+                });
 
         List<StockDailyBarCandleDto> result = service.getRecentCandles("AAPL", 2);
 
@@ -156,7 +162,7 @@ class StockDailyBarServiceTest {
     void nullableFieldsMapToNull() {
         StockDailyBar bar = createTestBar("AAPL", LocalDate.of(2025, 6, 25),
                 150.0, 155.0, 148.0, 152.5, null, null, null, 1_000_000L);
-        when(repository.findTop7BySymbolOrderByTradeDateDesc("AAPL"))
+        when(repository.findBySymbolOrderByTradeDateDesc(eq("AAPL"), any(org.springframework.data.domain.Pageable.class)))
                 .thenReturn(new ArrayList<>(List.of(bar)));
 
         List<StockDailyBarCandleDto> result = service.getRecentCandles("AAPL", 7);

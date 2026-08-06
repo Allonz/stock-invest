@@ -38,10 +38,8 @@ public class NotificationController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> getLatestNotification(
             @RequestParam(value = "windows", required = false) String windows) {
         try {
+            // P3-3：两分支等价（均原样返回 result），删除死分支
             Map<String, Object> result = screeningService.getLatestNotificationGrouped(windows);
-            if (result.containsKey("message")) {
-                return ResponseEntity.ok(ApiResponse.ok(result));
-            }
             return ResponseEntity.ok(ApiResponse.ok(result));
         } catch (Exception e) {
             log.error("getLatestNotification failed", e);

@@ -5,7 +5,6 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -292,35 +291,12 @@ public class TigerStockServiceImpl implements StockScannerStrategy {
     }
     
     /**
-     * 获取备用股票列表
-     * @param market 市场
-     * @param limit 限制数量
-     * @return 股票代码列表
-     */
-    private static List<String> getFallbackStockList(Market market, int limit) {
-        List<String> stocks = new ArrayList<>();
-        
-        // 添加一些知名股票作为备用
-        if (market == Market.US) {
-            stocks.addAll(Arrays.asList(
-                "AAPL", "MSFT", "GOOGL", "AMZN", "META",
-                "TSLA", "NVDA", "JPM", "V", "WMT",
-                "PG", "MA", "HD", "BAC", "INTC",
-                "VZ", "DIS", "NFLX", "ADBE", "CSCO"
-            ));
-        }
-        
-        // 限制数量
-        return stocks.stream().limit(limit).collect(Collectors.toList());
-    }
-    
-    /**
      * 从Tiger API获取股票列表
      * @param market 市场
      * @param limit 限制数量
      * @param minPrice 最低价格
      * @param maxPrice 最高价格
-     * @return 股票代码列表
+     * @return 股票代码列表（失败抛 StockDataException，P3-7：不再返回硬编码列表）
      */
     private List<String> getStocksFromTigerApi(Market market,
                                                int limit, Double minPrice, Double maxPrice) {
@@ -350,11 +326,14 @@ public class TigerStockServiceImpl implements StockScannerStrategy {
             
             // 发送请求
             MarketScannerResponse response = client.execute(request);
-            
-            // 检查响应
+
+            // 检查响应（P3-7：不再静默返回硬编码知名股票列表 —— 调用方无法区分真假数据，
+            // 失败显式抛 StockDataException，由调用方决定降级策略）
             if (response == null || !response.isSuccess()) {
-                log.error("获取股票列表失败: {}", response == null ? "响应为空" : response.getMessage());
-                return getFallbackStockList(market, limit);
+                String reason = response == null ? "响应为空" : response.getMessage();
+                log.error("获取股票列表失败: {}", reason);
+                throw new StockDataException(null, "tiger", "Tiger 扫描失败: " + reason,
+                        StockDataException.ErrorCategory.TRANSIENT_FAILURE);
             }
             
             // 直接从响应中提取股票代码
@@ -368,7 +347,7 @@ public class TigerStockServiceImpl implements StockScannerStrategy {
                 .collect(Collectors.toList());
         } catch (Exception e) {
             log.warn("获取股票列表时出错: {}", e.getMessage());
-            return getFallbackStockList(market, limit);
+            throw StockDataException.classify(null, "tiger", e.getMessage(), e);
         }
     }
     public List<String> scanStocks(Market market, int limit, Double minPrice, Double maxPrice) {
