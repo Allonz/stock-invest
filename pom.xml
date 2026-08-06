@@ -120,6 +120,13 @@
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
         </dependency>
+
+        <!-- MCP Server (Streamable HTTP) — 供 OpenClaw 调用 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
+            <version>1.1.8</version>
+        </dependency>
     </dependencies>
 
     <build>

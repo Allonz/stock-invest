@@ -54,4 +54,12 @@ public interface ScreeningService {
      * @return 包含 batchId / screenDate / results 的 Map
      */
     Map<String, Object> getLatestNotificationGrouped();
+
+    /**
+     * 获取最新筛选结果，按 algorithm + windowDays 分组统计（通知用），支持窗口过滤。
+     *
+     * @param windows 逗号分隔的窗口列表，如 "2d,3d,4d,5d"；null 或空表示返回全部窗口
+     * @return 包含 batchId / screenDate / results 的 Map
+     */
+    Map<String, Object> getLatestNotificationGrouped(String windows);
 }

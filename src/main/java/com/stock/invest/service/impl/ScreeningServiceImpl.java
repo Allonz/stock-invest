@@ -18,12 +18,14 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -204,6 +206,11 @@ public class ScreeningServiceImpl implements ScreeningService {
 
     @Override
     public Map<String, Object> getLatestNotificationGrouped() {
+        return getLatestNotificationGrouped(null);
+    }
+
+    @Override
+    public Map<String, Object> getLatestNotificationGrouped(String windows) {
         java.util.Optional<ScreeningMatch> latest = screeningMatchRepository.findTopByOrderByTradeDateDescIdDesc();
         if (!latest.isPresent()) {
             Map<String, Object> empty = new HashMap<>();
@@ -216,11 +223,20 @@ public class ScreeningServiceImpl implements ScreeningService {
 
         java.util.List<ScreeningMatch> allMatches = screeningMatchRepository
                 .findByBatchIdOrderByIdAsc(batchId);
+        Set<String> allowedWindows = null;
+        if (windows != null && !windows.isBlank()) {
+            allowedWindows = Arrays.stream(windows.split(","))
+                    .map(String::trim)
+                    .collect(Collectors.toSet());
+        }
         Map<String, Map<String, Object>> resultByAlgo = new LinkedHashMap<>();
         for (ScreeningMatch m : allMatches) {
             String algo = m.getAlgorithm();
             int wd = m.getWindowDays();
             String windowKey = wd + "d";
+            if (allowedWindows != null && !allowedWindows.contains(windowKey)) {
+                continue;
+            }
 
             Map<String, Object> windowData = resultByAlgo
                     .computeIfAbsent(algo, k -> new LinkedHashMap<>());
@@ -239,7 +255,8 @@ public class ScreeningServiceImpl implements ScreeningService {
 
             Map<String, Object> stockInfo = new LinkedHashMap<>();
             stockInfo.put("symbol", m.getSymbol());
-            stockInfo.put("lastClose", m.getLastClose());
+            Double close = m.getLastClose();
+            stockInfo.put("lastClose", close == null ? null : Math.round(close * 1000.0) / 1000.0);
             stockInfo.put("rise", m.getRise());
             stocks.add(stockInfo);
         }

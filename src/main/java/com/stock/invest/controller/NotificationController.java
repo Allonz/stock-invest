@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.stock.invest.enums.dto.ApiResponse;
@@ -34,9 +35,10 @@ public class NotificationController {
      * GET /api/notification/latest — 最新筛选结果通知（按 algorithm + windowDays 分组）
      */
     @GetMapping("/latest")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getLatestNotification() {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getLatestNotification(
+            @RequestParam(value = "windows", required = false) String windows) {
         try {
-            Map<String, Object> result = screeningService.getLatestNotificationGrouped();
+            Map<String, Object> result = screeningService.getLatestNotificationGrouped(windows);
             if (result.containsKey("message")) {
                 return ResponseEntity.ok(ApiResponse.ok(result));
             }

@@ -3,6 +3,20 @@ spring:
     log-startup-info: true
   application:
     name: stock-invest
+  # MCP Server 配置（OpenClaw 通过 /api/mcp 接入）
+  ai:
+    mcp:
+      server:
+        protocol: STREAMABLE
+        name: stock-invest
+        version: 1.0.0
+        type: SYNC
+        capabilities:
+          resource: false
+          prompt: false
+          completion: false
+        streamable-http:
+          mcp-endpoint: /api/mcp
   lifecycle:
     timeout-per-shutdown-phase: 20s
   # 设置数据库连接
