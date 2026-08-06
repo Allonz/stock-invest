@@ -2,9 +2,15 @@ package com.stock.invest.model;
 
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class KLineIteratorTest {
+
+    private static BigDecimal bd(String v) {
+        return new BigDecimal(v);
+    }
 
     @Test
     void setTimeStringWithValidNumericTimestampShouldSetTime() {
@@ -64,17 +70,17 @@ class KLineIteratorTest {
         it.setSymbol("AAPL");
         assertEquals("AAPL", it.getSymbol());
         
-        it.setOpen(150.5);
-        assertEquals(150.5, it.getOpen(), 0.001);
+        it.setOpen(bd("150.5"));
+        assertEquals(0, bd("150.5").compareTo(it.getOpen()));
         
-        it.setHigh(155.0);
-        assertEquals(155.0, it.getHigh(), 0.001);
+        it.setHigh(bd("155.0"));
+        assertEquals(0, bd("155.0").compareTo(it.getHigh()));
         
-        it.setLow(148.5);
-        assertEquals(148.5, it.getLow(), 0.001);
+        it.setLow(bd("148.5"));
+        assertEquals(0, bd("148.5").compareTo(it.getLow()));
         
-        it.setClose(152.0);
-        assertEquals(152.0, it.getClose(), 0.001);
+        it.setClose(bd("152.0"));
+        assertEquals(0, bd("152.0").compareTo(it.getClose()));
         
         it.setVolume(1000000L);
         assertEquals(1000000L, it.getVolume());
@@ -88,21 +94,24 @@ class KLineIteratorTest {
 
     @Test
     void constructorWithAllFieldsShouldWork() {
-        KLineIterator it = new KLineIterator("AAPL", 1700000000000L, 150.0, 155.0, 148.0, 152.0, 1000000L, 5000000.0, 0.0, 0.0, 0.0);
+        KLineIterator it = new KLineIterator("AAPL", 1700000000000L,
+                bd("150.0"), bd("155.0"), bd("148.0"), bd("152.0"),
+                1000000L, 5000000.0, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
         
         assertEquals("AAPL", it.getSymbol());
         assertEquals(1700000000000L, it.getTime());
-        assertEquals(150.0, it.getOpen(), 0.001);
-        assertEquals(155.0, it.getHigh(), 0.001);
-        assertEquals(148.0, it.getLow(), 0.001);
-        assertEquals(152.0, it.getClose(), 0.001);
+        assertEquals(0, bd("150.0").compareTo(it.getOpen()));
+        assertEquals(0, bd("155.0").compareTo(it.getHigh()));
+        assertEquals(0, bd("148.0").compareTo(it.getLow()));
+        assertEquals(0, bd("152.0").compareTo(it.getClose()));
         assertEquals(1000000L, it.getVolume());
         assertEquals(5000000.0, it.getAmount(), 0.001);
     }
 
     @Test
     void toStringShouldContainFields() {
-        KLineIterator it = new KLineIterator("AAPL", 123L, 1.0, 2.0, 0.5, 1.5, 100L, 200.0);
+        KLineIterator it = new KLineIterator("AAPL", 123L,
+                bd("1.0"), bd("2.0"), bd("0.5"), bd("1.5"), 100L, 200.0);
         String str = it.toString();
         assertTrue(str.contains("AAPL"));
         assertTrue(str.contains("123"));
@@ -120,10 +129,10 @@ class KLineIteratorTest {
     void defaultValues() {
         KLineIterator it = new KLineIterator();
         assertEquals(0L, it.getTime());
-        assertEquals(0.0, it.getOpen(), 0.001);
-        assertEquals(0.0, it.getHigh(), 0.001);
-        assertEquals(0.0, it.getLow(), 0.001);
-        assertEquals(0.0, it.getClose(), 0.001);
+        assertNull(it.getOpen());
+        assertNull(it.getHigh());
+        assertNull(it.getLow());
+        assertNull(it.getClose());
         assertEquals(0L, it.getVolume());
         assertEquals(0.0, it.getAmount(), 0.001);
         assertNull(it.getSymbol());

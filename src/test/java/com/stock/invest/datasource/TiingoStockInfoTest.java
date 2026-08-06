@@ -31,6 +31,10 @@ class TiingoStockInfoTest {
 
     private TiingoDataSourceStrategy strategy;
 
+    private static java.math.BigDecimal bd(String v) {
+        return new java.math.BigDecimal(v);
+    }
+
     @BeforeEach
     void setUp() {
         strategy = new TiingoDataSourceStrategy(tiingoRestClient);
@@ -46,18 +50,18 @@ class TiingoStockInfoTest {
         KLineIterator latest = new KLineIterator();
         latest.setSymbol("AAPL");
         latest.setTime(1719331200000L);
-        latest.setOpen(150.0);
-        latest.setHigh(152.0);
-        latest.setLow(149.0);
-        latest.setClose(151.0);
+        latest.setOpen(bd("150.0"));
+        latest.setHigh(bd("152.0"));
+        latest.setLow(bd("149.0"));
+        latest.setClose(bd("151.0"));
         latest.setVolume(1000000L);
         KLineIterator prev = new KLineIterator();
         prev.setSymbol("AAPL");
         prev.setTime(1719244800000L);
-        prev.setOpen(148.0);
-        prev.setHigh(150.0);
-        prev.setLow(147.0);
-        prev.setClose(149.0);
+        prev.setOpen(bd("148.0"));
+        prev.setHigh(bd("150.0"));
+        prev.setLow(bd("147.0"));
+        prev.setClose(bd("149.0"));
         prev.setVolume(900000L);
         kd.setItems(List.of(latest, prev));
 
@@ -67,12 +71,12 @@ class TiingoStockInfoTest {
 
         assertNotNull(info);
         assertEquals("AAPL", info.getSymbol());
-        assertEquals(151.0, info.getCurrentPrice(), 0.001);
-        assertEquals(150.0, info.getOpenPrice(), 0.001);
+        assertEquals(0, bd("151.0").compareTo(info.getCurrentPrice()));
+        assertEquals(0, bd("150.0").compareTo(info.getOpenPrice()));
         assertEquals(1000000L, info.getVolume());
-        assertEquals(2.0, info.getChange(), 0.001);
-        // (151 - 149) / 149 * 100
-        assertEquals(1.3422818791946307, info.getChangePercent(), 0.001);
+        assertEquals(0, bd("2.0").compareTo(info.getChange()));
+        // (151 - 149) / 149 * 100 —— BigDecimal divide scale 8 HALF_UP 后乘 100
+        assertEquals(0, bd("1.342282").compareTo(info.getChangePercent()));
     }
 
     // ---- TG-INFO-002: 只有一条数据时 change 为 0 ----
@@ -85,8 +89,8 @@ class TiingoStockInfoTest {
         KLineIterator latest = new KLineIterator();
         latest.setSymbol("MSFT");
         latest.setTime(1719331200000L);
-        latest.setClose(300.0);
-        latest.setOpen(298.0);
+        latest.setClose(bd("300.0"));
+        latest.setOpen(bd("298.0"));
         latest.setVolume(500000L);
         kd.setItems(List.of(latest));
 
@@ -96,9 +100,9 @@ class TiingoStockInfoTest {
 
         assertNotNull(info);
         assertEquals("MSFT", info.getSymbol());
-        assertEquals(300.0, info.getCurrentPrice(), 0.001);
-        assertEquals(0.0, info.getChange(), 0.001);
-        assertEquals(0.0, info.getChangePercent(), 0.001);
+        assertEquals(0, bd("300.0").compareTo(info.getCurrentPrice()));
+        assertEquals(0, java.math.BigDecimal.ZERO.compareTo(info.getChange()));
+        assertEquals(0, java.math.BigDecimal.ZERO.compareTo(info.getChangePercent()));
     }
 
     // ---- TG-INFO-003: null/empty data returns null ----

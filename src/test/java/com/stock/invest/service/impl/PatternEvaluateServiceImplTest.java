@@ -26,15 +26,15 @@ class PatternEvaluateServiceImplTest {
             KLineIterator bar = new KLineIterator(
                     "TEST",           // symbol
                     1700000000000L + i * 86400000L, // time (one day apart)
-                    100.0 + i,        // open
-                    105.0 + i,        // high
-                    95.0 + i,         // low
-                    102.0 + i,        // close
+                    java.math.BigDecimal.valueOf(100.0 + i),        // open
+                    java.math.BigDecimal.valueOf(105.0 + i),        // high
+                    java.math.BigDecimal.valueOf(95.0 + i),         // low
+                    java.math.BigDecimal.valueOf(102.0 + i),        // close
                     volumes[i],       // volume
                     0.0,              // amount
-                    0.0,              // changePercent
-                    0.0,              // afterHours
-                    0.0               // afterHoursChangePercent
+                    java.math.BigDecimal.ZERO,              // changePercent
+                    java.math.BigDecimal.ZERO,              // afterHours
+                    java.math.BigDecimal.ZERO               // afterHoursChangePercent
             );
             list.add(bar);
         }

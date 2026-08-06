@@ -25,8 +25,8 @@ public class TestDataFactory {
         StockDailyBar bar = new StockDailyBar();
         bar.setSymbol(symbol);
         bar.setTradeDate(tradeDate);
-        bar.setOpenPrice(open);
-        bar.setClosePrice(close);
+        bar.setOpenPrice(java.math.BigDecimal.valueOf(open));
+        bar.setClosePrice(java.math.BigDecimal.valueOf(close));
         bar.setVolume(volume);
         bar.setSource(source);
         return bar;
@@ -81,8 +81,8 @@ public class TestDataFactory {
         match.setBatchId(batchId);
         match.setSymbol(symbol);
         match.setTradeDate(tradeDate);
-        match.setPrice(price);
-        match.setLastClose(price);
+        match.setPrice(java.math.BigDecimal.valueOf(price));
+        match.setLastClose(java.math.BigDecimal.valueOf(price));
         match.setRise(rise);
         match.setDataSource(dataSource);
         return match;
@@ -110,7 +110,10 @@ public class TestDataFactory {
                 .toInstant().toEpochMilli();
         KLineData kd = new KLineData();
         kd.setSymbol(symbol);
-        KLineIterator item = new KLineIterator(symbol, epochMillis, open, close + 1, close - 1, close, volume, 0, 0.0, 0.0, 0.0);
+        KLineIterator item = new KLineIterator(symbol, epochMillis,
+                java.math.BigDecimal.valueOf(open), java.math.BigDecimal.valueOf(close + 1),
+                java.math.BigDecimal.valueOf(close - 1), java.math.BigDecimal.valueOf(close),
+                volume, 0, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO);
         List<KLineIterator> itemsList = new ArrayList<>();
         itemsList.add(item);
         kd.setItems(itemsList);
@@ -130,8 +133,10 @@ public class TestDataFactory {
             long epochMillis = d.atStartOfDay(java.time.ZoneId.systemDefault())
                     .toInstant().toEpochMilli();
             KLineIterator item = new KLineIterator(symbol, epochMillis,
-                    basePrice + i, basePrice + i + 1, basePrice + i - 1,
-                    basePrice + i, baseVolume + i * 1000L, 0, 0.0, 0.0, 0.0);
+                    java.math.BigDecimal.valueOf(basePrice + i), java.math.BigDecimal.valueOf(basePrice + i + 1),
+                    java.math.BigDecimal.valueOf(basePrice + i - 1), java.math.BigDecimal.valueOf(basePrice + i),
+                    baseVolume + i * 1000L, 0, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
+                    java.math.BigDecimal.ZERO);
             itemsList.add(item);
         }
         kd.setItems(itemsList);

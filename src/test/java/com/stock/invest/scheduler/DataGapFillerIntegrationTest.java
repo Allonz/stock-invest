@@ -98,14 +98,20 @@ class DataGapFillerIntegrationTest {
                 StockDailyBar prev = bars.get(i - 1);
                 StockDailyBar curr = bars.get(i);
 
-                Double changePct = curr.getChangePercent();
-                Double prevClose = prev.getClosePrice();
-                Double currClose = curr.getClosePrice();
+                java.math.BigDecimal changePct = curr.getChangePercent();
+                java.math.BigDecimal prevClose = prev.getClosePrice();
+                java.math.BigDecimal currClose = curr.getClosePrice();
 
-                if (changePct != null && changePct != 0.0 && prevClose != null && currClose != null && prevClose != 0.0) {
-                    double expectedChange = Math.round((currClose - prevClose) / prevClose * 100 * 10000.0) / 10000.0;
+                if (changePct != null && changePct.compareTo(java.math.BigDecimal.ZERO) != 0
+                        && prevClose != null && currClose != null
+                        && prevClose.compareTo(java.math.BigDecimal.ZERO) != 0) {
+                    // P2-6：BigDecimal 版期望公式 —— divide scale 8 HALF_UP 后乘 100，圆整 4 位
+                    java.math.BigDecimal expectedChange = currClose.subtract(prevClose)
+                            .divide(prevClose, 8, java.math.RoundingMode.HALF_UP)
+                            .multiply(java.math.BigDecimal.valueOf(100))
+                            .setScale(4, java.math.RoundingMode.HALF_UP);
                     // Skip rows where the stored change_percent is clearly wrong (deviation > 1%)
-                    if (Math.abs(expectedChange - changePct) > 1.0) {
+                    if (expectedChange.subtract(changePct).abs().doubleValue() > 1.0) {
                         log.warn("SKIP {} change_percent mismatch: stored={} calculated={}, DB data may be stale",
                                 symbol, changePct, expectedChange);
                         continue;

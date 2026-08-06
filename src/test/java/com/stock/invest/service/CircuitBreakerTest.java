@@ -68,12 +68,16 @@ class CircuitBreakerTest {
         lenient().when(tiingoSource.getSourceName()).thenReturn("tiingo");
         lenient().when(tiingoSource.isAvailable()).thenReturn(true);
 
-        lenient().when(gapFillProperties.getMinPriceThreshold()).thenReturn(1.0);
+        lenient().when(gapFillProperties.getMinPriceThreshold()).thenReturn(java.math.BigDecimal.valueOf(1.0));
         lenient().when(stockDataSourcePriorityService.getPriorityList(anyString()))
                 .thenReturn(List.of("tiger", "yfinance", "twelvedata", "tiingo"));
 
         KLineData mismatch = new KLineData();
-        mismatch.setItems(List.of(new KLineIterator("X", 0L, 0, 0, 0, 0, 0, 0, 0, 0, 0)));
+        mismatch.setItems(List.of(new KLineIterator("X", 0L,
+                java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
+                java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
+                0, 0,
+                java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO)));
         lenient().when(yfinanceSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(mismatch);
         lenient().when(twelvedataSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(mismatch);
         lenient().when(tiingoSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(mismatch);
@@ -99,8 +103,8 @@ class CircuitBreakerTest {
         StockDailyBar b = new StockDailyBar();
         b.setSymbol(symbol);
         b.setTradeDate(tradeDate);
-        b.setOpenPrice(0.5);
-        b.setClosePrice(0.5);
+        b.setOpenPrice(java.math.BigDecimal.valueOf(0.5));
+        b.setClosePrice(java.math.BigDecimal.valueOf(0.5));
         b.setVolume(10L);
         b.setSource("yfinance");
         return b;

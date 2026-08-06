@@ -76,8 +76,8 @@ class TigerOpenPythonBridgeAfterHoursTest {
         assertNotNull(result.getItems());
         // Items should be sorted newest first (1719331200000 first)
         assertEquals(2, result.getItems().size());
-        assertEquals(151.0, result.getItems().get(0).getClose(), 0.001);
-        assertEquals(150.0, result.getItems().get(1).getClose(), 0.001);
+        assertEquals(0, new java.math.BigDecimal("151.0").compareTo(result.getItems().get(0).getClose()));
+        assertEquals(0, new java.math.BigDecimal("150.0").compareTo(result.getItems().get(1).getClose()));
 
         verify(pythonScriptExecutor).executeScriptWithEnvironment(
                 envCaptor.capture(), scriptCaptor.capture(), argsCaptor.capture());

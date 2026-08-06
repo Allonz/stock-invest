@@ -75,7 +75,7 @@ class TigerAfterHoursTest {
         assertEquals("AAPL", result.getSymbol());
         assertNotNull(result.getItems());
         assertEquals(1, result.getItems().size());
-        assertEquals(151.0, result.getItems().get(0).getClose(), 0.001);
+        assertEquals(0, java.math.BigDecimal.valueOf(151.0).compareTo(result.getItems().get(0).getClose()));
         assertEquals(1000000L, result.getItems().get(0).getVolume());
 
         verify(tigerHttpClient).execute(any(QuoteKlineRequest.class));

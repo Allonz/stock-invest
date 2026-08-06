@@ -61,8 +61,8 @@ class ScreeningServiceTest {
         StockDailyBar b = new StockDailyBar();
         b.setSymbol(symbol);
         b.setTradeDate(date);
-        b.setOpenPrice(open);
-        b.setClosePrice(close);
+        b.setOpenPrice(java.math.BigDecimal.valueOf(open));
+        b.setClosePrice(java.math.BigDecimal.valueOf(close));
         b.setVolume(volume);
         b.setSource(source);
         return b;

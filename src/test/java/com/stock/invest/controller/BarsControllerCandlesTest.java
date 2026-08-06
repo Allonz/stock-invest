@@ -17,6 +17,8 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import java.math.BigDecimal;
+
 /**
  * CTRL-001~008: BarsController 蜡烛图端点单元测试。
  */
@@ -34,11 +36,19 @@ class BarsControllerCandlesTest {
 
     private List<StockDailyBarCandleDto> mockCandles;
 
+    private static BigDecimal bd(String v) {
+        return new BigDecimal(v);
+    }
+
     @BeforeEach
     void setUp() {
         mockCandles = List.of(
-            new StockDailyBarCandleDto("2026-06-25", 150.0, 152.0, 149.0, 151.0, 1.0, 150.5, 0.5, 1000000L),
-            new StockDailyBarCandleDto("2026-06-24", 149.0, 151.0, 148.0, 150.0, 0.5, 149.5, 0.3, 900000L)
+            new StockDailyBarCandleDto("2026-06-25",
+                    bd("150.0"), bd("152.0"), bd("149.0"), bd("151.0"),
+                    bd("1.0"), bd("150.5"), bd("0.5"), 1000000L),
+            new StockDailyBarCandleDto("2026-06-24",
+                    bd("149.0"), bd("151.0"), bd("148.0"), bd("150.0"),
+                    bd("0.5"), bd("149.5"), bd("0.3"), 900000L)
         );
     }
 
@@ -80,7 +90,9 @@ class BarsControllerCandlesTest {
     @DisplayName("CTRL-003: GET /api/bars/TSLA/candles?days=3 passes custom days")
     void getCandles_customDays() throws Exception {
         var tslaCandles = List.of(
-            new StockDailyBarCandleDto("2026-06-25", 200.0, 205.0, 199.0, 204.0, 2.0, 203.0, 1.0, 5000000L)
+            new StockDailyBarCandleDto("2026-06-25",
+                    bd("200.0"), bd("205.0"), bd("199.0"), bd("204.0"),
+                    bd("2.0"), bd("203.0"), bd("1.0"), 5000000L)
         );
         when(stockDailyBarService.getRecentCandles("TSLA", 3)).thenReturn(tslaCandles);
 
@@ -126,7 +138,9 @@ class BarsControllerCandlesTest {
     @DisplayName("CTRL-006: GET /api/bars/BRK.A/candles handles dot in symbol")
     void getCandles_specialCharSymbol() throws Exception {
         var brkCandles = List.of(
-            new StockDailyBarCandleDto("2026-06-25", 400.0, 401.0, 399.0, 400.5, 0.2, 400.0, 0.1, 100000L)
+            new StockDailyBarCandleDto("2026-06-25",
+                    bd("400.0"), bd("401.0"), bd("399.0"), bd("400.5"),
+                    bd("0.2"), bd("400.0"), bd("0.1"), 100000L)
         );
         when(stockDailyBarService.getRecentCandles("BRK.A", 7)).thenReturn(brkCandles);
 

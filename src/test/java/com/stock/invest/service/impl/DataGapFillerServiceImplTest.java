@@ -89,7 +89,11 @@ class DataGapFillerServiceImplTest {
         com.stock.invest.model.KLineData defaultKd = new com.stock.invest.model.KLineData();
         defaultKd.setSymbol("AAPL");
         defaultKd.setItems(java.util.List.of(
-            new com.stock.invest.model.KLineIterator("AAPL", 0L, 0,0,0,0,0,0,0,0,0)));
+            new com.stock.invest.model.KLineIterator("AAPL", 0L,
+                    java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
+                    java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
+                    0, 0,
+                    java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO)));
         lenient().when(tigerDataSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(defaultKd);
         lenient().when(yfinanceDataSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(defaultKd);
         lenient().when(twelvedataDataSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(defaultKd);
@@ -242,7 +246,11 @@ class DataGapFillerServiceImplTest {
         com.stock.invest.model.KLineData nonNullKd = new com.stock.invest.model.KLineData();
         nonNullKd.setSymbol("AAPL");
         nonNullKd.setItems(java.util.List.of(
-            new com.stock.invest.model.KLineIterator("AAPL", 0L, 0,0,0,0,0,0,0,0,0)));
+            new com.stock.invest.model.KLineIterator("AAPL", 0L,
+                    java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
+                    java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
+                    0, 0,
+                    java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO)));
         when(tigerDataSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(nonNullKd);
 
         service.processRetryingTasks();
@@ -285,8 +293,8 @@ class DataGapFillerServiceImplTest {
         StockDailyBar b = new StockDailyBar();
         b.setSymbol(symbol);
         b.setTradeDate(tradeDate);
-        b.setOpenPrice(0.5);
-        b.setClosePrice(0.5);
+        b.setOpenPrice(java.math.BigDecimal.valueOf(0.5));
+        b.setClosePrice(java.math.BigDecimal.valueOf(0.5));
         b.setVolume(10L);
         b.setSource("yfinance");
         return b;
@@ -444,7 +452,7 @@ class DataGapFillerServiceImplTest {
 
     /** 单 symbol + 单缺失日期（日历仅开放 probeDate）的最小化补缺场景。 */
     private void stubSingleGapScenario(String symbol, LocalDate probeDate) {
-        lenient().when(gapFillProperties.getMinPriceThreshold()).thenReturn(1.0);
+        lenient().when(gapFillProperties.getMinPriceThreshold()).thenReturn(java.math.BigDecimal.valueOf(1.0));
         when(stockDailyBarRepository.findAllSymbols()).thenReturn(List.of(symbol));
         when(stockDailyBarRepository.findBySymbolOrderByTradeDateDesc(eq(symbol), any()))
                 .thenReturn(new ArrayList<>(List.of(lowBar(symbol, probeDate.minusDays(1)))));
@@ -610,7 +618,7 @@ class DataGapFillerServiceImplTest {
     @Test
     @DisplayName("P1-2: 单 symbol 持久化失败不整体回滚，批次继续")
     void fillGaps_partialFailureKeepsCommittedRows() {
-        lenient().when(gapFillProperties.getMinPriceThreshold()).thenReturn(1.0);
+        lenient().when(gapFillProperties.getMinPriceThreshold()).thenReturn(java.math.BigDecimal.valueOf(1.0));
         lenient().when(tradingCalendarDbService.isTradingDay(anyString(), any(LocalDate.class))).thenReturn(true);
         TransactionStatus status = mock(TransactionStatus.class);
         when(transactionManager.getTransaction(any())).thenReturn(status);
@@ -637,7 +645,11 @@ class DataGapFillerServiceImplTest {
                     kd.setSymbol(sym);
                     com.stock.invest.model.KLineIterator item = new com.stock.invest.model.KLineIterator(
                             sym, date.atStartOfDay(AMERICA_NY).toInstant().toEpochMilli(),
-                            150.0, 155.0, 148.0, 152.5, 1_000_000L, 5_000_000.0, 1.67, 153.0, 0.33);
+                            java.math.BigDecimal.valueOf(150.0), java.math.BigDecimal.valueOf(155.0),
+                            java.math.BigDecimal.valueOf(148.0), java.math.BigDecimal.valueOf(152.5),
+                            1_000_000L, 5_000_000.0,
+                            java.math.BigDecimal.valueOf(1.67), java.math.BigDecimal.valueOf(153.0),
+                            java.math.BigDecimal.valueOf(0.33));
                     item.setTimeString(date.toString());
                     kd.setItems(List.of(item));
                     return kd;
@@ -657,7 +669,7 @@ class DataGapFillerServiceImplTest {
     @Test
     @DisplayName("P1-2: fillGaps 运行中第二个调用被互斥拒绝并立即返回")
     void fillGaps_runningGuardBlocksSecondCall() throws Exception {
-        lenient().when(gapFillProperties.getMinPriceThreshold()).thenReturn(1.0);
+        lenient().when(gapFillProperties.getMinPriceThreshold()).thenReturn(java.math.BigDecimal.valueOf(1.0));
         CountDownLatch entered = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
         doAnswer(inv -> {
@@ -731,7 +743,7 @@ class DataGapFillerServiceImplTest {
     @Test
     @DisplayName("P1-2: 批次失败后 retry 任务独立事务落库（status=retrying）")
     void retryTask_persistsOwnTransaction() {
-        lenient().when(gapFillProperties.getMinPriceThreshold()).thenReturn(1.0);
+        lenient().when(gapFillProperties.getMinPriceThreshold()).thenReturn(java.math.BigDecimal.valueOf(1.0));
         lenient().when(tradingCalendarDbService.isTradingDay(anyString(), any(LocalDate.class))).thenReturn(true);
         TransactionStatus status = mock(TransactionStatus.class);
         when(transactionManager.getTransaction(any())).thenReturn(status);
@@ -758,7 +770,7 @@ class DataGapFillerServiceImplTest {
     @Test
     @DisplayName("P1-2/§4.4: 含中间空洞的 DESC 序 bars → 空洞日期被补缺")
     void fillGaps_fillsInternalGapDate() {
-        lenient().when(gapFillProperties.getMinPriceThreshold()).thenReturn(1.0);
+        lenient().when(gapFillProperties.getMinPriceThreshold()).thenReturn(java.math.BigDecimal.valueOf(1.0));
         lenient().when(tradingCalendarDbService.isTradingDay(anyString(), any(LocalDate.class))).thenReturn(true);
         LocalDate today = nyToday();
         LocalDate tue = weekdayNear(today, 3);
@@ -777,7 +789,10 @@ class DataGapFillerServiceImplTest {
                     kd.setSymbol("AAPL");
                     com.stock.invest.model.KLineIterator item = new com.stock.invest.model.KLineIterator(
                             "AAPL", date.atStartOfDay(AMERICA_NY).toInstant().toEpochMilli(),
-                            150.0, 155.0, 148.0, 152.5, 1_000_000L, 5_000_000.0, 0.0, 0.0, 0.0);
+                            java.math.BigDecimal.valueOf(150.0), java.math.BigDecimal.valueOf(155.0),
+                            java.math.BigDecimal.valueOf(148.0), java.math.BigDecimal.valueOf(152.5),
+                            1_000_000L, 5_000_000.0,
+                            java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO);
                     item.setTimeString(date.toString());
                     kd.setItems(List.of(item));
                     return kd;
@@ -796,7 +811,7 @@ class DataGapFillerServiceImplTest {
     @Test
     @DisplayName("§4.5: 数据源挂起（阻塞 2s）不永久阻塞批次与互斥释放")
     void hangingSource_doesNotBlockBatchOrMutex() throws Exception {
-        lenient().when(gapFillProperties.getMinPriceThreshold()).thenReturn(1.0);
+        lenient().when(gapFillProperties.getMinPriceThreshold()).thenReturn(java.math.BigDecimal.valueOf(1.0));
         lenient().when(tradingCalendarDbService.isTradingDay(anyString(), any(LocalDate.class))).thenReturn(true);
         LocalDate stopDate = nyToday().minusDays(5);
 
@@ -829,7 +844,7 @@ class DataGapFillerServiceImplTest {
     @Test
     @DisplayName("§4.1: fillGaps 中途异常 → finally 释放互斥，后续可再次进入")
     void mutexReleasedAfterException() {
-        lenient().when(gapFillProperties.getMinPriceThreshold()).thenReturn(1.0);
+        lenient().when(gapFillProperties.getMinPriceThreshold()).thenReturn(java.math.BigDecimal.valueOf(1.0));
         // 首次调用抛异常，之后恢复（链式 stub，避免 doThrow 后重 stub 触发旧异常）
         when(stockDailyBarRepository.findAllSymbols())
                 .thenThrow(new RuntimeException("findAllSymbols boom"))

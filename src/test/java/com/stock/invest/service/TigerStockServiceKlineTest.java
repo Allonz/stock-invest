@@ -52,16 +52,16 @@ class TigerStockServiceKlineTest {
         assertNotNull(result);
         assertEquals("AAPL", result.getSymbol());
         assertEquals(1719331200000L, result.getTime());
-        assertEquals(150.0, result.getOpen(), 0.001);
-        assertEquals(152.0, result.getHigh(), 0.001);
-        assertEquals(149.0, result.getLow(), 0.001);
-        assertEquals(151.0, result.getClose(), 0.001);
+        assertEquals(0, java.math.BigDecimal.valueOf(150.0).compareTo(result.getOpen()));
+        assertEquals(0, java.math.BigDecimal.valueOf(152.0).compareTo(result.getHigh()));
+        assertEquals(0, java.math.BigDecimal.valueOf(149.0).compareTo(result.getLow()));
+        assertEquals(0, java.math.BigDecimal.valueOf(151.0).compareTo(result.getClose()));
         assertEquals(1000000L, result.getVolume());
         assertEquals(151000000.0, result.getAmount(), 0.001);
         // Default values
-        assertEquals(0.0, result.getChangePercent(), 0.001);
-        assertEquals(0.0, result.getAfterHours(), 0.001);
-        assertEquals(0.0, result.getAfterHoursChangePercent(), 0.001);
+        assertEquals(0, java.math.BigDecimal.ZERO.compareTo(result.getChangePercent()));
+        assertEquals(0, java.math.BigDecimal.ZERO.compareTo(result.getAfterHours()));
+        assertEquals(0, java.math.BigDecimal.ZERO.compareTo(result.getAfterHoursChangePercent()));
     }
 
     // ---- KLINE-PT-002: 零值字段处理 ----
@@ -82,8 +82,8 @@ class TigerStockServiceKlineTest {
         assertNotNull(result);
         assertEquals("ZERO", result.getSymbol());
         assertEquals(0L, result.getTime());
-        assertEquals(0.0, result.getOpen(), 0.001);
-        assertEquals(0.0, result.getClose(), 0.001);
+        assertEquals(0, java.math.BigDecimal.ZERO.compareTo(result.getOpen()));
+        assertEquals(0, java.math.BigDecimal.ZERO.compareTo(result.getClose()));
         assertEquals(0L, result.getVolume());
         assertEquals(0.0, result.getAmount(), 0.001);
     }
@@ -106,10 +106,10 @@ class TigerStockServiceKlineTest {
         assertNotNull(result);
         assertEquals("BRK.A", result.getSymbol());
         assertEquals(9999999999999L, result.getTime());
-        assertEquals(99999.99, result.getOpen(), 0.001);
-        assertEquals(100000.0, result.getHigh(), 0.001);
-        assertEquals(0.01, result.getLow(), 0.001);
-        assertEquals(50000.50, result.getClose(), 0.001);
+        assertEquals(0, java.math.BigDecimal.valueOf(99999.99).compareTo(result.getOpen()));
+        assertEquals(0, java.math.BigDecimal.valueOf(100000.0).compareTo(result.getHigh()));
+        assertEquals(0, java.math.BigDecimal.valueOf(0.01).compareTo(result.getLow()));
+        assertEquals(0, java.math.BigDecimal.valueOf(50000.50).compareTo(result.getClose()));
         assertEquals(999999999L, result.getVolume());
         assertEquals(5.0e10, result.getAmount(), 0.001);
     }

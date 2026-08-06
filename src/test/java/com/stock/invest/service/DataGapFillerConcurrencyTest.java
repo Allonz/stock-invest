@@ -48,7 +48,7 @@ class DataGapFillerConcurrencyTest {
     void setUp() {
         lenient().when(tigerSource.getSourceName()).thenReturn("tiger");
         lenient().when(tigerSource.isAvailable()).thenReturn(true);
-        lenient().when(gapFillProperties.getMinPriceThreshold()).thenReturn(1.0);
+        lenient().when(gapFillProperties.getMinPriceThreshold()).thenReturn(java.math.BigDecimal.valueOf(1.0));
         lenient().when(stockDataSourcePriorityService.getPriorityList(anyString()))
                 .thenReturn(List.of("tiger", "yfinance"));
 

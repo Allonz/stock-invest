@@ -60,13 +60,13 @@ class StockDailyBarServiceTest {
         assertEquals(3, result.size());
         StockDailyBarCandleDto dto = result.get(0);
         assertEquals("2025-06-23", dto.date());
-        assertEquals(148.0, dto.open(), 0.001);
+        assertEquals(0, bd("148.0").compareTo(dto.open()));
         // high/low/changePercent/afterHours covered in SVC-004
-        assertEquals(146.0, dto.low(), 0.001);
-        assertEquals(150.0, dto.close(), 0.001);
-        assertEquals(1.35, dto.changePercent(), 0.001);
-        assertEquals(150.5, dto.afterHours(), 0.001);
-        assertEquals(0.33, dto.afterHoursChangePercent(), 0.001);
+        assertEquals(0, bd("146.0").compareTo(dto.low()));
+        assertEquals(0, bd("150.0").compareTo(dto.close()));
+        assertEquals(0, bd("1.35").compareTo(dto.changePercent()));
+        assertEquals(0, bd("150.5").compareTo(dto.afterHours()));
+        assertEquals(0, bd("0.33").compareTo(dto.afterHoursChangePercent()));
         assertEquals(850_000L, dto.volume());
     }
 
@@ -106,11 +106,11 @@ class StockDailyBarServiceTest {
 
         assertEquals(1, result.size());
         StockDailyBarCandleDto dto = result.get(0);
-        assertEquals(155.0, dto.high(), 0.001, "highPrice mapped");
-        assertEquals(148.0, dto.low(), 0.001, "lowPrice mapped");
-        assertEquals(1.67, dto.changePercent(), 0.001, "changePercent mapped");
-        assertEquals(153.0, dto.afterHours(), 0.001, "afterHours mapped");
-        assertEquals(0.33, dto.afterHoursChangePercent(), 0.001, "afterHoursChangePercent mapped");
+        assertEquals(0, bd("155.0").compareTo(dto.high()), "highPrice mapped");
+        assertEquals(0, bd("148.0").compareTo(dto.low()), "lowPrice mapped");
+        assertEquals(0, bd("1.67").compareTo(dto.changePercent()), "changePercent mapped");
+        assertEquals(0, bd("153.0").compareTo(dto.afterHours()), "afterHours mapped");
+        assertEquals(0, bd("0.33").compareTo(dto.afterHoursChangePercent()), "afterHoursChangePercent mapped");
     }
 
     // SVC-005: 日期格式为 yyyy-MM-dd
@@ -174,6 +174,10 @@ class StockDailyBarServiceTest {
 
     // === Helper ===
 
+    private static java.math.BigDecimal bd(String v) {
+        return new java.math.BigDecimal(v);
+    }
+
     private static StockDailyBar createTestBar(String symbol, LocalDate tradeDate,
                                                 double open, double high, double low, double close,
                                                 Double changePct, Double afterHours, Double afterHoursChgPct,
@@ -181,13 +185,13 @@ class StockDailyBarServiceTest {
         StockDailyBar bar = new StockDailyBar();
         bar.setSymbol(symbol);
         bar.setTradeDate(tradeDate);
-        bar.setOpenPrice(open);
-        bar.setHighPrice(high);
-        bar.setLowPrice(low);
-        bar.setClosePrice(close);
-        bar.setChangePercent(changePct);
-        bar.setAfterHours(afterHours);
-        bar.setAfterHoursChangePercent(afterHoursChgPct);
+        bar.setOpenPrice(java.math.BigDecimal.valueOf(open));
+        bar.setHighPrice(java.math.BigDecimal.valueOf(high));
+        bar.setLowPrice(java.math.BigDecimal.valueOf(low));
+        bar.setClosePrice(java.math.BigDecimal.valueOf(close));
+        bar.setChangePercent(changePct == null ? null : java.math.BigDecimal.valueOf(changePct));
+        bar.setAfterHours(afterHours == null ? null : java.math.BigDecimal.valueOf(afterHours));
+        bar.setAfterHoursChangePercent(afterHoursChgPct == null ? null : java.math.BigDecimal.valueOf(afterHoursChgPct));
         bar.setVolume(volume);
         bar.setSource("yfinance");
         return bar;

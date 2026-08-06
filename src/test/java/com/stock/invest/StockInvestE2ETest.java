@@ -44,7 +44,10 @@ class StockInvestE2ETest {
     @DisplayName("POST /api/ingest/tiger-watchlist -> 200 with valid data")
     void ingestWatchlist_returns200() {
         TigerWatchlistRowDto row = new TigerWatchlistRowDto(
-                "AAPL", "Apple Inc.", 0.15, 0.10, 0.20, 0.08, null, null, null, "1.2M");
+                "AAPL", "Apple Inc.",
+                new java.math.BigDecimal("0.15"), new java.math.BigDecimal("0.10"),
+                new java.math.BigDecimal("0.20"), new java.math.BigDecimal("0.08"),
+                null, null, null, "1.2M");
         TigerWatchlistIngestRequestDto body = new TigerWatchlistIngestRequestDto(
                 LocalDate.now().toString(),
                 List.of(row)

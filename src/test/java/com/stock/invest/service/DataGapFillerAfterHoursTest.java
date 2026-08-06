@@ -59,7 +59,7 @@ class DataGapFillerAfterHoursTest {
         lenient().when(tigerSource.getSourceName()).thenReturn("tiger");
         lenient().when(tigerSource.isAvailable()).thenReturn(true);
 
-        lenient().when(gapFillProperties.getMinPriceThreshold()).thenReturn(1.0);
+        lenient().when(gapFillProperties.getMinPriceThreshold()).thenReturn(java.math.BigDecimal.valueOf(1.0));
 
         // Allow trading on weekdays so findMissingTradeDates finds gaps
         lenient().when(tradingCalendarDbService.isTradingDay(anyString(), any(LocalDate.class))).thenReturn(true);
@@ -112,15 +112,15 @@ class DataGapFillerAfterHoursTest {
         verify(stockDailyBarRepository, atLeast(2)).save(barCaptor.capture());
         List<StockDailyBar> allSaved = barCaptor.getAllValues();
         StockDailyBar ahBar = allSaved.stream()
-                .filter(b -> b.getAfterHours() != null && Math.abs(b.getAfterHours() - 153.0) < 0.001)
+                .filter(b -> b.getAfterHours() != null
+                        && b.getAfterHours().compareTo(java.math.BigDecimal.valueOf(153.0)) == 0)
                 .findAny()
                 .orElse(null);
 
         assertNotNull(ahBar, "should exist a save carrying afterHours=153.0 from AH data");
         assertNotNull(ahBar.getAfterHoursChangePercent(), "afterHoursChangePercent should be calculated");
-        // (153.0 - 152.5) / 152.5 * 100 = 0.3278...
-        double expectedAhChgPct = (153.0 - 152.5) / 152.5 * 100;
-        assertEquals(expectedAhChgPct, ahBar.getAfterHoursChangePercent(), 0.01);
+        // (153.0 - 152.5) / 152.5 * 100 —— BigDecimal divide scale 8 HALF_UP → 0.327869 → setScale(4) = 0.3279
+        assertEquals(0, new java.math.BigDecimal("0.3279").compareTo(ahBar.getAfterHoursChangePercent()));
     }
 
     // AH-002: mergeAfterHours 非 Tiger source 跳过
@@ -158,9 +158,9 @@ class DataGapFillerAfterHoursTest {
         verify(stockDailyBarRepository, atLeastOnce()).save(barCaptor.capture());
         StockDailyBar saved = barCaptor.getValue();
         assertEquals("yfinance", saved.getSource());
-        // KLineIterator stores afterHours as double (primitive), default 0.0
-        // mergeAfterHours not called for non-tiger source, so it stays 0.0
-        assertEquals(0.0, saved.getAfterHours(), 0.001);
+        // KLineIterator stores afterHours as BigDecimal, constructor default ZERO
+        // mergeAfterHours not called for non-tiger source, so it stays ZERO
+        assertEquals(0, java.math.BigDecimal.ZERO.compareTo(saved.getAfterHours()));
     }
 
     // AH-003: mergeAfterHours 盘后数据为空时跳过
@@ -189,8 +189,9 @@ class DataGapFillerAfterHoursTest {
 
         verify(stockDailyBarRepository, atLeastOnce()).save(barCaptor.capture());
         StockDailyBar saved = barCaptor.getValue();
-        // afterHours is 0.0 (double default from KLineIterator) when mergeAfterHours skipped null data
-        assertEquals(0.0, saved.getAfterHours(), 0.001, "afterHours remains 0.0 when AH data is null");
+        // afterHours is ZERO (KLineIterator constructor default) when mergeAfterHours skipped null data
+        assertEquals(0, java.math.BigDecimal.ZERO.compareTo(saved.getAfterHours()),
+                "afterHours remains ZERO when AH data is null");
     }
 
     // AH-004: mergeAfterHours 异常处理
@@ -220,9 +221,10 @@ class DataGapFillerAfterHoursTest {
 
         verify(stockDailyBarRepository, atLeastOnce()).save(barCaptor.capture());
         StockDailyBar saved = barCaptor.getValue();
-        assertEquals(152.5, saved.getClosePrice(), 0.001);
-        // afterHours is 0.0 when mergeAfterHours throws (exception caught, field unchanged)
-        assertEquals(0.0, saved.getAfterHours(), 0.001, "afterHours remains 0.0 when AH throws");
+        assertEquals(0, java.math.BigDecimal.valueOf(152.5).compareTo(saved.getClosePrice()));
+        // afterHours is ZERO when mergeAfterHours throws (exception caught, field unchanged)
+        assertEquals(0, java.math.BigDecimal.ZERO.compareTo(saved.getAfterHours()),
+                "afterHours remains ZERO when AH throws");
     }
 
     // AH-005: afterHoursChangePercent 计算正确
@@ -256,14 +258,15 @@ class DataGapFillerAfterHoursTest {
         List<StockDailyBar> allSaved = barCaptor.getAllValues();
         // 同上：日期相等过滤后最后一次 save 恒为普通 persist，盘后价断言"存在"即可
         StockDailyBar ahBar = allSaved.stream()
-                .filter(b -> b.getAfterHours() != null && Math.abs(b.getAfterHours() - 103.0) < 0.001)
+                .filter(b -> b.getAfterHours() != null
+                        && b.getAfterHours().compareTo(java.math.BigDecimal.valueOf(103.0)) == 0)
                 .findAny()
                 .orElse(null);
 
         // (103.0 - 100.0) / 100.0 * 100 = 3.0
         assertNotNull(ahBar, "should exist a save carrying afterHours=103.0 from AH data");
-        assertEquals(103.0, ahBar.getAfterHours(), 0.001);
-        assertEquals(3.0, ahBar.getAfterHoursChangePercent(), 0.001);
+        assertEquals(0, java.math.BigDecimal.valueOf(103.0).compareTo(ahBar.getAfterHours()));
+        assertEquals(0, java.math.BigDecimal.valueOf(3.0).compareTo(ahBar.getAfterHoursChangePercent()));
     }
 
     // AH-006: Real 模式（标记 @Tag("integration") 跳过）
@@ -313,10 +316,10 @@ class DataGapFillerAfterHoursTest {
         StockDailyBar bar = new StockDailyBar();
         bar.setSymbol(symbol);
         bar.setTradeDate(tradeDate);
-        bar.setOpenPrice(0.5);
-        bar.setHighPrice(0.6);
-        bar.setLowPrice(0.4);
-        bar.setClosePrice(0.5);
+        bar.setOpenPrice(java.math.BigDecimal.valueOf(0.5));
+        bar.setHighPrice(java.math.BigDecimal.valueOf(0.6));
+        bar.setLowPrice(java.math.BigDecimal.valueOf(0.4));
+        bar.setClosePrice(java.math.BigDecimal.valueOf(0.5));
         bar.setVolume(100L);
         bar.setSource("yfinance");
         return bar;
@@ -330,8 +333,11 @@ class DataGapFillerAfterHoursTest {
         KLineData kd = new KLineData();
         kd.setSymbol(symbol);
         KLineIterator item = new KLineIterator(
-                symbol, epochMillis, open, high, low, close, volume, 0,
-                0.0, 0.0, 0.0);
+                symbol, epochMillis,
+                java.math.BigDecimal.valueOf(open), java.math.BigDecimal.valueOf(high),
+                java.math.BigDecimal.valueOf(low), java.math.BigDecimal.valueOf(close),
+                volume, 0,
+                java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO);
         item.setTimeString(tradeDate.toString());
         kd.setItems(List.of(item));
         return kd;

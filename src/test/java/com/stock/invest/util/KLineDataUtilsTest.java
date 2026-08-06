@@ -19,10 +19,10 @@ public class KLineDataUtilsTest {
         KLineIterator bar = new KLineIterator();
         bar.setSymbol("AAA");
         bar.setTime(time);
-        bar.setOpen(10.0D);
-        bar.setHigh(11.0D);
-        bar.setLow(9.5D);
-        bar.setClose(10.5D);
+        bar.setOpen(java.math.BigDecimal.valueOf(10.0D));
+        bar.setHigh(java.math.BigDecimal.valueOf(11.0D));
+        bar.setLow(java.math.BigDecimal.valueOf(9.5D));
+        bar.setClose(java.math.BigDecimal.valueOf(10.5D));
         bar.setVolume(volume);
         bar.setAmount(1000.0D);
         return bar;

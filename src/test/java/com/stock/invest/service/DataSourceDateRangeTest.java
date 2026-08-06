@@ -161,7 +161,7 @@ class DataSourceDateRangeTest {
     @Test
     void fetchAndPersist_eachSourceCalledOnceThenStops() {
         GapFillProperties gfProps = mock(GapFillProperties.class);
-        when(gfProps.getMinPriceThreshold()).thenReturn(1.0);
+        when(gfProps.getMinPriceThreshold()).thenReturn(java.math.BigDecimal.valueOf(1.0));
 
         StockDailyBarRepository barRepo = mock(StockDailyBarRepository.class);
         DataFillTaskRepository taskRepo = mock(DataFillTaskRepository.class);
@@ -225,7 +225,7 @@ class DataSourceDateRangeTest {
         StockDailyBar existingBar = new StockDailyBar();
         existingBar.setSymbol(SYMBOL);
         existingBar.setTradeDate(TRADE_DATE.minusDays(7));
-        existingBar.setClosePrice(0.05);
+        existingBar.setClosePrice(java.math.BigDecimal.valueOf(0.05));
         when(barRepo.findBySymbolOrderByTradeDateDesc(eq(SYMBOL), any(PageRequest.class)))
                 .thenReturn(List.of(existingBar));
         when(barRepo.findAllSymbols()).thenReturn(List.of(SYMBOL));
@@ -248,7 +248,7 @@ class DataSourceDateRangeTest {
     @Test
     void fetchAndPersist_nullFromSource1_fallsToSource2() {
         GapFillProperties gfProps = mock(GapFillProperties.class);
-        when(gfProps.getMinPriceThreshold()).thenReturn(1.0);
+        when(gfProps.getMinPriceThreshold()).thenReturn(java.math.BigDecimal.valueOf(1.0));
 
         StockDailyBarRepository barRepo = mock(StockDailyBarRepository.class);
         DataFillTaskRepository taskRepo = mock(DataFillTaskRepository.class);
@@ -314,7 +314,7 @@ class DataSourceDateRangeTest {
         StockDailyBar existingBar = new StockDailyBar();
         existingBar.setSymbol(SYMBOL);
         existingBar.setTradeDate(TRADE_DATE.minusDays(7));
-        existingBar.setClosePrice(0.05);
+        existingBar.setClosePrice(java.math.BigDecimal.valueOf(0.05));
         when(barRepo.findBySymbolOrderByTradeDateDesc(eq(SYMBOL), any(PageRequest.class)))
                 .thenReturn(List.of(existingBar));
         when(barRepo.findAllSymbols()).thenReturn(List.of(SYMBOL));
@@ -356,7 +356,10 @@ class DataSourceDateRangeTest {
         long epochMillis = tradeDate.atStartOfDay(AMERICA_NY).toInstant().toEpochMilli();
         KLineData kd = new KLineData();
         kd.setSymbol(SYMBOL);
-        KLineIterator item = new KLineIterator(SYMBOL, epochMillis, open, close + 1, close - 1, close, volume, 0);
+        KLineIterator item = new KLineIterator(SYMBOL, epochMillis,
+                java.math.BigDecimal.valueOf(open), java.math.BigDecimal.valueOf(close + 1),
+                java.math.BigDecimal.valueOf(close - 1), java.math.BigDecimal.valueOf(close),
+                volume, 0);
         item.setTimeString(tradeDate.toString());
         kd.setItems(List.of(item));
         return kd;

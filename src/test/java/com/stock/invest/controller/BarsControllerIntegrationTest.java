@@ -107,9 +107,9 @@ class BarsControllerIntegrationTest {
                     .stream().toList();
 
             if (!bars.isEmpty()) {
-                Double dbChangePercent = bars.get(0).getChangePercent();
+                java.math.BigDecimal dbChangePercent = bars.get(0).getChangePercent();
                 if (dbChangePercent != null && apiChangePercent != null) {
-                    assertEquals(dbChangePercent, apiChangePercent, 0.0001,
+                    assertEquals(0, dbChangePercent.compareTo(java.math.BigDecimal.valueOf(apiChangePercent)),
                             "changePercent mismatch for " + symbol + " on " + dateStr);
                 }
             }

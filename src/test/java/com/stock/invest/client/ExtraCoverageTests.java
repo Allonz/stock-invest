@@ -43,8 +43,8 @@ class ExtraCoverageTests {
         String json = "{\"close\":150.5}";
         when(http.get(anyString(), anyMap())).thenReturn(json);
 
-        Double close = client.fetchLastClose("AAPL");
-        assertEquals(150.5, close, 0.001);
+        java.math.BigDecimal close = client.fetchLastClose("AAPL");
+        assertEquals(0, new java.math.BigDecimal("150.5").compareTo(close));
     }
 
     @Test
@@ -52,7 +52,7 @@ class ExtraCoverageTests {
         String json = "{}";
         when(http.get(anyString(), anyMap())).thenReturn(json);
 
-        Double close = client.fetchLastClose("AAPL");
+        java.math.BigDecimal close = client.fetchLastClose("AAPL");
         assertNull(close);
     }
 

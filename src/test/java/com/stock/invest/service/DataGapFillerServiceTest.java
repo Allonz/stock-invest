@@ -107,7 +107,11 @@ class DataGapFillerServiceTest {
         com.stock.invest.model.KLineData nonNullKd = new com.stock.invest.model.KLineData();
         nonNullKd.setSymbol("TEST");
         nonNullKd.setItems(java.util.List.of(
-            new com.stock.invest.model.KLineIterator("TEST", 0L, 0,0,0,0,0,0,0,0,0)));
+            new com.stock.invest.model.KLineIterator("TEST", 0L,
+                    java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
+                    java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
+                    0, 0,
+                    java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO)));
         lenient().when(twelvedataDataSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(nonNullKd);
         lenient().when(tiingoDataSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(nonNullKd);
     }
@@ -165,12 +169,20 @@ class DataGapFillerServiceTest {
         // yfinance 返回包含 item 的数据（日期不匹配），避免两个数据源都 null 导致 blacklist
         com.stock.invest.model.KLineData yfKd = new com.stock.invest.model.KLineData();
         yfKd.setSymbol("AAPL");
-        yfKd.setItems(java.util.List.of(new com.stock.invest.model.KLineIterator("AAPL", 0L, 0,0,0,0,0,0,0,0,0)));
+        yfKd.setItems(java.util.List.of(new com.stock.invest.model.KLineIterator("AAPL", 0L,
+                java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
+                java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
+                0, 0,
+                java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO)));
         when(yfinanceDataSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(yfKd);
         com.stock.invest.model.KLineData tgKd = new com.stock.invest.model.KLineData();
         tgKd.setSymbol("AAPL");
         tgKd.setItems(java.util.List.of(
-            new com.stock.invest.model.KLineIterator("AAPL", 0L, 0,0,0,0,0,0,0,0,0)));
+            new com.stock.invest.model.KLineIterator("AAPL", 0L,
+                    java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
+                    java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
+                    0, 0,
+                    java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO)));
         when(tigerDataSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(tgKd);
 
         service.processRetryingTasks();
@@ -235,12 +247,20 @@ class DataGapFillerServiceTest {
         // yfinance 返回包含 item 的数据（日期不匹配），避免 blacklist
         com.stock.invest.model.KLineData yfKd = new com.stock.invest.model.KLineData();
         yfKd.setSymbol("AAPL");
-        yfKd.setItems(java.util.List.of(new com.stock.invest.model.KLineIterator("AAPL", 0L, 0,0,0,0,0,0,0,0,0)));
+        yfKd.setItems(java.util.List.of(new com.stock.invest.model.KLineIterator("AAPL", 0L,
+                java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
+                java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
+                0, 0,
+                java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO)));
         when(yfinanceDataSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(yfKd);
         com.stock.invest.model.KLineData tgKd2 = new com.stock.invest.model.KLineData();
         tgKd2.setSymbol("AAPL");
         tgKd2.setItems(java.util.List.of(
-            new com.stock.invest.model.KLineIterator("AAPL", 0L, 0,0,0,0,0,0,0,0,0)));
+            new com.stock.invest.model.KLineIterator("AAPL", 0L,
+                    java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
+                    java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
+                    0, 0,
+                    java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO)));
         when(tigerDataSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(tgKd2);
 
         service.processRetryingTasks();

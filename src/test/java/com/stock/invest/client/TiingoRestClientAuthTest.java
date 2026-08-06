@@ -140,7 +140,7 @@ class TiingoRestClientAuthTest {
         String json = "[]";
         when(http.get(anyString(), anyMap())).thenReturn(json);
 
-        Double result = client.fetchLastClose("AAPL");
+        java.math.BigDecimal result = client.fetchLastClose("AAPL");
         assertNull(result);
     }
 
@@ -152,8 +152,8 @@ class TiingoRestClientAuthTest {
                 + "]";
         when(http.get(anyString(), anyMap())).thenReturn(json);
 
-        Double result = client.fetchLastClose("AAPL");
-        assertEquals(154.0, result, 0.001);
+        java.math.BigDecimal result = client.fetchLastClose("AAPL");
+        assertEquals(0, new java.math.BigDecimal("154.0").compareTo(result));
     }
 
     @Test
@@ -191,7 +191,8 @@ class TiingoRestClientAuthTest {
                 + "]";
         when(http.get(anyString(), anyMap())).thenReturn(json);
 
-        List<String> result = client.listUsSymbolsByPriceRange(10, 40.0, 100.0);
+        List<String> result = client.listUsSymbolsByPriceRange(
+                10, java.math.BigDecimal.valueOf(40.0), java.math.BigDecimal.valueOf(100.0));
         // MSFT (50.0) and AMZN (80.0) should be in range
         assertTrue(result.contains("MSFT"), "MSFT at 50.0 should be in 40-100 range");
         assertTrue(result.contains("AMZN"), "AMZN at 80.0 should be in 40-100 range");
@@ -207,7 +208,8 @@ class TiingoRestClientAuthTest {
                 + "]";
         when(http.get(anyString(), anyMap())).thenReturn(json);
 
-        List<String> result = client.listUsSymbolsByPriceRange(10, 40.0, 100.0);
+        List<String> result = client.listUsSymbolsByPriceRange(
+                10, java.math.BigDecimal.valueOf(40.0), java.math.BigDecimal.valueOf(100.0));
         assertTrue(result.isEmpty());
     }
 
@@ -217,7 +219,8 @@ class TiingoRestClientAuthTest {
         String json = "{\"error\":\"not found\"}";
         when(http.get(anyString(), anyMap())).thenReturn(json);
 
-        assertThrows(Exception.class, () -> client.listUsSymbolsByPriceRange(10, 40.0, 100.0));
+        assertThrows(Exception.class, () -> client.listUsSymbolsByPriceRange(
+                10, java.math.BigDecimal.valueOf(40.0), java.math.BigDecimal.valueOf(100.0)));
     }
 
     @Test
@@ -228,7 +231,8 @@ class TiingoRestClientAuthTest {
                 + "]";
         when(http.get(anyString(), anyMap())).thenReturn(json);
 
-        List<String> result = client.listUsSymbolsByPriceRange(10, 1.0, 10.0);
+        List<String> result = client.listUsSymbolsByPriceRange(
+                10, java.math.BigDecimal.valueOf(1.0), java.math.BigDecimal.valueOf(10.0));
         assertTrue(result.isEmpty());
     }
 }

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -16,13 +17,17 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("StockDailyBar — 新增字段（highPrice/lowPrice/changePercent/afterHours/afterHoursChangePercent）")
 class StockDailyBarFieldTest {
 
+    private static BigDecimal bd(String v) {
+        return new BigDecimal(v);
+    }
+
     // ENT-001: highPrice 字段 getter/setter
     @Test
     @DisplayName("ENT-001: highPrice 字段 getter/setter")
     void highPriceField() {
         StockDailyBar bar = new StockDailyBar();
-        bar.setHighPrice(155.5);
-        assertEquals(155.5, bar.getHighPrice(), 0.001);
+        bar.setHighPrice(bd("155.5"));
+        assertEquals(0, bd("155.5").compareTo(bar.getHighPrice()));
     }
 
     // ENT-002: lowPrice 字段 getter/setter
@@ -30,8 +35,8 @@ class StockDailyBarFieldTest {
     @DisplayName("ENT-002: lowPrice 字段 getter/setter")
     void lowPriceField() {
         StockDailyBar bar = new StockDailyBar();
-        bar.setLowPrice(148.2);
-        assertEquals(148.2, bar.getLowPrice(), 0.001);
+        bar.setLowPrice(bd("148.2"));
+        assertEquals(0, bd("148.2").compareTo(bar.getLowPrice()));
     }
 
     // ENT-003: changePercent 字段（nullable）
@@ -41,8 +46,8 @@ class StockDailyBarFieldTest {
         StockDailyBar bar = new StockDailyBar();
         assertNull(bar.getChangePercent(), "default should be null");
 
-        bar.setChangePercent(2.35);
-        assertEquals(2.35, bar.getChangePercent(), 0.001);
+        bar.setChangePercent(bd("2.35"));
+        assertEquals(0, bd("2.35").compareTo(bar.getChangePercent()));
 
         bar.setChangePercent(null);
         assertNull(bar.getChangePercent(), "can set back to null");
@@ -55,8 +60,8 @@ class StockDailyBarFieldTest {
         StockDailyBar bar = new StockDailyBar();
         assertNull(bar.getAfterHours(), "default should be null");
 
-        bar.setAfterHours(153.0);
-        assertEquals(153.0, bar.getAfterHours(), 0.001);
+        bar.setAfterHours(bd("153.0"));
+        assertEquals(0, bd("153.0").compareTo(bar.getAfterHours()));
 
         bar.setAfterHours(null);
         assertNull(bar.getAfterHours());
@@ -69,8 +74,8 @@ class StockDailyBarFieldTest {
         StockDailyBar bar = new StockDailyBar();
         assertNull(bar.getAfterHoursChangePercent(), "default should be null");
 
-        bar.setAfterHoursChangePercent(0.45);
-        assertEquals(0.45, bar.getAfterHoursChangePercent(), 0.001);
+        bar.setAfterHoursChangePercent(bd("0.45"));
+        assertEquals(0, bd("0.45").compareTo(bar.getAfterHoursChangePercent()));
 
         bar.setAfterHoursChangePercent(null);
         assertNull(bar.getAfterHoursChangePercent());
@@ -83,25 +88,25 @@ class StockDailyBarFieldTest {
         StockDailyBar bar = new StockDailyBar();
         bar.setSymbol("AAPL");
         bar.setTradeDate(LocalDate.of(2025, 6, 25));
-        bar.setOpenPrice(150.0);
-        bar.setHighPrice(155.0);
-        bar.setLowPrice(148.0);
-        bar.setClosePrice(152.5);
-        bar.setChangePercent(1.67);
-        bar.setAfterHours(153.0);
-        bar.setAfterHoursChangePercent(0.33);
+        bar.setOpenPrice(bd("150.0"));
+        bar.setHighPrice(bd("155.0"));
+        bar.setLowPrice(bd("148.0"));
+        bar.setClosePrice(bd("152.5"));
+        bar.setChangePercent(bd("1.67"));
+        bar.setAfterHours(bd("153.0"));
+        bar.setAfterHoursChangePercent(bd("0.33"));
         bar.setVolume(1_000_000L);
         bar.setSource("yfinance");
 
         assertEquals("AAPL", bar.getSymbol());
         assertEquals(LocalDate.of(2025, 6, 25), bar.getTradeDate());
-        assertEquals(150.0, bar.getOpenPrice(), 0.001);
-        assertEquals(155.0, bar.getHighPrice(), 0.001);
-        assertEquals(148.0, bar.getLowPrice(), 0.001);
-        assertEquals(152.5, bar.getClosePrice(), 0.001);
-        assertEquals(1.67, bar.getChangePercent(), 0.001);
-        assertEquals(153.0, bar.getAfterHours(), 0.001);
-        assertEquals(0.33, bar.getAfterHoursChangePercent(), 0.001);
+        assertEquals(0, bd("150.0").compareTo(bar.getOpenPrice()));
+        assertEquals(0, bd("155.0").compareTo(bar.getHighPrice()));
+        assertEquals(0, bd("148.0").compareTo(bar.getLowPrice()));
+        assertEquals(0, bd("152.5").compareTo(bar.getClosePrice()));
+        assertEquals(0, bd("1.67").compareTo(bar.getChangePercent()));
+        assertEquals(0, bd("153.0").compareTo(bar.getAfterHours()));
+        assertEquals(0, bd("0.33").compareTo(bar.getAfterHoursChangePercent()));
         assertEquals(1_000_000L, bar.getVolume());
         assertEquals("yfinance", bar.getSource());
     }

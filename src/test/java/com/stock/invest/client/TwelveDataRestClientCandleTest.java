@@ -69,8 +69,8 @@ class TwelveDataRestClientCandleTest {
         assertEquals("AAPL", data.getSymbol());
         assertNotNull(data.getItems());
         assertEquals(2, data.getItems().size());
-        assertEquals(154.0, data.getItems().get(0).getClose(), 0.001);
-        assertEquals(151.0, data.getItems().get(1).getClose(), 0.001);
+        assertEquals(0, new java.math.BigDecimal("154.0").compareTo(data.getItems().get(0).getClose()));
+        assertEquals(0, new java.math.BigDecimal("151.0").compareTo(data.getItems().get(1).getClose()));
         assertEquals(2000000L, data.getItems().get(0).getVolume());
     }
 
@@ -110,9 +110,9 @@ class TwelveDataRestClientCandleTest {
         String json = "{\"close\":\"150.25\"}";
         when(http.get(anyString(), anyMap())).thenReturn(json);
 
-        Double close = client.fetchLastClose("AAPL");
+        java.math.BigDecimal close = client.fetchLastClose("AAPL");
 
-        assertEquals(150.25, close, 0.001);
+        assertEquals(0, new java.math.BigDecimal("150.25").compareTo(close));
     }
 
     @Test
@@ -121,7 +121,7 @@ class TwelveDataRestClientCandleTest {
         String json = "{\"code\":\"error\",\"status\":\"error\"}";
         when(http.get(anyString(), anyMap())).thenReturn(json);
 
-        Double close = client.fetchLastClose("AAPL");
+        java.math.BigDecimal close = client.fetchLastClose("AAPL");
 
         assertNull(close);
     }

@@ -65,7 +65,7 @@ class DataGapFillerPersistTest {
         lenient().when(yfinanceDataSource.getSourceName()).thenReturn("yfinance");
         lenient().when(yfinanceDataSource.isAvailable()).thenReturn(true);
 
-        when(gapFillProperties.getMinPriceThreshold()).thenReturn(1.0);
+        when(gapFillProperties.getMinPriceThreshold()).thenReturn(java.math.BigDecimal.valueOf(1.0));
 
         // Allow trading on weekdays so findMissingTradeDates finds gaps
         when(tradingCalendarDbService.isTradingDay(anyString(), any(LocalDate.class))).thenReturn(true);
@@ -96,10 +96,10 @@ class DataGapFillerPersistTest {
         StockDailyBar existingBar = new StockDailyBar();
         existingBar.setSymbol("AAPL");
         existingBar.setTradeDate(stopDate);
-        existingBar.setOpenPrice(0.5);
-        existingBar.setClosePrice(0.5);
-        existingBar.setHighPrice(0.6);
-        existingBar.setLowPrice(0.4);
+        existingBar.setOpenPrice(java.math.BigDecimal.valueOf(0.5));
+        existingBar.setClosePrice(java.math.BigDecimal.valueOf(0.5));
+        existingBar.setHighPrice(java.math.BigDecimal.valueOf(0.6));
+        existingBar.setLowPrice(java.math.BigDecimal.valueOf(0.4));
         existingBar.setVolume(100L);
         existingBar.setSource("yfinance");
 
@@ -116,9 +116,11 @@ class DataGapFillerPersistTest {
                     kd.setSymbol("AAPL");
                     KLineIterator item = new KLineIterator(
                             "AAPL", date.atStartOfDay(AMERICA_NY).toInstant().toEpochMilli(),
-                            150.0, 155.0, 148.0, 152.5,
+                            java.math.BigDecimal.valueOf(150.0), java.math.BigDecimal.valueOf(155.0),
+                            java.math.BigDecimal.valueOf(148.0), java.math.BigDecimal.valueOf(152.5),
                             1_000_000L, 5_000_000.0,
-                            1.67, 153.0, 0.33);
+                            java.math.BigDecimal.valueOf(1.67), java.math.BigDecimal.valueOf(153.0),
+                            java.math.BigDecimal.valueOf(0.33));
                     item.setTimeString(date.toString());
                     kd.setItems(List.of(item));
                     return kd;
@@ -130,13 +132,13 @@ class DataGapFillerPersistTest {
         StockDailyBar saved = barCaptor.getValue();
 
         assertEquals("AAPL", saved.getSymbol());
-        assertEquals(150.0, saved.getOpenPrice(), 0.001);
-        assertEquals(155.0, saved.getHighPrice(), 0.001);
-        assertEquals(148.0, saved.getLowPrice(), 0.001);
-        assertEquals(152.5, saved.getClosePrice(), 0.001);
-        assertEquals(1.67, saved.getChangePercent(), 0.001);
-        assertEquals(153.0, saved.getAfterHours(), 0.001);
-        assertEquals(0.33, saved.getAfterHoursChangePercent(), 0.001);
+        assertEquals(0, java.math.BigDecimal.valueOf(150.0).compareTo(saved.getOpenPrice()));
+        assertEquals(0, java.math.BigDecimal.valueOf(155.0).compareTo(saved.getHighPrice()));
+        assertEquals(0, java.math.BigDecimal.valueOf(148.0).compareTo(saved.getLowPrice()));
+        assertEquals(0, java.math.BigDecimal.valueOf(152.5).compareTo(saved.getClosePrice()));
+        assertEquals(0, java.math.BigDecimal.valueOf(1.67).compareTo(saved.getChangePercent()));
+        assertEquals(0, java.math.BigDecimal.valueOf(153.0).compareTo(saved.getAfterHours()));
+        assertEquals(0, java.math.BigDecimal.valueOf(0.33).compareTo(saved.getAfterHoursChangePercent()));
         assertEquals(1_000_000L, saved.getVolume());
         assertEquals("tiger", saved.getSource());
     }
@@ -152,8 +154,8 @@ class DataGapFillerPersistTest {
         StockDailyBar existingBar = new StockDailyBar();
         existingBar.setSymbol("AAPL");
         existingBar.setTradeDate(stopDate);
-        existingBar.setOpenPrice(0.5);
-        existingBar.setClosePrice(0.5);
+        existingBar.setOpenPrice(java.math.BigDecimal.valueOf(0.5));
+        existingBar.setClosePrice(java.math.BigDecimal.valueOf(0.5));
         existingBar.setVolume(100L);
         existingBar.setSource("yfinance");
 
@@ -161,8 +163,8 @@ class DataGapFillerPersistTest {
         existingEntity.setId(99L);
         existingEntity.setSymbol("AAPL");
         existingEntity.setTradeDate(tradeDate);
-        existingEntity.setOpenPrice(140.0);
-        existingEntity.setClosePrice(142.0);
+        existingEntity.setOpenPrice(java.math.BigDecimal.valueOf(140.0));
+        existingEntity.setClosePrice(java.math.BigDecimal.valueOf(142.0));
         existingEntity.setVolume(500_000L);
         existingEntity.setSource("yfinance");
 
@@ -179,9 +181,11 @@ class DataGapFillerPersistTest {
                     kd.setSymbol("AAPL");
                     KLineIterator item = new KLineIterator(
                             "AAPL", date.atStartOfDay(AMERICA_NY).toInstant().toEpochMilli(),
-                            155.0, 158.0, 152.0, 156.0,
+                            java.math.BigDecimal.valueOf(155.0), java.math.BigDecimal.valueOf(158.0),
+                            java.math.BigDecimal.valueOf(152.0), java.math.BigDecimal.valueOf(156.0),
                             2_000_000L, 10_000_000.0,
-                            2.5, 157.0, 0.64);
+                            java.math.BigDecimal.valueOf(2.5), java.math.BigDecimal.valueOf(157.0),
+                            java.math.BigDecimal.valueOf(0.64));
                     item.setTimeString(date.toString());
                     kd.setItems(List.of(item));
                     return kd;
@@ -193,10 +197,10 @@ class DataGapFillerPersistTest {
         StockDailyBar saved = barCaptor.getValue();
 
         assertEquals(99L, saved.getId());
-        assertEquals(155.0, saved.getOpenPrice(), 0.001);
-        assertEquals(158.0, saved.getHighPrice(), 0.001);
-        assertEquals(2.5, saved.getChangePercent(), 0.001);
-        assertEquals(157.0, saved.getAfterHours(), 0.001);
+        assertEquals(0, java.math.BigDecimal.valueOf(155.0).compareTo(saved.getOpenPrice()));
+        assertEquals(0, java.math.BigDecimal.valueOf(158.0).compareTo(saved.getHighPrice()));
+        assertEquals(0, java.math.BigDecimal.valueOf(2.5).compareTo(saved.getChangePercent()));
+        assertEquals(0, java.math.BigDecimal.valueOf(157.0).compareTo(saved.getAfterHours()));
     }
 
     // FILL-003: persist 设置 source 为数据源名称
@@ -209,8 +213,8 @@ class DataGapFillerPersistTest {
         StockDailyBar existingBar = new StockDailyBar();
         existingBar.setSymbol("AAPL");
         existingBar.setTradeDate(stopDate);
-        existingBar.setOpenPrice(0.5);
-        existingBar.setClosePrice(0.5);
+        existingBar.setOpenPrice(java.math.BigDecimal.valueOf(0.5));
+        existingBar.setClosePrice(java.math.BigDecimal.valueOf(0.5));
         existingBar.setVolume(100L);
         existingBar.setSource("yfinance");
 
@@ -227,9 +231,11 @@ class DataGapFillerPersistTest {
                     kd.setSymbol("AAPL");
                     KLineIterator item = new KLineIterator(
                             "AAPL", date.atStartOfDay(AMERICA_NY).toInstant().toEpochMilli(),
-                            150.0, 155.0, 148.0, 152.5,
+                            java.math.BigDecimal.valueOf(150.0), java.math.BigDecimal.valueOf(155.0),
+                            java.math.BigDecimal.valueOf(148.0), java.math.BigDecimal.valueOf(152.5),
                             1_000_000L, 5_000_000.0,
-                            1.67, 153.0, 0.33);
+                            java.math.BigDecimal.valueOf(1.67), java.math.BigDecimal.valueOf(153.0),
+                            java.math.BigDecimal.valueOf(0.33));
                     item.setTimeString(date.toString());
                     kd.setItems(List.of(item));
                     return kd;
@@ -264,8 +270,8 @@ class DataGapFillerPersistTest {
         StockDailyBar existingBar = new StockDailyBar();
         existingBar.setSymbol("AAPL");
         existingBar.setTradeDate(stopDate);
-        existingBar.setOpenPrice(0.5);
-        existingBar.setClosePrice(0.5);
+        existingBar.setOpenPrice(java.math.BigDecimal.valueOf(0.5));
+        existingBar.setClosePrice(java.math.BigDecimal.valueOf(0.5));
         existingBar.setVolume(100L);
         existingBar.setSource("yfinance");
 
@@ -307,8 +313,8 @@ class DataGapFillerPersistTest {
         StockDailyBar existingBar = new StockDailyBar();
         existingBar.setSymbol("AAPL");
         existingBar.setTradeDate(stopDate);
-        existingBar.setOpenPrice(0.5);
-        existingBar.setClosePrice(0.5);
+        existingBar.setOpenPrice(java.math.BigDecimal.valueOf(0.5));
+        existingBar.setClosePrice(java.math.BigDecimal.valueOf(0.5));
         existingBar.setVolume(100L);
         existingBar.setSource("yfinance");
 
@@ -328,9 +334,11 @@ class DataGapFillerPersistTest {
                     kd.setSymbol("AAPL");
                     KLineIterator item = new KLineIterator(
                             "AAPL", date.atStartOfDay(AMERICA_NY).toInstant().toEpochMilli(),
-                            150.0, 155.0, 148.0, 152.5,
+                            java.math.BigDecimal.valueOf(150.0), java.math.BigDecimal.valueOf(155.0),
+                            java.math.BigDecimal.valueOf(148.0), java.math.BigDecimal.valueOf(152.5),
                             1_000_000L, 5_000_000.0,
-                            1.67, 0.0, 0.0);
+                            java.math.BigDecimal.valueOf(1.67), java.math.BigDecimal.ZERO,
+                            java.math.BigDecimal.ZERO);
                     item.setTimeString(date.toString());
                     kd.setItems(List.of(item));
                     return kd;
@@ -342,8 +350,9 @@ class DataGapFillerPersistTest {
         StockDailyBar saved = barCaptor.getValue();
         assertEquals("yfinance", saved.getSource());
         // mergeAfterHours should not be called for yfinance source
-        // The afterHours should remain 0.0 (from KLineIterator double default)
-        assertEquals(0.0, saved.getAfterHours(), 0.001, "afterHours remains 0.0 for non-tiger source");
+        // The afterHours should remain ZERO (from KLineIterator constructor default)
+        assertEquals(0, java.math.BigDecimal.ZERO.compareTo(saved.getAfterHours()),
+                "afterHours remains ZERO for non-tiger source");
     }
 
     // §4.2: 事务回滚专项 —— TransactionTemplate 独立事务下失败不整体回滚
@@ -376,8 +385,10 @@ class DataGapFillerPersistTest {
                     kd.setSymbol(inv.getArgument(0));
                     KLineIterator item = new KLineIterator(
                             inv.getArgument(0), date.atStartOfDay(AMERICA_NY).toInstant().toEpochMilli(),
-                            150.0, 155.0, 148.0, 152.5,
-                            1_000_000L, 5_000_000.0, 0.0, 0.0, 0.0);
+                            java.math.BigDecimal.valueOf(150.0), java.math.BigDecimal.valueOf(155.0),
+                            java.math.BigDecimal.valueOf(148.0), java.math.BigDecimal.valueOf(152.5),
+                            1_000_000L, 5_000_000.0, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
+                            java.math.BigDecimal.ZERO);
                     item.setTimeString(date.toString());
                     kd.setItems(List.of(item));
                     return kd;
@@ -408,8 +419,8 @@ class DataGapFillerPersistTest {
         StockDailyBar b = new StockDailyBar();
         b.setSymbol(symbol);
         b.setTradeDate(tradeDate);
-        b.setOpenPrice(0.5);
-        b.setClosePrice(0.5);
+        b.setOpenPrice(java.math.BigDecimal.valueOf(0.5));
+        b.setClosePrice(java.math.BigDecimal.valueOf(0.5));
         b.setVolume(10L);
         b.setSource("yfinance");
         return b;
