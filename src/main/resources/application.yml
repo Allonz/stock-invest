@@ -34,6 +34,14 @@ spring:
     password: ${MYSQL_PASSWORD:allon23}
     hikari:
       connection-init-sql: SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci
+  # P2-1：版本化迁移（原 schema.sql / fix_constraint_name.sql / DatabaseInitializer 三套并行 DDL 已废弃）
+  #   baseline-version=0：存量库（无 flyway_schema_history）先基线到 0，再执行 V1/V2，
+  #   V1 幂等建表（存量库 no-op），V2 增量对齐（只增不改删）
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 0
   # 设置JPA编码
   jpa:
     open-in-view: false

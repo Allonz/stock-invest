@@ -70,6 +70,16 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Flyway 版本化迁移（版本由 Spring Boot 3.5.16 BOM 管理，不在依赖冻结范围；见 docs/optimization-plan.md P2-1） -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-mysql</artifactId>
+        </dependency>
+
         <!-- Tiger Open API SDK -->
         <dependency>
             <groupId>io.github.tigerbrokers</groupId>

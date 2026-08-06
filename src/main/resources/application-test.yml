@@ -4,6 +4,14 @@ spring:
     driver-class-name: org.h2.Driver
     username: sa
     password:
+    hikari:
+      # 覆盖 application.yml 的 MySQL SET NAMES 初始化 SQL（H2 不支持）
+      connection-init-sql: ""
+  # P2-1 偏差记录：H2 测试环境不启用 Flyway（现有 Hibernate create-drop 方案维持，
+  # 迁移脚本含 MySQL 专有语法 ADD COLUMN IF NOT EXISTS / 动态 SQL，H2 不兼容；
+  # 见 docs/optimization-plan.md P2-1 第 6 点）
+  flyway:
+    enabled: false
   h2:
     console:
       enabled: true
