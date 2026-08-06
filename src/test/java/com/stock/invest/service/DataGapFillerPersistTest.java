@@ -24,6 +24,7 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -343,5 +344,74 @@ class DataGapFillerPersistTest {
         // mergeAfterHours should not be called for yfinance source
         // The afterHours should remain 0.0 (from KLineIterator double default)
         assertEquals(0.0, saved.getAfterHours(), 0.001, "afterHours remains 0.0 for non-tiger source");
+    }
+
+    // §4.2: 事务回滚专项 —— TransactionTemplate 独立事务下失败不整体回滚
+    @Test
+    @DisplayName("§4.2: persist 失败仅回滚自身事务，已落库数据保留，批次继续")
+    void persistFailureRollsBackOnlyItsOwnTransaction() {
+        org.springframework.transaction.TransactionStatus status =
+                mock(org.springframework.transaction.TransactionStatus.class);
+        when(transactionManager.getTransaction(any())).thenReturn(status);
+
+        LocalDate today = nyToday();
+        LocalDate stopDate = today.minusDays(5);
+
+        StockDailyBar s1Bar = lowBar("S1", stopDate);
+        StockDailyBar s2Bar = lowBar("S2", stopDate);
+
+        when(stockDailyBarRepository.findAllSymbols()).thenReturn(List.of("S1", "S2"));
+        when(stockDailyBarRepository.findBySymbolOrderByTradeDateDesc(eq("S1"), any()))
+                .thenReturn(new ArrayList<>(List.of(s1Bar)));
+        when(stockDailyBarRepository.findBySymbolOrderByTradeDateDesc(eq("S2"), any()))
+                .thenReturn(new ArrayList<>(List.of(s2Bar)));
+        when(stockDailyBarRepository.findBySymbolAndTradeDate(anyString(), any()))
+                .thenReturn(Optional.empty());
+
+        // yfinance（优先级最高）对每个缺失日期返回匹配数据 → 走 persist
+        lenient().when(yfinanceDataSource.getDailyKLineDataByDateRange(anyString(), any()))
+                .thenAnswer(inv -> {
+                    LocalDate date = inv.getArgument(1);
+                    KLineData kd = new KLineData();
+                    kd.setSymbol(inv.getArgument(0));
+                    KLineIterator item = new KLineIterator(
+                            inv.getArgument(0), date.atStartOfDay(AMERICA_NY).toInstant().toEpochMilli(),
+                            150.0, 155.0, 148.0, 152.5,
+                            1_000_000L, 5_000_000.0, 0.0, 0.0, 0.0);
+                    item.setTimeString(date.toString());
+                    kd.setItems(List.of(item));
+                    return kd;
+                });
+
+        // 首个 save（S1 第一个缺失日期）抛异常 —— 模拟单条落库失败
+        AtomicInteger saveCount = new AtomicInteger();
+        doAnswer(inv -> {
+            if (saveCount.getAndIncrement() == 0) {
+                throw new RuntimeException("db write failed");
+            }
+            return inv.getArgument(0);
+        }).when(stockDailyBarRepository).save(any(StockDailyBar.class));
+
+        assertDoesNotThrow(() -> service.fillGaps());
+
+        // 失败的那条落库：独立事务回滚（不连带其他成功 save）
+        verify(transactionManager, atLeastOnce()).rollback(status);
+        // 其余成功落库：独立事务提交 —— 证明无整体回滚
+        verify(transactionManager, atLeastOnce()).commit(status);
+        // 批次未中止：S2 仍被处理
+        verify(stockDailyBarRepository, times(1)).findBySymbolOrderByTradeDateDesc(eq("S2"), any());
+        // 至少有一条 save 成功（S2 的缺失日期）
+        verify(stockDailyBarRepository, atLeastOnce()).save(any(StockDailyBar.class));
+    }
+
+    private static StockDailyBar lowBar(String symbol, LocalDate tradeDate) {
+        StockDailyBar b = new StockDailyBar();
+        b.setSymbol(symbol);
+        b.setTradeDate(tradeDate);
+        b.setOpenPrice(0.5);
+        b.setClosePrice(0.5);
+        b.setVolume(10L);
+        b.setSource("yfinance");
+        return b;
     }
 }
