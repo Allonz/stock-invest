@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stock.invest.client.TwelveDataRestClient;
 import com.stock.invest.config.TwelveDataProperties;
 import com.stock.invest.config.ScannerProperties;
+import com.stock.invest.exception.StockDataException;
 import com.stock.invest.model.KLineData;
 import com.stock.invest.model.KLineIterator;
 import com.stock.invest.model.StockInfo;
@@ -81,9 +82,10 @@ public class TwelveDataStockServiceImpl implements StockScannerStrategy {
             String result = pythonScriptExecutor.executeScriptWithEnvironment(
                     apiKeyEnv(), getScriptName(), "get_daily_kline_range", symbol, tradeDate.toString(), tradeDate.toString());
             if (result != null && result.contains("\"error\"")) {
-                log.warn("[TwelveData] getDailyKLineDataByDateRange error for {}: {} (raw: {})", symbol,
-                        result, result.substring(0, Math.min(result.length(), 500)));
-                return null;
+                // P1-3：Python 侧失败输出 {"error": ...} —— 带分类抛出，not-found 才计入黑名单
+                log.warn("[TwelveData] getDailyKLineDataByDateRange error for {}: {}", symbol,
+                        result.substring(0, Math.min(result.length(), 500)));
+                throw StockDataException.classify(symbol, "twelvedata", extractErrorFromJson(result), null);
             }
             KLineData klineData = objectMapper.readValue(result, KLineData.class);
             // 填充每个 item 的 symbol 字段（Python 脚本返回的 JSON 中 item 不含 symbol）
@@ -98,9 +100,35 @@ public class TwelveDataStockServiceImpl implements StockScannerStrategy {
                         symbol, first.getTimeString(), first.getOpen(), first.getHigh(), first.getLow(), first.getClose());
             }
             return klineData;
+        } catch (StockDataException e) {
+            throw e;
         } catch (Exception e) {
+            // P1-3：瞬态失败（超时/连接/解析）抛带分类异常，不再返回 null 被误判
             log.error("Failed to get daily kline by date range for {}: {}", symbol, e.getMessage());
-            return null;
+            throw new StockDataException(symbol, "twelvedata", "获取K线数据失败: " + e.getMessage(),
+                    e, StockDataException.ErrorCategory.TRANSIENT_FAILURE);
+        }
+    }
+
+    /**
+     * 从 Python 脚本输出的 error JSON 中提取可读错误消息（兼容 {"error": "..."} 与 {"error": {"message": "..."}}）。
+     */
+    private String extractErrorFromJson(String result) {
+        try {
+            com.fasterxml.jackson.databind.JsonNode node = objectMapper.readTree(result);
+            com.fasterxml.jackson.databind.JsonNode err = node.get("error");
+            if (err == null) {
+                return result;
+            }
+            if (err.isTextual()) {
+                return err.asText();
+            }
+            if (err.has("message")) {
+                return err.path("message").asText();
+            }
+            return err.toString();
+        } catch (Exception ignored) {
+            return result;
         }
     }
     public StockInfo getStockInfo(String symbol) {

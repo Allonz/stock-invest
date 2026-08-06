@@ -28,6 +28,11 @@ public interface DataGapFillerService {
      */
     void processRetryingTasks();
 
+    /**
+     * 补缺/重试批次是否正在运行（P1-2 互斥状态，供管理端点识别"已在运行"）。
+     */
+    boolean isRunning();
+
     // ---- DataFillTask 查询封装（供 AdminController 使用，避免 Controller 直接注入 Repository） ----
 
     /**

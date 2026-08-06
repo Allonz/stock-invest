@@ -61,6 +61,8 @@ class DataGapFillerServiceTest {
     private StockDataSourcePriorityService stockDataSourcePriorityService;
     @Mock
     private SymbolBlacklistService symbolBlacklistService;
+    @Mock
+    private org.springframework.transaction.PlatformTransactionManager transactionManager;
 
     private DataGapFillerServiceImpl service;
 
@@ -87,7 +89,8 @@ class DataGapFillerServiceTest {
                 dataFillProgressService,
                 tradingCalendarDbService,
                 stockDataSourcePriorityService,
-                symbolBlacklistService);
+                symbolBlacklistService,
+                transactionManager);
 
         // Priority service returns fallback chain order
         lenient().when(stockDataSourcePriorityService.getPriorityList(anyString()))

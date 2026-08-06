@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.stock.invest.exception.StockDataException;
 import com.stock.invest.model.KLineData;
 import com.stock.invest.model.KLineIterator;
 import com.stock.invest.model.StockInfo;
@@ -138,8 +139,10 @@ public class TigerStockServiceImpl implements StockScannerStrategy {
                 .withLimit(30);
             QuoteKlineResponse response = client.execute(request);
             if (response == null || !response.isSuccess()) {
-                log.error("获取K线数据失败: {}", response == null ? "响应为空" : response.getMessage());
-                return new KLineData();
+                // P1-5：账户级错误（4000/permission/quota）从错误消息侧识别并抛出，触发熔断
+                String message = response == null ? "响应为空" : response.getMessage();
+                log.error("获取K线数据失败: {}", message);
+                throw StockDataException.classify(symbol, "tiger", message, null);
             }
             KLineData kLineData = new KLineData();
             kLineData.setSymbol(symbol);
@@ -149,9 +152,12 @@ public class TigerStockServiceImpl implements StockScannerStrategy {
             }
             kLineData.setItems(items);
             return kLineData;
+        } catch (StockDataException e) {
+            throw e;
         } catch (Exception e) {
+            // P1-3：瞬态失败（超时/连接/解析）抛带分类异常，不再返回空 KLineData
             log.warn("获取K线数据时出错: {}", e.getMessage());
-            return new KLineData();
+            throw StockDataException.classify(symbol, "tiger", e.getMessage(), e);
         }
     }
 

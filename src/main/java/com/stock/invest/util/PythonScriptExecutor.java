@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -18,6 +19,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 @Component
@@ -25,6 +31,29 @@ public class PythonScriptExecutor {
 
     private static final Logger log = LoggerFactory.getLogger(PythonScriptExecutor.class);
     private static final int DEFAULT_TIMEOUT_SECONDS = 30;
+
+    /** stdout 读取上限（约 8 MB / 20 万行），防止异常输出撑爆内存 */
+    private static final int MAX_OUTPUT_CHARS = 8 * 1024 * 1024;
+    /** stderr 仅保留尾部（8 KB），库日志/调试输出不占内存 */
+    private static final int MAX_STDERR_CHARS = 8 * 1024;
+    /** 进程退出后等待读流结束的保险时间 */
+    private static final int DRAIN_GRACE_SECONDS = 5;
+
+    /**
+     * 读流专用小线程池（2 个进程 × 2 路输出）。
+     * <p>P1-1：超时等待期间必须并行排空 stdout/stderr，否则子进程写满管道缓冲（约 64KB）会永久阻塞；
+     * 超时后 destroyForcibly 使流 EOF，读流任务自然结束，不会长期占用线程。</p>
+     */
+    private static final ExecutorService DRAIN_POOL = Executors.newFixedThreadPool(4, new ThreadFactory() {
+        private int seq;
+
+        @Override
+        public synchronized Thread newThread(Runnable r) {
+            Thread t = new Thread(r, "python-drain-" + (++seq));
+            t.setDaemon(true);
+            return t;
+        }
+    });
 
     public String executeScript(String scriptName, String... args) throws IOException, InterruptedException {
         return executeScriptWithEnvironment(Collections.emptyMap(), scriptName, args);
@@ -72,35 +101,26 @@ public class PythonScriptExecutor {
             Process process = processBuilder.start();
             log.info("Python脚本执行: script={} args={}", scriptName, java.util.Arrays.toString(args));
             try {
-                // 单独读取 stdout（结果输出）
-                StringBuilder output = new StringBuilder();
-                try (BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        output.append(line).append("\n");
-                    }
-                }
+                // P1-1：并行排空两路输出（防止管道缓冲写满死锁），同时等待超时
+                CompletableFuture<String> outFuture = CompletableFuture.supplyAsync(
+                        () -> drain(process.getInputStream(), MAX_OUTPUT_CHARS), DRAIN_POOL);
+                CompletableFuture<String> errFuture = CompletableFuture.supplyAsync(
+                        () -> drainTail(process.getErrorStream(), MAX_STDERR_CHARS), DRAIN_POOL);
 
-                // 单独读取 stderr（库日志/调试信息），仅 debug 级别记录，不影响结果解析
-                StringBuilder errOutput = new StringBuilder();
-                try (BufferedReader errReader = new BufferedReader(
-                        new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8))) {
-                    String line;
-                    while ((line = errReader.readLine()) != null) {
-                        errOutput.append(line).append("\n");
-                    }
-                }
-                String stderr = errOutput.toString().trim();
-                if (!stderr.isEmpty()) {
-                    log.info("Python脚本 stderr (script={}): {}", scriptName, stderr);
-                }
-
+                // 超时判定前置：子进程挂起时不再被 readLine() 永久阻塞
                 boolean completed = process.waitFor(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
                 if (!completed) {
                     log.warn("Python脚本执行超时 ({}秒)，强制终止进程: {}", DEFAULT_TIMEOUT_SECONDS, scriptName);
+                    process.destroy();
                     process.destroyForcibly();
                     throw new IOException("Python脚本执行超时 (" + DEFAULT_TIMEOUT_SECONDS + "秒)，已强制终止进程");
+                }
+
+                // 进程已退出，读流必然 EOF，get 仅为保险
+                String output = awaitDrain(outFuture, scriptName);
+                String stderr = awaitDrain(errFuture, scriptName);
+                if (!stderr.isEmpty()) {
+                    log.info("Python脚本 stderr (script={}): {}", scriptName, stderr);
                 }
 
                 int exitCode = process.exitValue();
@@ -109,8 +129,9 @@ public class PythonScriptExecutor {
                     throw new IOException("Python脚本执行失败，退出码: " + exitCode);
                 }
 
-                String result = output.toString().trim();
-                log.info("Python脚本 stdout (script={}): {}", scriptName, result);
+                String result = output.trim();
+                // P1-1/P2-17：stdout 全量日志降为 DEBUG（每次执行可能是全量 K 线 JSON）
+                log.debug("Python脚本 stdout (script={}): {}", scriptName, result);
                 return result;
             } finally {
                 process.destroy();
@@ -122,6 +143,62 @@ public class PythonScriptExecutor {
                 // cleanup best-effort
             }
         }
+    }
+
+    /**
+     * 等待读流任务结束；进程已退出后流必然 EOF，这里只做超时兜底。
+     */
+    private static String awaitDrain(CompletableFuture<String> future, String scriptName)
+            throws IOException, InterruptedException {
+        try {
+            return future.get(DRAIN_GRACE_SECONDS, TimeUnit.SECONDS);
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause() == null ? e : e.getCause();
+            log.warn("Python输出读取失败 (script={}): {}", scriptName, cause.getMessage());
+            return "";
+        } catch (java.util.concurrent.TimeoutException e) {
+            log.warn("Python输出读取超时 (script={})，按空输出处理", scriptName);
+            return "";
+        }
+    }
+
+    /**
+     * 读取流到 EOF，最多保留 maxChars 字符（超出部分丢弃但仍继续消费，避免阻塞子进程写管道）。
+     */
+    private static String drain(InputStream in, int maxChars) {
+        StringBuilder sb = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(in, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (sb.length() < maxChars) {
+                    sb.append(line).append('\n');
+                }
+            }
+        } catch (IOException e) {
+            log.debug("Python输出流读取失败: {}", e.getMessage());
+        }
+        return sb.toString();
+    }
+
+    /**
+     * 读取流到 EOF，仅保留尾部 maxChars 字符（环形截断）。
+     */
+    private static String drainTail(InputStream in, int maxChars) {
+        StringBuilder sb = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(in, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line).append('\n');
+                if (sb.length() > maxChars) {
+                    sb.delete(0, sb.length() - maxChars);
+                }
+            }
+        } catch (IOException e) {
+            log.debug("Python错误输出流读取失败: {}", e.getMessage());
+        }
+        return sb.toString();
     }
 
     private String resolvePythonExecutable() {

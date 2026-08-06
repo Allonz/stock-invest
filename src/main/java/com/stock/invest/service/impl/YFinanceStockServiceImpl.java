@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.stock.invest.exception.StockDataException;
 import com.stock.invest.model.KLineData;
 import com.stock.invest.model.KLineIterator;
 import com.stock.invest.model.StockInfo;
@@ -221,6 +222,11 @@ public class YFinanceStockServiceImpl implements StockScannerStrategy {
             log.info("[YFinanceStockServiceImpl] dateRange symbol={}, range=[{},{}]", symbol, tradeDate, yfEnd);
             String result = pythonScriptExecutor.executeScript(getScriptName(),
                     "get_daily_kline_range", symbol, tradeDate.toString(), yfEnd.toString());
+            // P1-3：Python 侧失败输出 {"error": ...} —— 解析消息并带分类抛出，
+            // 避免"确认不存在"（No data found）与瞬态失败混为一谈
+            if (result != null && result.contains("\"error\"")) {
+                throw StockDataException.classify(symbol, "yfinance", extractErrorFromJson(result), null);
+            }
             KLineData klineData = objectMapper.readValue(result, KLineData.class);
             // 填充每个 item 的 symbol 字段（Python 脚本返回的 JSON 中 item 不含 symbol）
             if (klineData != null && klineData.getItems() != null) {
@@ -234,9 +240,34 @@ public class YFinanceStockServiceImpl implements StockScannerStrategy {
                         symbol, first.getTimeString(), first.getOpen(), first.getHigh(), first.getLow(), first.getClose(), first.getChangePercent());
             }
             return klineData;
+        } catch (StockDataException e) {
+            throw e;
         } catch (Exception e) {
+            // P1-3：瞬态失败（超时/连接/解析等）抛带分类异常，不再返回空 KLineData 被误判为 not-found
             log.warn("Failed to get daily kline by range for {}: {}", symbol, e.getMessage());
-            return new KLineData();
+            throw StockDataException.classify(symbol, "yfinance", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 从 Python 脚本输出的 error JSON 中提取可读错误消息（兼容 {"error": "..."} 与 {"error": {"message": "..."}}）。
+     */
+    private String extractErrorFromJson(String result) {
+        try {
+            com.fasterxml.jackson.databind.JsonNode node = objectMapper.readTree(result);
+            com.fasterxml.jackson.databind.JsonNode err = node.get("error");
+            if (err == null) {
+                return result;
+            }
+            if (err.isTextual()) {
+                return err.asText();
+            }
+            if (err.has("message")) {
+                return err.path("message").asText();
+            }
+            return err.toString();
+        } catch (Exception ignored) {
+            return result;
         }
     }
 

@@ -47,6 +47,7 @@ class DataGapFillerAfterHoursTest {
     @Mock private TradingCalendarDbService tradingCalendarDbService;
     @Mock private StockDataSourcePriorityService stockDataSourcePriorityService;
     @Mock private SymbolBlacklistService symbolBlacklistService;
+    @Mock private org.springframework.transaction.PlatformTransactionManager transactionManager;
 
     @Captor private ArgumentCaptor<StockDailyBar> barCaptor;
 
@@ -67,7 +68,8 @@ class DataGapFillerAfterHoursTest {
         service = new DataGapFillerServiceImpl(
                 stockDailyBarRepository, dataFillTaskRepository, dataSources,
                 gapFillProperties, dataFillProgressService, tradingCalendarDbService,
-                stockDataSourcePriorityService, symbolBlacklistService);
+                stockDataSourcePriorityService, symbolBlacklistService,
+                transactionManager);
         lenient().when(stockDataSourcePriorityService.getPriorityList(anyString()))
                 .thenReturn(java.util.List.of("tiger", "yfinance"));
     }
@@ -130,7 +132,8 @@ class DataGapFillerAfterHoursTest {
         DataGapFillerServiceImpl yService = new DataGapFillerServiceImpl(
                 stockDailyBarRepository, dataFillTaskRepository, dataSources,
                 gapFillProperties, dataFillProgressService, tradingCalendarDbService,
-                stockDataSourcePriorityService, symbolBlacklistService);
+                stockDataSourcePriorityService, symbolBlacklistService,
+                transactionManager);
 
         LocalDate today = nyToday();
         LocalDate stopDate = today.minusDays(5);

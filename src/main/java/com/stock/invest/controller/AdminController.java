@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -188,6 +189,12 @@ public class AdminController {
     public ResponseEntity<ApiResponse<?>> triggerDataFill() {
         log.info("[Admin] triggerDataFill: manual trigger (async)");
 
+        // P1-2：补缺已在运行（定时/REST/MCP 任一路）则拒绝新触发
+        if (dataGapFillerService.isRunning()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(ApiResponse.error("数据补缺已在运行中，请稍后再试"));
+        }
+
         DataFillProgressService.FillProgress progress = dataFillProgressService.startFill();
         progress.setRunning(true);
         progress.setStartTime(System.currentTimeMillis());
@@ -213,6 +220,13 @@ public class AdminController {
     @PostMapping("/trigger-retry-tasks")
     public ResponseEntity<ApiResponse<?>> triggerRetryTasks() {
         log.info("[Admin] triggerRetryTasks: manual trigger");
+
+        // P1-2：重试批次已在运行（与补缺共用互斥）则拒绝新触发
+        if (dataGapFillerService.isRunning()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(ApiResponse.error("补缺/重试任务已在运行中，请稍后再试"));
+        }
+
         scanExecutor.execute(() -> {
             try { dataGapFillerService.processRetryingTasks(); }
             catch (Exception e) { log.error("[Admin] processRetryingTasks failed", e); }

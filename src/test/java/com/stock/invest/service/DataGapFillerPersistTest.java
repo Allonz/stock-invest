@@ -16,6 +16,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.PlatformTransactionManager;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -48,6 +49,7 @@ class DataGapFillerPersistTest {
     @Mock private TradingCalendarDbService tradingCalendarDbService;
     @Mock private StockDataSourcePriorityService stockDataSourcePriorityService;
     @Mock private SymbolBlacklistService symbolBlacklistService;
+    @Mock private PlatformTransactionManager transactionManager;
 
     @Captor private ArgumentCaptor<StockDailyBar> barCaptor;
     @Captor private ArgumentCaptor<DataFillTask> taskCaptor;
@@ -74,7 +76,8 @@ class DataGapFillerPersistTest {
         service = new DataGapFillerServiceImpl(
                 stockDailyBarRepository, dataFillTaskRepository, dataSources,
                 gapFillProperties, dataFillProgressService, tradingCalendarDbService,
-                stockDataSourcePriorityService, symbolBlacklistService);
+                stockDataSourcePriorityService, symbolBlacklistService,
+                transactionManager);
     }
 
     private LocalDate nyToday() {
@@ -251,7 +254,7 @@ class DataGapFillerPersistTest {
 
     // FILL-004: data_fill_task 重试任务在失败时创建
     @Test
-    @DisplayName("FILL-004: 所有数据源失败时创建 retry 任务")
+    @DisplayName("FILL-004: 所有数据源空结果时不进黑名单，创建 retry 任务（P1-3 三态）")
     void createsRetryTaskWhenAllSourcesFail() throws Exception {
         LocalDate today = nyToday();
         LocalDate stopDate = today.minusDays(5);
@@ -267,8 +270,10 @@ class DataGapFillerPersistTest {
         when(stockDailyBarRepository.findAllSymbols()).thenReturn(List.of("AAPL"));
         when(stockDailyBarRepository.findBySymbolOrderByTradeDateDesc(eq("AAPL"), any()))
                 .thenReturn(new ArrayList<>(List.of(existingBar)));
+        when(dataFillTaskRepository.findBySymbolAndTradeDate(eq("AAPL"), any()))
+                .thenReturn(Optional.empty());
 
-        // Both data sources return empty
+        // Both data sources return empty (成功但无数据 = EMPTY，不计黑名单)
         KLineData empty = new KLineData();
         empty.setSymbol("AAPL");
         empty.setItems(List.of());
@@ -280,10 +285,14 @@ class DataGapFillerPersistTest {
 
         service.fillGaps();
 
-        verify(symbolBlacklistService, atLeastOnce()).recordNotFound(eq("AAPL"), anyMap());
-        verify(dataFillTaskRepository, atLeastOnce()).updateStatusBySymbolAndStatusIn(
+        // P1-3：空结果不再触发黑名单；走 retry 任务路径
+        verify(symbolBlacklistService, never()).recordNotFound(eq("AAPL"), anyMap());
+        verify(dataFillTaskRepository, never()).updateStatusBySymbolAndStatusIn(
                 eq("AAPL"), anyList(), eq("stopped"), anyString());
-        verify(dataFillTaskRepository, never()).save(any());
+        verify(dataFillTaskRepository, atLeastOnce()).save(taskCaptor.capture());
+        DataFillTask created = taskCaptor.getValue();
+        assertEquals("AAPL", created.getSymbol());
+        assertEquals("retrying", created.getStatus());
     }
 
     // FILL-005: mergeAfterHours 仅对 tiger/tigeropen source 执行

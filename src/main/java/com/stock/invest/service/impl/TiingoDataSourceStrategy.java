@@ -1,6 +1,7 @@
 package com.stock.invest.service.impl;
 
 import com.stock.invest.client.TiingoRestClient;
+import com.stock.invest.exception.StockDataException;
 import com.stock.invest.model.KLineData;
 import com.stock.invest.model.StockInfo;
 import com.stock.invest.service.StockScannerStrategy;
@@ -78,17 +79,19 @@ public class TiingoDataSourceStrategy implements StockScannerStrategy {
             return tiingoRestClient.fetchDailyBars(symbol, tradeDate, tradeDate);
         } catch (HttpClientErrorException e) {
             if (e.getStatusCode().value() == 404) {
-                KLineData empty = new KLineData();
-                empty.setSymbol(symbol);
-                empty.setItems(java.util.Collections.emptyList());
+                // P1-3：404 = 确认不存在，计入黑名单
                 log.warn("[Tiingo] symbol not found (404) for date range: {}", symbol);
-                return empty;
+                throw new StockDataException(symbol, "tiingo", "股票不存在 (404)",
+                        StockDataException.ErrorCategory.CONFIRMED_NOT_FOUND);
             }
+            // P1-3：其他 HTTP 错误（429/5xx 等）为瞬态失败，不计黑名单
             log.warn("tiingo getDailyKLineDataByDateRange failed for {}: {}", symbol, e.getMessage());
-            return new KLineData();
+            throw new StockDataException(symbol, "tiingo", "HTTP错误: " + e.getMessage(),
+                    StockDataException.ErrorCategory.TRANSIENT_FAILURE);
         } catch (Exception e) {
             log.warn("tiingo getDailyKLineDataByDateRange failed for {}: {}", symbol, e.getMessage());
-            return new KLineData();
+            throw new StockDataException(symbol, "tiingo", "获取K线数据失败: " + e.getMessage(),
+                    StockDataException.ErrorCategory.TRANSIENT_FAILURE);
         }
     }
 

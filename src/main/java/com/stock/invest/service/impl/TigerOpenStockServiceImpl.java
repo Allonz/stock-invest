@@ -3,6 +3,7 @@ package com.stock.invest.service.impl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stock.invest.client.TigerOpenPythonBridge;
+import com.stock.invest.exception.StockDataException;
 import com.stock.invest.model.KLineData;
 import com.stock.invest.model.StockInfo;
 import com.stock.invest.service.DataSourceStrategy;
@@ -12,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -67,6 +69,28 @@ public class TigerOpenStockServiceImpl implements StockScannerStrategy {
         } catch (Exception e) {
             log.warn("[TigerOpenStock] getDailyKLineDataAsObject failed for {}: {}", symbol, e.getMessage());
             return new KLineData();
+        }
+    }
+
+    /**
+     * P1-3/P1-5：补缺 fallback 链入口 —— 失败时抛带分类的 {@link StockDataException}，
+     * 账户级错误（4000/permission/quota）触发源级熔断，not-found 才计入黑名单；
+     * 不再像 {@link #getDailyKLineDataAsObject} 那样返回空 KLineData 被误判为"不存在"。
+     */
+    @Override
+    public KLineData getDailyKLineDataByDateRange(String symbol, LocalDate tradeDate) {
+        try {
+            KLineData data = bridge.fetchDailyBars(symbol, 12);
+            if (data == null) {
+                throw new StockDataException(symbol, "tigeropen", "无数据返回",
+                        StockDataException.ErrorCategory.TRANSIENT_FAILURE);
+            }
+            return data;
+        } catch (StockDataException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("[TigerOpenStock] getDailyKLineDataByDateRange failed for {}: {}", symbol, e.getMessage());
+            throw StockDataException.classify(symbol, "tigeropen", e.getMessage(), e);
         }
     }
 

@@ -218,7 +218,8 @@ class DataSourceDateRangeTest {
         List<DataSourceStrategy> sources = List.of(source1, source2);
         DataGapFillerServiceImpl service = new DataGapFillerServiceImpl(
                 barRepo, taskRepo, sources, gfProps, progressService,
-                calendarService, priorityService, symbolBlacklistService);
+                calendarService, priorityService, symbolBlacklistService,
+                mock(org.springframework.transaction.PlatformTransactionManager.class));
 
         StockDailyBar existingBar = new StockDailyBar();
         existingBar.setSymbol(SYMBOL);
@@ -305,7 +306,8 @@ class DataSourceDateRangeTest {
         List<DataSourceStrategy> sources = List.of(source1, source2);
         DataGapFillerServiceImpl service = new DataGapFillerServiceImpl(
                 barRepo, taskRepo, sources, gfProps, progressService,
-                calendarService, priorityService, symbolBlacklistService);
+                calendarService, priorityService, symbolBlacklistService,
+                mock(org.springframework.transaction.PlatformTransactionManager.class));
 
         StockDailyBar existingBar = new StockDailyBar();
         existingBar.setSymbol(SYMBOL);

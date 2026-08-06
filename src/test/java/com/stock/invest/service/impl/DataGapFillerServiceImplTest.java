@@ -53,6 +53,8 @@ class DataGapFillerServiceImplTest {
     private com.stock.invest.service.StockDataSourcePriorityService stockDataSourcePriorityService;
     @Mock
     private com.stock.invest.service.SymbolBlacklistService symbolBlacklistService;
+    @Mock
+    private org.springframework.transaction.PlatformTransactionManager transactionManager;
 
     private DataGapFillerServiceImpl service;
 
@@ -94,7 +96,8 @@ class DataGapFillerServiceImplTest {
                 dataFillProgressService,
                 tradingCalendarDbService,
                 stockDataSourcePriorityService,
-                symbolBlacklistService);
+                symbolBlacklistService,
+                transactionManager);
     }
 
     private LocalDate nyToday() {

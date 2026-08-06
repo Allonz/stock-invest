@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 /**
@@ -49,6 +50,9 @@ public class ScreeningServiceImpl implements ScreeningService {
     private final PatternEvaluateService patternEvaluateService;
     private final TradingCalendarDbService tradingCalendarDbService;
 
+    /** P1-2：筛选运行互斥 —— 同步/异步/定时多路触发共用同一实例，重复触发直接跳过 */
+    private final AtomicBoolean running = new AtomicBoolean(false);
+
     public ScreeningServiceImpl(
             StockDailyBarRepository stockDailyBarRepository,
             ScreeningMatchRepository screeningMatchRepository,
@@ -64,6 +68,19 @@ public class ScreeningServiceImpl implements ScreeningService {
     @Transactional
     @SuppressWarnings("null")
     public String runScreening(LocalDate tradeDate) {
+        // P1-2：互斥 —— 已有一份筛选在跑则跳过，避免重复触发插入重复行、双倍计算
+        if (!running.compareAndSet(false, true)) {
+            log.warn("[Screening] runScreening: already running, skip concurrent trigger");
+            return null;
+        }
+        try {
+            return runScreeningInternal(tradeDate);
+        } finally {
+            running.set(false);
+        }
+    }
+
+    private String runScreeningInternal(LocalDate tradeDate) {
         LocalDate targetDate = tradeDate == null ? ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate() : tradeDate;
         String batchId = UUID.randomUUID().toString();
 

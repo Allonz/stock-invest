@@ -17,6 +17,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -25,11 +27,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.stock.invest.config.GapFillProperties;
 import com.stock.invest.entity.DataFillTask;
 import com.stock.invest.entity.StockDailyBar;
+import com.stock.invest.exception.StockDataException;
 import com.stock.invest.model.KLineData;
 import com.stock.invest.model.KLineIterator;
 import com.stock.invest.repository.DataFillTaskRepository;
@@ -65,6 +69,9 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
     private static final int MAX_LOOKBACK_DAYS = 30;
     private static final int MAX_MISSING_DATES_PER_SYMBOL = 5;
 
+    /** P1-5：账户级错误（权限/配额）触发源级熔断的冷却时长 */
+    private static final long SOURCE_COOLDOWN_MILLIS = 30 * 60 * 1000L;
+
     private final StockDailyBarRepository stockDailyBarRepository;
     private final DataFillTaskRepository dataFillTaskRepository;
     private final List<DataSourceStrategy> dataSources;
@@ -74,6 +81,15 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
     private final StockDataSourcePriorityService stockDataSourcePriorityService;
     private final SymbolBlacklistService symbolBlacklistService;
 
+    /** P1-2：批次运行互斥 —— 定时、REST、MCP 三路共用同一 Service 实例，天然互斥 */
+    private final AtomicBoolean running = new AtomicBoolean(false);
+
+    /** P1-5：数据源熔断冷却表，key=数据源名，value=冷却截止 epochMillis */
+    private final Map<String, Long> sourceCooldownUntil = new ConcurrentHashMap<>();
+
+    /** P1-2：事务边界收缩 —— 单次持久化用独立事务，失败不回滚整批 */
+    private final TransactionTemplate transactionTemplate;
+
     public DataGapFillerServiceImpl(
             StockDailyBarRepository stockDailyBarRepository,
             DataFillTaskRepository dataFillTaskRepository,
@@ -82,7 +98,8 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
             DataFillProgressService dataFillProgressService,
             TradingCalendarDbService tradingCalendarDbService,
             StockDataSourcePriorityService stockDataSourcePriorityService,
-            SymbolBlacklistService symbolBlacklistService) {
+            SymbolBlacklistService symbolBlacklistService,
+            PlatformTransactionManager transactionManager) {
         this.stockDailyBarRepository = stockDailyBarRepository;
         this.dataFillTaskRepository = dataFillTaskRepository;
         this.dataSources = dataSources;
@@ -91,14 +108,26 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         this.tradingCalendarDbService = tradingCalendarDbService;
         this.stockDataSourcePriorityService = stockDataSourcePriorityService;
         this.symbolBlacklistService = symbolBlacklistService;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
     @Override
-    @Transactional
     public void fillGaps() {
+        // P1-2：运行互斥 —— 已有一份补缺在跑则直接跳过，避免定时/手动/MCP 并发重复补缺、双倍配额
+        if (!running.compareAndSet(false, true)) {
+            log.warn("[DataGapFiller] fillGaps: already running, skip concurrent trigger");
+            return;
+        }
         Instant batchStart = Instant.now();
         log.info("[DataGapFiller] fillGaps: === BEGIN ===");
+        try {
+            fillGapsInternal(batchStart);
+        } finally {
+            running.set(false);
+        }
+    }
 
+    private void fillGapsInternal(Instant batchStart) {
         // 获取进度对象，如果没有（scheduler 触发）则忽略
         DataFillProgressService.FillProgress progress = dataFillProgressService.getProgress();
 
@@ -117,14 +146,15 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
                 .collect(java.util.stream.Collectors.toList());
         if (!blacklistedSymbols.isEmpty()) {
             log.info("[DataGapFiller] [blacklist] filtered symbols: {}, count={}", blacklistedSymbols, blacklistedSymbols.size());
-            // 清理已入黑 symbol 的 retry 任务
+            // 清理已入黑 symbol 的 retry 任务（独立事务，避免整批回滚）
             for (String s : blacklistedSymbols) {
-                dataFillTaskRepository.updateStatusBySymbolAndStatusIn(
-                        s,
+                final String symbol = s;
+                runInTx(() -> dataFillTaskRepository.updateStatusBySymbolAndStatusIn(
+                        symbol,
                         java.util.List.of("pending", "retrying"),
                         "stopped",
                         "symbol is blacklisted, stop retry"
-                );
+                ));
             }
         }
         log.info("[DataGapFiller] fillGaps: scanning totalSymbols={}, afterBlacklistFilter={}, skipped={}",
@@ -151,7 +181,14 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
                 progress.setStage("FILLING");
             }
 
-            FillResult result = fillGapsForSymbol(symbol, progress);
+            // P1-2：单 symbol 失败不中断批次
+            FillResult result;
+            try {
+                result = fillGapsForSymbol(symbol, progress);
+            } catch (Exception e) {
+                log.error("[DataGapFiller] fillGaps: symbol={} failed, continue batch — error={}", symbol, e.getMessage(), e);
+                result = FillResult.failedSymbol();
+            }
             processed += result.symbolsProcessed;
             totalGapsFound += result.gapsFound;
             totalFilled += result.filled;
@@ -176,14 +213,14 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
     }
 
     private FillResult fillGapsForSymbol(String symbol, DataFillProgressService.FillProgress progress) {
+        // 查询结果按 tradeDate DESC（最新在前）
         List<StockDailyBar> bars = stockDailyBarRepository
                 .findBySymbolOrderByTradeDateDesc(symbol, PageRequest.of(0, MAX_LOOKBACK_DAYS));
         if (bars.isEmpty()) {
             return FillResult.empty();
         }
-        Collections.reverse(bars);
 
-        StockDailyBar latest = bars.get(bars.size() - 1);
+        StockDailyBar latest = bars.get(0);
         if (latest.getClosePrice() != null && latest.getClosePrice() > gapFillProperties.getMinPriceThreshold()) {
             return FillResult.empty();
         }
@@ -227,7 +264,9 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
 
     /**
      * 计算 [max(oldestBar, today-30d), today(NY)] 范围内的缺失交易日。
-     * <p>existingBars 按 tradeDate DESC 排序传入。</p>
+     * <p>P1-4：方法内部显式按 tradeDate ASC 排序，不依赖调用方的传入顺序
+     * （此前依赖调用方传 DESC 序，而调用方经 {@code Collections.reverse} 实际传 ASC，
+     * 导致 newest/oldest 取反、窗口内部历史空洞永不发现）。</p>
      * <p>通过 TradingCalendarDbService 查询交易日历，跳过非开盘日（节假日）。</p>
      */
         static List<LocalDate> findMissingTradeDates(List<StockDailyBar> existingBars,
@@ -236,9 +275,13 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
             return Collections.emptyList();
         }
 
-        // bars 按 tradeDate DESC 传回
-        LocalDate newestInBars = existingBars.get(0).getTradeDate();
-        LocalDate oldestInBars = existingBars.get(existingBars.size() - 1).getTradeDate();
+        // P1-4：显式升序排序，消除对调用方顺序的隐式依赖
+        List<StockDailyBar> sorted = existingBars.stream()
+                .filter(Objects::nonNull)
+                .sorted(Comparator.comparing(StockDailyBar::getTradeDate))
+                .toList();
+        LocalDate newestInBars = sorted.get(sorted.size() - 1).getTradeDate();
+        LocalDate oldestInBars = sorted.get(0).getTradeDate();
 
         // 以纽约时间为基准的"今天"
         LocalDate today = ZonedDateTime.now(AMERICA_NY).toLocalDate();
@@ -300,8 +343,10 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         // 使用该股票专属的数据源优先级列表（含历史成功记录排序 + fallback）
         List<FallbackSource> fallbacks = buildFallbackChainForSymbol(symbol);
 
-        // 记录每个数据源的"不存在"判定结果
+        // 记录每个数据源的"确认不存在"判定结果（P1-3：仅 CONFIRMED_NOT_FOUND 计入黑名单计数）
         Map<String, Boolean> sourceNotFoundResults = new LinkedHashMap<>();
+        // P1-5：账户级错误终止本 symbol 的 fallback 链
+        boolean accountLevelAbort = false;
 
         for (FallbackSource source : fallbacks) {
             log.info("");
@@ -312,7 +357,8 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
             try {
                 klineData = source.fetcher.fetch(symbol, tradeDate);
                 if (isKLineDataEmpty(klineData)) {
-                    sourceNotFoundResults.put(source.name, true);
+                    // P1-3：成功但无数据（EMPTY）——默认不计黑名单，避免限流/超时/解析失败
+                    // 被数据源"包装成空结果"后误伤真实股票
                     log.warn("\033[34m[DataGapFiller] {} source then received response:\033[0m returned empty result for symbol={}",
                             source.name, symbol);
                     log.info("\033[32m[DataGapFiller] {} source end\033[0m", source.name);
@@ -338,9 +384,10 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
                         log.info("\033[34m[DataGapFiller] {} source then received response:\033[0m matched targetDate={}", source.name, tradeDate);
                         StockDailyBar bar = persist(symbol, tradeDate, item, source.name);
                         mergeAfterHoursIfAvailable(symbol, tradeDate, bar, source.ds);
-                        // 更新该股票的该数据源优先级
-                        stockDataSourcePriorityService.updatePriority(
-                                symbol, source.name, java.time.LocalDateTime.now());
+                        // 更新该股票的该数据源优先级（独立事务）
+                        final String sourceName = source.name;
+                        runInTx(() -> stockDataSourcePriorityService.updatePriority(
+                                symbol, sourceName, java.time.LocalDateTime.now()));
                         log.info("[DataGapFiller] fillWithFallback: success symbol={}, source={}", symbol, source.name);
                         log.info("\033[32m[DataGapFiller] {} source end\033[0m", source.name);
                         log.info("");
@@ -353,15 +400,44 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
                         symbol, source.name, tradeDate);
                 log.info("\033[32m[DataGapFiller] {} source end\033[0m", source.name);
                 log.info("");
-            } catch (Exception e) {
-                String errorMsg = e.getMessage();
-                boolean isNotFound = isNotFoundError(klineData, errorMsg);
-                sourceNotFoundResults.put(source.name, isNotFound);
-
-                log.error("[DataGapFiller] fillWithFallback: error symbol={}, source={}, error={}",
-                        symbol, source.name, errorMsg);
+            } catch (StockDataException e) {
+                // P1-3/P1-5：带分类的异常 —— 三态判定
+                switch (e.getCategory()) {
+                    case CONFIRMED_NOT_FOUND -> {
+                        sourceNotFoundResults.put(source.name, true);
+                        log.warn("[DataGapFiller] fillWithFallback: confirmed not-found symbol={}, source={}, error={}",
+                                symbol, source.name, e.getMessage());
+                    }
+                    case ACCOUNT_LEVEL -> {
+                        // P1-5：账户级错误 → 熔断该源（冷却期内跳过），并终止本 symbol 的 fallback 链
+                        long until = System.currentTimeMillis() + SOURCE_COOLDOWN_MILLIS;
+                        sourceCooldownUntil.put(source.name, until);
+                        accountLevelAbort = true;
+                        log.error("[DataGapFiller] fillWithFallback: account-level error symbol={}, source={}, " +
+                                        "circuit open until={}, stop fallback chain — error={}",
+                                symbol, source.name, until, e.getMessage());
+                    }
+                    default -> log.warn("[DataGapFiller] fillWithFallback: transient failure symbol={}, source={}, " +
+                                    "not counted for blacklist — error={}",
+                            symbol, source.name, e.getMessage());
+                }
                 log.info("\033[32m[DataGapFiller] {} source end\033[0m", source.name);
                 log.info("");
+            } catch (Exception e) {
+                // P1-3：未知异常（非 StockDataException）——按关键词判 not-found，否则视为瞬态，不计黑名单
+                String errorMsg = e.getMessage();
+                boolean isNotFound = isNotFoundError(null, errorMsg);
+                if (isNotFound) {
+                    sourceNotFoundResults.put(source.name, true);
+                }
+                log.error("[DataGapFiller] fillWithFallback: error symbol={}, source={}, notFound={}, error={}",
+                        symbol, source.name, isNotFound, errorMsg);
+                log.info("\033[32m[DataGapFiller] {} source end\033[0m", source.name);
+                log.info("");
+            }
+
+            if (accountLevelAbort) {
+                break;
             }
         }
 
@@ -379,16 +455,16 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
                 }
             }
 
-            // 记入黑名单
-            symbolBlacklistService.recordNotFound(symbol, sourceErrors);
-
-            // 将 data_fill_task 中该 symbol 的 pending/retrying 任务改为 stopped
-            dataFillTaskRepository.updateStatusBySymbolAndStatusIn(
-                    symbol,
-                    java.util.List.of("pending", "retrying"),
-                    "stopped",
-                    "双数据源以上报 404，已进黑名单"
-            );
+            // 记入黑名单 + 停止 retry 任务（P1-2：独立事务，失败不回滚批次）
+            runInTx(() -> {
+                symbolBlacklistService.recordNotFound(symbol, sourceErrors);
+                dataFillTaskRepository.updateStatusBySymbolAndStatusIn(
+                        symbol,
+                        java.util.List.of("pending", "retrying"),
+                        "stopped",
+                        "双数据源以上报 404，已进黑名单"
+                );
+            });
 
             log.warn("[DataGapFiller] [blacklist] symbol={} added to blacklist: {} sources returned not-found",
                     symbol, notFoundCount);
@@ -423,7 +499,8 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         bar.setAfterHours(item.getAfterHours());
         bar.setAfterHoursChangePercent(item.getAfterHoursChangePercent());
         bar.setSource(source);
-        stockDailyBarRepository.save(bar);
+        // P1-2：单次持久化独立事务，失败不回滚整批
+        runInTx(() -> stockDailyBarRepository.save(bar));
         return bar;
     }
 
@@ -453,7 +530,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
                 if (regClose != null && regClose != 0.0) {
                     bar.setAfterHoursChangePercent((ahClose - regClose) / regClose * 100);
                 }
-                stockDailyBarRepository.save(bar);
+                runInTx(() -> stockDailyBarRepository.save(bar));
                 return;
             }
         } catch (Exception e) {
@@ -479,7 +556,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
             task.setStatus("retrying");
             task.setLastError(error);
             // dayCount 和 retryDate 由 processRetryingTasks 统一管理
-            dataFillTaskRepository.save(task);
+            runInTx(() -> dataFillTaskRepository.save(task));
             log.info("[DataGapFiller] createRetryTask: updated symbol={}, date={}, retryCount={}, error={}",
                     symbol, tradeDate, task.getRetryCount(), error);
             return;
@@ -492,14 +569,26 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         task.setRetryDate(today);
         task.setDayCount(1);
         task.setLastError(error);
-        dataFillTaskRepository.save(task);
+        runInTx(() -> dataFillTaskRepository.save(task));
         log.info("[DataGapFiller] createRetryTask: created symbol={}, date={}, error={}",
                 symbol, tradeDate, error);
     }
 
     @Override
-    @Transactional
     public void processRetryingTasks() {
+        // P1-2：运行互斥 —— 与 fillGaps 共用同一把锁，补缺/重试不得并发
+        if (!running.compareAndSet(false, true)) {
+            log.warn("[DataGapFiller] processRetryingTasks: already running, skip concurrent trigger");
+            return;
+        }
+        try {
+            processRetryingTasksInternal();
+        } finally {
+            running.set(false);
+        }
+    }
+
+    private void processRetryingTasksInternal() {
         log.info("");
         log.info("\033[31m[DataGapFiller] processRetryingTasks: === BEGIN ===\033[0m");
 
@@ -516,7 +605,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
             Instant weekAgo = Instant.now().minus(7, ChronoUnit.DAYS);
             if (!task.getCreatedAt().isAfter(weekAgo)) {
                 task.setStatus("stopped");
-                dataFillTaskRepository.save(task);
+                runInTx(() -> dataFillTaskRepository.save(task));
                 log.info("[DataGapFiller] processRetryingTasks: task expired taskId={}, symbol={}, date={}",
                         task.getId(), symbol, tradeDate);
                 continue;
@@ -549,7 +638,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
             if (symbolBlacklistService.isBlacklisted(symbol)) {
                 task.setStatus("stopped");
                 task.setLastError("symbol is blacklisted");
-                dataFillTaskRepository.save(task);
+                runInTx(() -> dataFillTaskRepository.save(task));
                 log.info("[DataGapFiller] processRetryingTasks: task stopped (blacklisted) taskId={}, symbol={}, date={}",
                         task.getId(), symbol, tradeDate);
                 continue;
@@ -566,7 +655,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
             boolean success = fetchAndPersist(symbol, tradeDate).success();
             if (success) {
                 task.setStatus("completed");
-                dataFillTaskRepository.save(task);
+                runInTx(() -> dataFillTaskRepository.save(task));
                 log.info("[DataGapFiller] processRetryingTasks: retry success taskId={}, symbol={}, date={}",
                         task.getId(), symbol, tradeDate);
                 retried++;
@@ -576,7 +665,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
                 if (symbolBlacklistService.isBlacklisted(symbol)) {
                     task.setStatus("stopped");
                     task.setLastError("blacklisted after all sources exhausted");
-                    dataFillTaskRepository.save(task);
+                    runInTx(() -> dataFillTaskRepository.save(task));
                     log.info("[DataGapFiller] processRetryingTasks: task stopped (newly blacklisted) taskId={}, symbol={}, date={}",
                             task.getId(), symbol, tradeDate);
                 } else {
@@ -584,7 +673,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
                     task.setDayCount(task.getDayCount() + 1);
                     task.setStatus("retrying");
                     task.setLastError("retry attempt failed again");
-                    dataFillTaskRepository.save(task);
+                    runInTx(() -> dataFillTaskRepository.save(task));
                     log.warn("[DataGapFiller] processRetryingTasks: retry failed taskId={}, symbol={}, date={}, retryCount={}, dayCount={}",
                             task.getId(), symbol, tradeDate, task.getRetryCount(), task.getDayCount());
                 }
@@ -650,6 +739,8 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         return dataSources.stream()
                 .filter(Objects::nonNull)
                 .filter(DataSourceStrategy::isAvailable)
+                // P1-5：熔断冷却期内的源直接跳过（账户级错误后 30 分钟内不再打该源）
+                .filter(ds -> !isSourceCooledDown(ds.getSourceName()))
                 .sorted(Comparator.comparingInt(s -> priorityMap.getOrDefault(s.getSourceName(), 99)))
                 .map(ds -> new FallbackSource(ds.getSourceName(),
                         (sym, date) -> ds.getDailyKLineDataByDateRange(sym, date), ds))
@@ -657,34 +748,27 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
     }
 
     /**
-     * 综合判断该数据源是否返回了"股票不存在"。
-     * 同时覆盖两条失败路径：
-     *   路径 A：fetch 返回空结果（items 为空）
-     *   路径 B：异常消息匹配 404/not found 关键词
-     *
-     * @param klineData   fetch 返回的数据对象（可为 null）
-     * @param errorMessage catch 块中的异常消息（可为 null）
-     * @return true = 该数据源判定为"不存在"
+     * 数据源是否处于熔断冷却期（P1-5）。
+     */
+    private boolean isSourceCooledDown(String sourceName) {
+        Long until = sourceCooldownUntil.get(sourceName);
+        if (until == null) {
+            return false;
+        }
+        if (System.currentTimeMillis() >= until) {
+            sourceCooldownUntil.remove(sourceName, until);
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * 判断异常消息是否明确匹配 not-found 关键词（P1-3 路径 B 白名单）。
+     * <p>仅在数据源未抛带分类的 {@link StockDataException} 时兜底使用；成功但空结果一律不计黑名单。</p>
      */
     private boolean isNotFoundError(KLineData klineData, String errorMessage) {
-        // 路径 A：空结果路径
-        if (klineData == null
-                || klineData.getItems() == null
-                || klineData.getItems().isEmpty()) {
-            return true;
-        }
-        // 路径 B：异常消息路径
         if (errorMessage != null && !errorMessage.isEmpty()) {
-            String lower = errorMessage.toLowerCase();
-            return lower.contains("404")
-                    || lower.contains("not found")
-                    || lower.contains("no data")
-                    || lower.contains("no historical data")
-                    || lower.contains("no results")
-                    || lower.contains("invalid symbol")
-                    || lower.contains("is missing or invalid")
-                    || lower.contains("grow or venture")
-                    || lower.contains("not_found");
+            return StockDataException.isNotFoundMessage(errorMessage.toLowerCase());
         }
         return false;
     }
@@ -722,5 +806,23 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         static FillResult empty() {
             return new FillResult(0, 0, 0, 0);
         }
+
+        static FillResult failedSymbol() {
+            return new FillResult(1, 0, 0, 1);
+        }
+    }
+
+    // ---- P1-2 辅助：独立事务 + 互斥状态 ----
+
+    /**
+     * 以独立事务执行单次持久化，失败只回滚当前操作，不影响批次其他已落库数据。
+     */
+    private void runInTx(Runnable action) {
+        transactionTemplate.executeWithoutResult(status -> action.run());
+    }
+
+    @Override
+    public boolean isRunning() {
+        return running.get();
     }
 }
