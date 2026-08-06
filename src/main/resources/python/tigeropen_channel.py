@@ -21,6 +21,17 @@ NY_TZ = ZoneInfo("America/New_York")
 logging.getLogger("tiger_openapi").setLevel(logging.CRITICAL)
 
 
+def _after_hours_trade_session():
+    """tigeropen 3.5.8 的 TradingSession 枚举成员为 AfterHours（无 AFTER_HOURS 别名）。
+
+    兼容两种命名：优先取库真实成员 AfterHours，回退 AFTER_HOURS，避免 AttributeError。
+    返回 None 时上层调用会因缺参而失败，这里保证不抛属性错误。
+    """
+    from tigeropen.common.consts import TradingSession
+
+    return getattr(TradingSession, "AfterHours", None) or getattr(TradingSession, "AFTER_HOURS", None)
+
+
 def _error_payload(exc):
     """将异常转为统一错误 JSON 结构；账户级错误（权限/配额）标为 ACCOUNT_LEVEL。"""
     code = getattr(exc, "code", None)
@@ -75,7 +86,6 @@ def _cmd_bars(client, symbol: str, lim: int):
     from datetime import datetime
 
     from tigeropen.common.consts import BarPeriod
-    from tigeropen.common.consts import TradingSession
 
     df = client.get_bars(symbol, period=BarPeriod.DAY, limit=int(lim))
     items = []
@@ -104,7 +114,7 @@ def _cmd_bars(client, symbol: str, lim: int):
 
     # 获取盘后 K 线，按日期合并到日 K 线中（P2-16：统一用美东时区取日期 key）
     ah_df = client.get_bars(
-        symbol, period=BarPeriod.DAY, limit=int(lim), trade_session=TradingSession.AFTER_HOURS
+        symbol, period=BarPeriod.DAY, limit=int(lim), trade_session=_after_hours_trade_session()
     )
     if ah_df is not None and not ah_df.empty:
         ah_by_date = {}
@@ -126,10 +136,9 @@ def _cmd_afterhours_bars(client, symbol: str, lim: int):
     import math
 
     from tigeropen.common.consts import BarPeriod
-    from tigeropen.common.consts import TradingSession
 
     df = client.get_bars(
-        symbol, period=BarPeriod.DAY, limit=int(lim), trade_session=TradingSession.AFTER_HOURS
+        symbol, period=BarPeriod.DAY, limit=int(lim), trade_session=_after_hours_trade_session()
     )
     items = []
     if df is not None and not df.empty:

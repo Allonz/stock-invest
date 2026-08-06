@@ -89,12 +89,9 @@ def test_py_to_002_bars_no_data():
 @patch("tigeropen.common.consts.TradingSession")
 def test_py_to_003_afterhours_bars_normal(mock_trading_session):
     """PY-TO-003: _cmd_afterhours_bars 正常返回盘后数据"""
-    # 解决 TigerOpen SDK 中 TradingSession.AFTER_HOURS 不存在的问题
-    # 实际 SDK 是 TradingSession.AfterHours
-    mock_trading_session.AFTER_HOURS = "AfterHours_mock"
-    # 保留 DAY 枚举以便 _cmd_bars 中的 import 能正常工作
-    from tigeropen.common.consts import BarPeriod
-    # BarPeriod 是独立的，不受影响
+    # tigeropen 3.5.8 的 TradingSession 成员名为 AfterHours（无 AFTER_HOURS 别名），
+    # 脚本经 _after_hours_trade_session() 兼容解析；测试按库真实成员打桩。
+    mock_trading_session.AfterHours = "AfterHours_mock"
 
     mock_client = MagicMock()
     df = _build_bars_df("MSFT", 2)
@@ -120,7 +117,7 @@ def test_py_to_003_afterhours_bars_normal(mock_trading_session):
 @patch("tigeropen.common.consts.TradingSession")
 def test_py_to_004_afterhours_bars_no_data(mock_trading_session):
     """PY-TO-004: _cmd_afterhours_bars 空数据"""
-    mock_trading_session.AFTER_HOURS = "AfterHours_mock"
+    mock_trading_session.AfterHours = "AfterHours_mock"
 
     mock_client = MagicMock()
     mock_client.get_bars.return_value = pd.DataFrame()  # empty DataFrame
