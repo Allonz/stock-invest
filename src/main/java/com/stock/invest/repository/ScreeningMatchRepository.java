@@ -18,6 +18,9 @@ public interface ScreeningMatchRepository extends JpaRepository<ScreeningMatch, 
 
     List<ScreeningMatch> findByTradeDateOrderByPriceDesc(LocalDate tradeDate);
 
+    /** P2-5：查询某交易日全部命中记录（用于 saveAll 前查重） */
+    List<ScreeningMatch> findByTradeDate(LocalDate tradeDate);
+
     Optional<ScreeningMatch> findTopByOrderByTradeDateDescIdDesc();
 
     @Query("SELECT DISTINCT sm.batchId FROM ScreeningMatch sm ORDER BY sm.batchId DESC")

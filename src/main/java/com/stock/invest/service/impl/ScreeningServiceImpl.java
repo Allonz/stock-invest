@@ -37,7 +37,8 @@ import java.util.stream.Collectors;
  * {@link PatternEvaluateServiceImpl} 做模式评估，结果写入 screening_match 表。
  * </p>
  * <p>
- * 每个 symbol 同时对 2/3/4/5/6/7 天窗口做并行评估，分别记录结果。
+ * 每个 symbol 对 2/3/4/5/6/7 天窗口依次评估（P3-2：原 javadoc 声称"并行评估"，
+ * 实际为串行双层循环，注释与实现保持一致），分别记录结果。
  * </p>
  */
 @Service
@@ -177,9 +178,24 @@ public class ScreeningServiceImpl implements ScreeningService {
             }
         }
 
-        // 批量写入
+        // 批量写入（P2-5：防重 —— 同交易日同股票同窗口同算法已存在的行跳过，
+        // 重复触发不再插入重复行；DB 唯一约束 uk_screening_match_trade_symbol_window_algorithm 兜底，
+        // 存量库存在历史重复行时约束暂缺，由本处应用层查重保证）
         if (!allRows.isEmpty()) {
-            screeningMatchRepository.saveAll(allRows);
+            Set<String> existingKeys = screeningMatchRepository.findByTradeDate(targetDate).stream()
+                    .map(m -> m.getSymbol() + "|" + m.getWindowDays() + "|" + m.getAlgorithm())
+                    .collect(Collectors.toSet());
+            List<ScreeningMatch> toSave = allRows.stream()
+                    .filter(r -> !existingKeys.contains(r.getSymbol() + "|" + r.getWindowDays() + "|" + r.getAlgorithm()))
+                    .collect(Collectors.toList());
+            int skippedDuplicates = allRows.size() - toSave.size();
+            if (skippedDuplicates > 0) {
+                log.info("[Screening] batch save skipped {} duplicate row(s) for tradeDate={}",
+                        skippedDuplicates, targetDate);
+            }
+            if (!toSave.isEmpty()) {
+                screeningMatchRepository.saveAll(toSave);
+            }
         }
 
         log.info("ScreeningServiceImpl: done batchId={}, tradeDate={}, symbols={}, processed={}, matchedRows={}",

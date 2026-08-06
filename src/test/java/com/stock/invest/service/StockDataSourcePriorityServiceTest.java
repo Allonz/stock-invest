@@ -67,19 +67,36 @@ class StockDataSourcePriorityServiceTest {
     }
 
     @Test
-    @DisplayName("updatePriority: deletes old record then saves new")
-    void test_updatePriority() {
+    @DisplayName("updatePriority: existing record -> update lastSuccessTime (P2-3)")
+    void test_updatePriority_existing() {
         LocalDateTime now = LocalDateTime.now();
+        StockDataSourcePriority existing = StockDataSourcePriority.of("AAPL", "twelvedata", now.minusDays(1));
+        existing.setId(1L);
+        when(repository.findBySymbolAndDataSource("AAPL", "twelvedata"))
+                .thenReturn(java.util.Optional.of(existing));
 
         service.updatePriority("AAPL", "twelvedata", now);
 
-        verify(repository).deleteBySymbolAndDataSource("AAPL", "twelvedata");
-        verify(repository).flush();
+        verify(repository).save(existing);
+        assertEquals(now, existing.getLastSuccessTime());
+        verify(repository, never()).deleteBySymbolAndDataSource(anyString(), anyString());
+    }
+
+    @Test
+    @DisplayName("updatePriority: no existing record -> insert new (P2-3)")
+    void test_updatePriority_insert() {
+        LocalDateTime now = LocalDateTime.now();
+        when(repository.findBySymbolAndDataSource("AAPL", "twelvedata"))
+                .thenReturn(java.util.Optional.empty());
+
+        service.updatePriority("AAPL", "twelvedata", now);
+
         ArgumentCaptor<StockDataSourcePriority> captor = ArgumentCaptor.forClass(StockDataSourcePriority.class);
         verify(repository).save(captor.capture());
         assertEquals("AAPL", captor.getValue().getSymbol());
         assertEquals("twelvedata", captor.getValue().getDataSource());
         assertEquals(now, captor.getValue().getLastSuccessTime());
+        verify(repository, never()).deleteBySymbolAndDataSource(anyString(), anyString());
     }
 
     @Test

@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -71,18 +72,36 @@ public class StockDataSourcePriorityService {
     }
 
     /**
-     * 更新某支股票某数据源的成功时间。
-     * 先删旧记录再插新记录，保证同一 (symbol, data_source) 只有一条。
+     * 更新某支股票某数据源的成功时间（P2-3）。
+     * <p>改为"存在则更新、不存在则插入"，不再"删后插"——
+     * 原删除+插入非原子，并发调用互相覆盖或触发唯一约束冲突。
+     * 并发兜底：(symbol, data_source) 唯一约束，插入冲突时捕获后重试一次按更新处理。</p>
      */
     @Transactional
     public void updatePriority(String symbol, String dataSource, LocalDateTime successTime) {
-        repository.deleteBySymbolAndDataSource(symbol, dataSource);
-        repository.flush();
+        try {
+            upsertOnce(symbol, dataSource, successTime);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            // 并发插入冲突：另一线程已插入该 (symbol, data_source)，按更新处理
+            log.debug("[DataSourcePriority] concurrent insert conflict, retry as update: symbol={}, dataSource={}",
+                    symbol, dataSource);
+            upsertOnce(symbol, dataSource, successTime);
+        }
+    }
 
+    private void upsertOnce(String symbol, String dataSource, LocalDateTime successTime) {
+        Optional<StockDataSourcePriority> existing =
+                repository.findBySymbolAndDataSource(symbol, dataSource);
+        if (existing.isPresent()) {
+            existing.get().setLastSuccessTime(successTime);
+            repository.save(existing.get());
+            log.debug("[DataSourcePriority] updated: symbol={}, dataSource={}, time={}",
+                    symbol, dataSource, successTime);
+            return;
+        }
         StockDataSourcePriority record = StockDataSourcePriority.of(symbol, dataSource, successTime);
         repository.save(record);
-
-        log.debug("[DataSourcePriority] updated: symbol={}, dataSource={}, time={}",
+        log.debug("[DataSourcePriority] inserted: symbol={}, dataSource={}, time={}",
                 symbol, dataSource, successTime);
     }
 }
