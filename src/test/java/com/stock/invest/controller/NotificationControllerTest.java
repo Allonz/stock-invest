@@ -13,6 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -45,7 +46,8 @@ class NotificationControllerTest {
         payload.put("screenDate", "2026-05-18");
         payload.put("results", results);
 
-        when(screeningService.getLatestNotificationGrouped()).thenReturn(payload);
+        // controller 已改调 getLatestNotificationGrouped(String windows) 重载（windows 缺省为 null）
+        when(screeningService.getLatestNotificationGrouped(isNull())).thenReturn(payload);
 
         mockMvc.perform(get("/api/notification/latest")
                         .accept(MediaType.APPLICATION_JSON))
@@ -61,7 +63,7 @@ class NotificationControllerTest {
     void test_latest_noResults() throws Exception {
         Map<String, Object> empty = new LinkedHashMap<>();
         empty.put("message", "暂无筛选数据");
-        when(screeningService.getLatestNotificationGrouped()).thenReturn(empty);
+        when(screeningService.getLatestNotificationGrouped(isNull())).thenReturn(empty);
 
         mockMvc.perform(get("/api/notification/latest")
                         .accept(MediaType.APPLICATION_JSON))
