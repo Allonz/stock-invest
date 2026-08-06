@@ -19,6 +19,16 @@ public interface ScreeningService {
     String runScreening(LocalDate tradeDate);
 
     /**
+     * 对指定交易日执行筛选（P1-7：支持窗口/数量参数生效）。
+     *
+     * @param tradeDate  交易日
+     * @param windowDays 窗口天数；null 或小于最小窗口时使用全部窗口 2~7 天
+     * @param limit      最多评估的候选 symbol 数；null 或 &lt;=0 表示不限
+     * @return 生成的 batchId；若已有筛选在运行则返回 null
+     */
+    String runScreening(LocalDate tradeDate, Integer windowDays, Integer limit);
+
+    /**
      * 获取最新一次筛选结果（含 stock name）。
      *
      * @return 结果 Map，包含 batchId / tradeDate / totalMatches / matches

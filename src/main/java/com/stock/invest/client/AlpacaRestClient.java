@@ -80,6 +80,7 @@ public class AlpacaRestClient {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .header("Authorization", basicAuthHeader())
+                    .timeout(java.time.Duration.ofSeconds(15))   // P1-9：总超时（含读），防止挂起线程
                     .GET()
                     .build();
 

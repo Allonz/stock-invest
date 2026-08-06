@@ -58,12 +58,16 @@ public class AlpacaCalendarService implements TradingCalendarService {
         }
 
         try {
-            return CompletableFuture
-                    .supplyAsync(() -> doQuery(date), executor)
-                    .get(TIMEOUT.getSeconds(), TimeUnit.SECONDS);
-        } catch (TimeoutException e) {
-            log.warn("[alpaca] 日历查询超时 ({}s)，触发 fallback", TIMEOUT.getSeconds());
-            return null;
+            CompletableFuture<TradingCalendarResult> future =
+                    CompletableFuture.supplyAsync(() -> doQuery(date), executor);
+            try {
+                return future.get(TIMEOUT.getSeconds(), TimeUnit.SECONDS);
+            } catch (TimeoutException e) {
+                // P2-14：超时必须取消底层任务，避免僵尸任务占用 scanExecutor 线程
+                future.cancel(true);
+                log.warn("[alpaca] 日历查询超时 ({}s)，触发 fallback", TIMEOUT.getSeconds());
+                return null;
+            }
         } catch (Exception e) {
             log.warn("[alpaca] 日历查询失败: {}，触发 fallback", e.getMessage());
             return null;

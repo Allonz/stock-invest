@@ -88,6 +88,17 @@ public class ResilientHttpExecutor {
                 }
                 log.error("[ResilientHttp] get: HTTP {} non-retryable — url={}", ex.getStatusCode().value(), url);
                 throw ex;
+            } catch (org.springframework.web.client.ResourceAccessException ex) {
+                // P1-9：网络层故障（连接拒绝、SocketTimeout、DNS 失败）——最常见的瞬时故障，按指数退避重试
+                if (attempts < max) {
+                    long backoffMs = (long) (500 * Math.pow(2, attempts - 1)) + jitter(attempts);
+                    log.warn("[ResilientHttp] get: network error, retry in {} ms (attempt {}/{}) — url={}, error={}",
+                            backoffMs, attempts, max, url, ex.getMessage());
+                    sleepQuietly(backoffMs);
+                    continue;
+                }
+                log.error("[ResilientHttp] get: network error, retries exhausted — url={}", url, ex);
+                throw ex;
             }
         }
     }

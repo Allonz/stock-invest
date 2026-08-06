@@ -68,23 +68,36 @@ public class ScreeningServiceImpl implements ScreeningService {
     @Transactional
     @SuppressWarnings("null")
     public String runScreening(LocalDate tradeDate) {
+        return runScreening(tradeDate, null, null);
+    }
+
+    @Override
+    @Transactional
+    @SuppressWarnings("null")
+    public String runScreening(LocalDate tradeDate, Integer windowDays, Integer limit) {
         // P1-2：互斥 —— 已有一份筛选在跑则跳过，避免重复触发插入重复行、双倍计算
         if (!running.compareAndSet(false, true)) {
             log.warn("[Screening] runScreening: already running, skip concurrent trigger");
             return null;
         }
         try {
-            return runScreeningInternal(tradeDate);
+            return runScreeningInternal(tradeDate, windowDays, limit);
         } finally {
             running.set(false);
         }
     }
 
-    private String runScreeningInternal(LocalDate tradeDate) {
+    private String runScreeningInternal(LocalDate tradeDate, Integer windowDays, Integer limit) {
         LocalDate targetDate = tradeDate == null ? ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate() : tradeDate;
         String batchId = UUID.randomUUID().toString();
 
-        log.info("ScreeningServiceImpl: start batchId={}, date={}", batchId, targetDate);
+        // P1-7：windowDays 生效 —— null 或小于最小窗口时使用全部窗口 2~7 天
+        List<Integer> windows = (windowDays == null || windowDays < WindowConstants.MIN_WINDOW_DAYS)
+                ? WindowConstants.ALL_WINDOW_DAYS
+                : List.of(windowDays);
+
+        log.info("ScreeningServiceImpl: start batchId={}, date={}, windowDays={}, limit={}",
+                batchId, targetDate, windows, limit);
 
         // 获取最近 MAX_SEARCH_DAYS 天的数据
         LocalDate startDate = targetDate.minusDays(WindowConstants.MAX_WINDOW_DAYS + 2);
@@ -127,31 +140,37 @@ public class ScreeningServiceImpl implements ScreeningService {
 
             processed++;
 
+            // P1-7：limit 生效 —— 最多评估 limit 个候选 symbol
+            if (limit != null && limit > 0 && processed >= limit) {
+                log.info("[Screening] limit={} reached, stop evaluating more symbols (processed={})", limit, processed);
+                break;
+            }
+
             // 多窗口并行评估：数据够哪个窗口就评估哪个
-            for (int windowDays : WindowConstants.ALL_WINDOW_DAYS) {
-                if (bars.size() < windowDays) {
+            for (int w : windows) {
+                if (bars.size() < w) {
                     continue;
                 }
                 // 取对应窗口长度的数据
-                List<StockDailyBar> windowSlice = bars.subList(bars.size() - windowDays, bars.size());
+                List<StockDailyBar> windowSlice = bars.subList(bars.size() - w, bars.size());
 
                 // 连续开盘日校验
-                if (!isWindowConsecutiveTradingDays(windowSlice, windowDays)) {
+                if (!isWindowConsecutiveTradingDays(windowSlice, w)) {
                     log.debug("[Screening] skip symbol={} window={}d: data not on consecutive trading days",
-                            symbol, windowDays);
+                            symbol, w);
                     continue;
                 }
 
                 // 算法1: 递增成交量
-                if (patternEvaluateService.matchesIncreasingVolumePattern(windowSlice, windowDays)) {
-                    ScreeningMatch row = buildMatch(batchId, latest, symbol, targetDate, windowDays, "increasing_volume");
+                if (patternEvaluateService.matchesIncreasingVolumePattern(windowSlice, w)) {
+                    ScreeningMatch row = buildMatch(batchId, latest, symbol, targetDate, w, "increasing_volume");
                     allRows.add(row);
                     totalMatchedRows++;
                 }
 
                 // 算法2: 放量突破
-                if (patternEvaluateService.matchesVolumeSpikePattern(windowSlice, windowDays)) {
-                    ScreeningMatch row = buildMatch(batchId, latest, symbol, targetDate, windowDays, "volume_spike");
+                if (patternEvaluateService.matchesVolumeSpikePattern(windowSlice, w)) {
+                    ScreeningMatch row = buildMatch(batchId, latest, symbol, targetDate, w, "volume_spike");
                     allRows.add(row);
                     totalMatchedRows++;
                 }

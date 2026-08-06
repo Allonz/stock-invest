@@ -17,10 +17,11 @@ public class AsyncConfig {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(8);
         executor.setMaxPoolSize(16);
-        executor.setQueueCapacity(200);
+        executor.setQueueCapacity(50);
         executor.setThreadNamePrefix("scan-");
         executor.setWaitForTasksToCompleteOnShutdown(true);
-        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        // P1-8：队列满时拒绝提交（AbortPolicy），避免数小时任务内联进 HTTP 线程拖垮 Tomcat worker
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
         executor.initialize();
         return executor;
     }

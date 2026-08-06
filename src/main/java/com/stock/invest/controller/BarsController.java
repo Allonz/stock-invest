@@ -67,15 +67,25 @@ public class BarsController {
             @RequestParam(required = false) String tradeDate,
             @RequestParam(required = false) String source) {
 
+        // P2-9：sortBy 白名单，非法字段回退 tradeDate，避免 Sort.by 反射异常 500
+        String sortField = switch (sortBy == null ? "" : sortBy) {
+            case "symbol", "tradeDate", "source", "closePrice", "volume", "id" -> sortBy;
+            default -> "tradeDate";
+        };
         Sort sort = sortDir.equalsIgnoreCase("desc")
-                ? Sort.by(sortBy).descending()
-                : Sort.by(sortBy).ascending();
+                ? Sort.by(sortField).descending()
+                : Sort.by(sortField).ascending();
 
         String sym = (symbol != null && !symbol.isBlank()) ? symbol.trim().toUpperCase() : null;
+        // P2-9：非法日期交给全局 handler 返回 400（不再裸 LocalDate.parse 抛 500）
         LocalDate date = (tradeDate != null && !tradeDate.isBlank()) ? LocalDate.parse(tradeDate) : null;
         String src = (source != null && !source.isBlank()) ? source : null;
 
-        Pageable pageable = PageRequest.of(page, pageSize, sort);
+        // P2-9：分页边界 clamp —— page>=0，pageSize∈[1,500]，防止超大分页拖垮 DB
+        int safePage = Math.max(0, page);
+        int safePageSize = Math.min(Math.max(1, pageSize), 500);
+
+        Pageable pageable = PageRequest.of(safePage, safePageSize, sort);
         Page<StockDailyBarDto> barPage = stockDailyBarService.queryBars(pageable, sym, date, src);
 
         Map<String, Object> result = new LinkedHashMap<>();
@@ -108,7 +118,9 @@ public class BarsController {
             @PathVariable String symbol,
             @RequestParam(defaultValue = "7") int days) {
         try {
-            List<StockDailyBarCandleDto> candles = stockDailyBarService.getRecentCandles(symbol, days);
+            // P2-9：days 边界 clamp [1,365]
+            int safeDays = Math.min(Math.max(1, days), 365);
+            List<StockDailyBarCandleDto> candles = stockDailyBarService.getRecentCandles(symbol, safeDays);
             return ResponseEntity.ok(ApiResponse.ok(candles));
         } catch (Exception e) {
             log.error("getCandles failed symbol={}", symbol, e);

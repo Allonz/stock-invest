@@ -155,17 +155,17 @@ class BarsControllerCandlesTest {
                 .andExpect(jsonPath("$.data[0].volume").isNumber());
     }
 
-    // ---- CTRL-008: days=0 or negative defaults gracefully ----
+    // ---- CTRL-008: days=0 or negative clamped to [1,365] ----
 
     @Test
-    @DisplayName("CTRL-008: GET /api/bars/AAPL/candles?days=0 passes 0 to service")
+    @DisplayName("CTRL-008: GET /api/bars/AAPL/candles?days=0 clamps to 1 (P2-9)")
     void getCandles_zeroDays() throws Exception {
-        when(stockDailyBarService.getRecentCandles("AAPL", 0)).thenReturn(List.of());
+        when(stockDailyBarService.getRecentCandles("AAPL", 1)).thenReturn(List.of());
 
         mockMvc.perform(get("/api/bars/AAPL/candles").param("days", "0"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(0));
 
-        verify(stockDailyBarService).getRecentCandles("AAPL", 0);
+        verify(stockDailyBarService).getRecentCandles("AAPL", 1);
     }
 }

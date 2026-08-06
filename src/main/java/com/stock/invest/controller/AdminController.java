@@ -68,7 +68,8 @@ public class AdminController {
             @RequestParam(value = "windowDays", defaultValue = "7") Integer windowDays) {
         LocalDate targetDate = (date != null) ? LocalDate.parse(date) : ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate();
         log.info("[Admin] triggerScreening: date={}, limit={}, windowDays={}", targetDate, limit, windowDays);
-        screeningService.runScreening(targetDate);
+        // P1-7：参数生效 —— windowDays/limit 透传筛选逻辑
+        screeningService.runScreening(targetDate, windowDays, limit);
         return ResponseEntity.ok(ApiResponse.ok("Screening triggered. date=" + targetDate));
     }
 
@@ -398,7 +399,7 @@ public class AdminController {
                 : LocalDate.parse(date);
         log.info("[Admin] runScreening: date={}, limit={}, windowDays={}", tradeDate, limit, windowDays);
         try {
-            String batchId = screeningService.runScreening(tradeDate);
+            String batchId = screeningService.runScreening(tradeDate, windowDays, limit);
             return ResponseEntity.ok(ApiResponse.ok(Map.of(
                     "message", "Screening completed",
                     "batchId", batchId != null ? batchId : ""

@@ -120,12 +120,14 @@ public class StockInvestMcpTools {
     }
 
     @McpTool(name = "screening_run",
-             description = "手动触发一次模式筛选，返回 batchId（日期缺省为纽约时间今天）")
+             description = "手动触发一次模式筛选，返回 batchId（日期缺省为纽约时间今天；windowDays 缺省或小于2时全窗口 2~7 天）")
     public Map<String, Object> runScreening(
-            @McpToolParam(description = "交易日 yyyy-MM-dd", required = false) String date) {
+            @McpToolParam(description = "交易日 yyyy-MM-dd", required = false) String date,
+            @McpToolParam(description = "窗口天数（2~7），缺省全窗口", required = false) Integer windowDays,
+            @McpToolParam(description = "最多评估的候选 symbol 数，缺省不限", required = false) Integer limit) {
         LocalDate tradeDate = (date == null || date.isBlank())
                 ? LocalDate.now(NY_ZONE) : LocalDate.parse(date);
-        String batchId = screeningService.runScreening(tradeDate);
+        String batchId = screeningService.runScreening(tradeDate, windowDays, limit);
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("batchId", batchId);
         data.put("tradeDate", tradeDate.toString());
