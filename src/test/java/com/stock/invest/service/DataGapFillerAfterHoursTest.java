@@ -106,18 +106,21 @@ class DataGapFillerAfterHoursTest {
 
         service.fillGaps();
 
-        // There will be at least two saves: persist + mergeAfterHours
+        // There will be at least two saves: persist + mergeAfterHours.
+        // P1-2 起日期相等过滤后最后一次 save 恒为普通 persist（afterHours=0），
+        // 盘后价由与 tradeDate 相等的 bar 携带 —— 断言"存在"而非"最后一次"。
         verify(stockDailyBarRepository, atLeast(2)).save(barCaptor.capture());
-
-        // Get the last captured bar (the one after mergeAfterHours)
         List<StockDailyBar> allSaved = barCaptor.getAllValues();
-        StockDailyBar finalBar = allSaved.get(allSaved.size() - 1);
+        StockDailyBar ahBar = allSaved.stream()
+                .filter(b -> b.getAfterHours() != null && Math.abs(b.getAfterHours() - 153.0) < 0.001)
+                .findAny()
+                .orElse(null);
 
-        assertEquals(153.0, finalBar.getAfterHours(), 0.001, "afterHours should be set from AH data");
-        assertNotNull(finalBar.getAfterHoursChangePercent(), "afterHoursChangePercent should be calculated");
+        assertNotNull(ahBar, "should exist a save carrying afterHours=153.0 from AH data");
+        assertNotNull(ahBar.getAfterHoursChangePercent(), "afterHoursChangePercent should be calculated");
         // (153.0 - 152.5) / 152.5 * 100 = 0.3278...
         double expectedAhChgPct = (153.0 - 152.5) / 152.5 * 100;
-        assertEquals(expectedAhChgPct, finalBar.getAfterHoursChangePercent(), 0.01);
+        assertEquals(expectedAhChgPct, ahBar.getAfterHoursChangePercent(), 0.01);
     }
 
     // AH-002: mergeAfterHours 非 Tiger source 跳过
@@ -251,11 +254,16 @@ class DataGapFillerAfterHoursTest {
 
         verify(stockDailyBarRepository, atLeast(2)).save(barCaptor.capture());
         List<StockDailyBar> allSaved = barCaptor.getAllValues();
-        StockDailyBar finalBar = allSaved.get(allSaved.size() - 1);
+        // 同上：日期相等过滤后最后一次 save 恒为普通 persist，盘后价断言"存在"即可
+        StockDailyBar ahBar = allSaved.stream()
+                .filter(b -> b.getAfterHours() != null && Math.abs(b.getAfterHours() - 103.0) < 0.001)
+                .findAny()
+                .orElse(null);
 
         // (103.0 - 100.0) / 100.0 * 100 = 3.0
-        assertEquals(103.0, finalBar.getAfterHours(), 0.001);
-        assertEquals(3.0, finalBar.getAfterHoursChangePercent(), 0.001);
+        assertNotNull(ahBar, "should exist a save carrying afterHours=103.0 from AH data");
+        assertEquals(103.0, ahBar.getAfterHours(), 0.001);
+        assertEquals(3.0, ahBar.getAfterHoursChangePercent(), 0.001);
     }
 
     // AH-006: Real 模式（标记 @Tag("integration") 跳过）
