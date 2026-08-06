@@ -33,7 +33,7 @@ public class TiingoRestClient {
         return Map.of("Authorization", "Token " + props.getToken().trim());
     }
 
-    public List<String> listUsSymbolsByPriceRange(int limit, double minPrice, double maxPrice) throws Exception {
+    public List<String> listUsSymbolsByPriceRange(int limit, java.math.BigDecimal minPrice, java.math.BigDecimal maxPrice) throws Exception {
         requireToken();
         String url = baseUrl() + "/iex/";
         String body = http.get(url, authHeaders());
@@ -48,11 +48,11 @@ public class TiingoRestClient {
             if (symbol.isEmpty() || !symbol.matches("^[A-Z0-9\\-]+$")) {
                 continue;
             }
-            Double price = resolvePrice(row);
+            java.math.BigDecimal price = resolvePrice(row);
             if (price == null) {
                 continue;
             }
-            if (price >= minPrice && price <= maxPrice) {
+            if (price.compareTo(minPrice) >= 0 && price.compareTo(maxPrice) <= 0) {
                 out.add(symbol);
             }
             if (out.size() >= limit) {
@@ -103,7 +103,7 @@ public class TiingoRestClient {
         return data;
     }
 
-    public Double fetchLastClose(String symbol) throws Exception {
+    public java.math.BigDecimal fetchLastClose(String symbol) throws Exception {
         KLineData data = fetchDailyBars(symbol, 3);
         if (data.getItems() == null || data.getItems().isEmpty()) {
             return null;
@@ -126,7 +126,7 @@ public class TiingoRestClient {
         return URLEncoder.encode(value, "UTF-8");
     }
 
-    private static Double resolvePrice(JsonNode node) {
+    private static java.math.BigDecimal resolvePrice(JsonNode node) {
         String[] fields = {"tngoLast", "last", "prevClose", "open"};
         for (String field : fields) {
             JsonNode p = node.get(field);
@@ -134,14 +134,14 @@ public class TiingoRestClient {
                 continue;
             }
             if (p.isNumber()) {
-                return p.asDouble();
+                return p.decimalValue();
             }
             String text = p.asText("");
             if (text.trim().isEmpty()) {
                 continue;
             }
             try {
-                return Double.parseDouble(text);
+                return new java.math.BigDecimal(text.trim());
             } catch (NumberFormatException e) {
                 // ignore - field not applicable
             }
@@ -149,12 +149,12 @@ public class TiingoRestClient {
         return null;
     }
 
-    private static double parseDouble(JsonNode node, String field) {
+    private static java.math.BigDecimal parseDouble(JsonNode node, String field) {
         JsonNode v = node.get(field);
         if (v == null || v.isNull()) {
-            return 0D;
+            return java.math.BigDecimal.ZERO;
         }
-        return v.isNumber() ? v.asDouble() : safeDouble(v.asText());
+        return v.isNumber() ? v.decimalValue() : safeBigDecimal(v.asText());
     }
 
     private static long parseLong(JsonNode node, String field) {
@@ -202,12 +202,12 @@ public class TiingoRestClient {
         return t;
     }
 
-    private static double safeDouble(String text) {
+    private static java.math.BigDecimal safeBigDecimal(String text) {
         try {
-            return Double.parseDouble(text);
+            return new java.math.BigDecimal(text.trim());
         } catch (Exception e) {
             // ignore - skip on failure
-            return 0D;
+            return java.math.BigDecimal.ZERO;
         }
     }
 

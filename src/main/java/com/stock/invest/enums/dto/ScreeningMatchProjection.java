@@ -1,5 +1,6 @@
 package com.stock.invest.enums.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
@@ -8,10 +9,10 @@ import java.time.LocalDate;
  */
 public interface ScreeningMatchProjection {
     String getSymbol();
-    Double getPrice();
+    BigDecimal getPrice();
     Boolean getRise();
     String getDataSource();
     LocalDate getTradeDate();
     String getBatchId();
-    Double getLastClose();
+    BigDecimal getLastClose();
 }

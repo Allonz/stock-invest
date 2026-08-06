@@ -292,8 +292,9 @@ public class YFinanceStockServiceImpl implements StockScannerStrategy {
                 return new KLineData();
             }
 
-            double ahClose = ((Number) ahPrice).doubleValue();
-            double ahChangePctVal = ahChangePct != null ? ((Number) ahChangePct).doubleValue() : 0.0;
+            java.math.BigDecimal ahClose = java.math.BigDecimal.valueOf(((Number) ahPrice).doubleValue());
+            java.math.BigDecimal ahChangePctVal = ahChangePct != null
+                    ? java.math.BigDecimal.valueOf(((Number) ahChangePct).doubleValue()) : java.math.BigDecimal.ZERO;
 
             KLineData ahData = new KLineData();
             ahData.setSymbol(symbol);

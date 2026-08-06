@@ -65,12 +65,12 @@ public class TigerWatchlistIngestServiceImpl implements TigerWatchlistIngestServ
                 reasons.add("invalid symbol: " + sym);
                 continue;
             }
-            if (row.lastPrice() == null || row.lastPrice() <= 0D) {
+            if (row.lastPrice() == null || row.lastPrice().compareTo(java.math.BigDecimal.ZERO) <= 0) {
                 skipped++;
                 reasons.add(sym + ": lastPrice invalid");
                 continue;
             }
-            if (row.openPrice() == null || row.openPrice() <= 0D) {
+            if (row.openPrice() == null || row.openPrice().compareTo(java.math.BigDecimal.ZERO) <= 0) {
                 skipped++;
                 reasons.add(sym + ": openPrice invalid (required, must be > 0)");
                 continue;
@@ -83,7 +83,7 @@ public class TigerWatchlistIngestServiceImpl implements TigerWatchlistIngestServ
                 reasons.add(sym + ": " + e.getMessage());
                 continue;
             }
-            double px = row.lastPrice();
+            java.math.BigDecimal px = row.lastPrice();
             StockDailyBar bar = stockDailyBarRepository.findBySymbolAndTradeDate(sym, tradeDate).orElseGet(StockDailyBar::new);
             // if existing record, check vol vs previous day
             if (bar.getId() != null && bar.getVolume() != null && bar.getVolume() > 0) {

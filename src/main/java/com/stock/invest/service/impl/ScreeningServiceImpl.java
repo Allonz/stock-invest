@@ -307,8 +307,8 @@ public class ScreeningServiceImpl implements ScreeningService {
 
             Map<String, Object> stockInfo = new LinkedHashMap<>();
             stockInfo.put("symbol", m.getSymbol());
-            Double close = m.getLastClose();
-            stockInfo.put("lastClose", close == null ? null : Math.round(close * 1000.0) / 1000.0);
+            java.math.BigDecimal close = m.getLastClose();
+            stockInfo.put("lastClose", close == null ? null : strip3(close));
             stockInfo.put("rise", m.getRise());
             stocks.add(stockInfo);
         }
@@ -340,12 +340,21 @@ public class ScreeningServiceImpl implements ScreeningService {
             item.put("id", m.getId());
             item.put("symbol", m.getSymbol());
             item.put("name", nameMap.getOrDefault(m.getSymbol(), ""));
-            item.put("lastClose", m.getLastClose());
+            java.math.BigDecimal lastClose = m.getLastClose();
+            item.put("lastClose", lastClose == null ? null : strip3(lastClose));
             item.put("rise", m.getRise());
             item.put("windowDays", m.getWindowDays());
             item.put("algorithm", m.getAlgorithm());
             return item;
         }).toList();
+    }
+
+    /**
+     * P2-6：lastClose 展示统一 3 位小数圆整 + 去尾零（整数值回落普通十进制，避免 1.5E+2 科学计数）。
+     */
+    private static java.math.BigDecimal strip3(java.math.BigDecimal value) {
+        java.math.BigDecimal rounded = value.setScale(3, java.math.RoundingMode.HALF_UP).stripTrailingZeros();
+        return rounded.scale() < 0 ? rounded.setScale(0) : rounded;
     }
 
     private ScreeningMatch buildMatch(String batchId, StockDailyBar latest,
@@ -358,7 +367,7 @@ public class ScreeningServiceImpl implements ScreeningService {
         row.setLastClose(latest.getClosePrice());
         row.setTradeDate(targetDate);
         row.setPrice(latest.getClosePrice());
-        row.setRise(latest.getClosePrice() > latest.getOpenPrice());
+        row.setRise(latest.getClosePrice().compareTo(latest.getOpenPrice()) > 0);
         row.setWindowDays(windowDays);
         row.setAlgorithm(algorithm);
         return row;

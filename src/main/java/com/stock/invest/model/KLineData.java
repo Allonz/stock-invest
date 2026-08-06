@@ -3,6 +3,7 @@ package com.stock.invest.model;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -14,10 +15,10 @@ import java.util.List;
 public class KLineData {
     @Setter private String symbol;
     private long time;
-    @Setter private double open;
-    @Setter private double high;
-    @Setter private double low;
-    @Setter private double close;
+    @Setter private BigDecimal open;
+    @Setter private BigDecimal high;
+    @Setter private BigDecimal low;
+    @Setter private BigDecimal close;
     @Setter private long volume;
     @Setter private double amount;
 
@@ -31,7 +32,7 @@ public class KLineData {
     public KLineData() {
     }
 
-    public KLineData(String symbol, long time, double open, double high, double low, double close, long volume, double amount) {
+    public KLineData(String symbol, long time, BigDecimal open, BigDecimal high, BigDecimal low, BigDecimal close, long volume, double amount) {
         this.symbol = symbol;
         this.time = time;
         this.open = open;

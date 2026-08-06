@@ -225,7 +225,8 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         }
 
         StockDailyBar latest = bars.get(0);
-        if (latest.getClosePrice() != null && latest.getClosePrice() > gapFillProperties.getMinPriceThreshold()) {
+        if (latest.getClosePrice() != null
+                && latest.getClosePrice().compareTo(gapFillProperties.getMinPriceThreshold()) > 0) {
             return FillResult.empty();
         }
 
@@ -392,7 +393,9 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
                             source.name, item.getSymbol(), item.getTime(), item.getTimeString(), itemDate,
                             item.getOpen(), item.getClose());
                     // 跳过零价格无效数据
-                    if (item.getOpen() == 0.0 && item.getClose() == 0.0) {
+                    if (item.getOpen() != null && item.getClose() != null
+                            && item.getOpen().compareTo(java.math.BigDecimal.ZERO) == 0
+                            && item.getClose().compareTo(java.math.BigDecimal.ZERO) == 0) {
                         log.warn("[DataGapFiller] {} source item: skip zero-price placeholder symbol={}, date={}",
                                 source.name, item.getSymbol(), itemDate);
                         continue;
@@ -541,11 +544,14 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
                 if (!itemDate.equals(tradeDate)) {
                     continue;
                 }
-                double ahClose = item.getClose();
+                java.math.BigDecimal ahClose = item.getClose();
                 bar.setAfterHours(ahClose);
-                Double regClose = bar.getClosePrice();
-                if (regClose != null && regClose != 0.0) {
-                    bar.setAfterHoursChangePercent((ahClose - regClose) / regClose * 100);
+                java.math.BigDecimal regClose = bar.getClosePrice();
+                if (regClose != null && regClose.compareTo(java.math.BigDecimal.ZERO) != 0) {
+                    bar.setAfterHoursChangePercent(ahClose.subtract(regClose)
+                            .divide(regClose, 8, java.math.RoundingMode.HALF_UP)
+                            .multiply(java.math.BigDecimal.valueOf(100))
+                            .setScale(4, java.math.RoundingMode.HALF_UP));
                 }
                 runInTx(() -> stockDailyBarRepository.save(bar));
                 return;

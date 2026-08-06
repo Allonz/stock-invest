@@ -1,5 +1,6 @@
 package com.stock.invest.enums.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
@@ -9,13 +10,13 @@ public record StockDailyBarDto(
     String symbol,
     String name,
     LocalDate tradeDate,
-    Double openPrice,
-    Double highPrice,
-    Double lowPrice,
-    Double closePrice,
-    Double changePercent,
-    Double afterHours,
-    Double afterHoursChangePercent,
+    BigDecimal openPrice,
+    BigDecimal highPrice,
+    BigDecimal lowPrice,
+    BigDecimal closePrice,
+    BigDecimal changePercent,
+    BigDecimal afterHours,
+    BigDecimal afterHoursChangePercent,
     Long volume,
     String source
 ) {}

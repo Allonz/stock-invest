@@ -8,28 +8,28 @@ public class KLineIterator {
     private String symbol;
     private long time;
     private String timeString; // 用于存储时间字符串
-    private double open;
-    private double high;
-    private double low;
-    private double close;
+    private java.math.BigDecimal open;
+    private java.math.BigDecimal high;
+    private java.math.BigDecimal low;
+    private java.math.BigDecimal close;
     private long volume;
     private double amount;
-    private double changePercent;           // 涨跌幅（%）
-    private double afterHours;               // 盘后价
-    private double afterHoursChangePercent;  // 盘后涨跌幅（%）
+    private java.math.BigDecimal changePercent;           // 涨跌幅（%）
+    private java.math.BigDecimal afterHours;               // 盘后价
+    private java.math.BigDecimal afterHoursChangePercent;  // 盘后涨跌幅（%）
 
     public KLineIterator() {
     }
 
     /**
-     * 8 参数构造器（兼容旧代码），新增字段默认 0.0
+     * 8 参数构造器（兼容旧代码），新增字段默认 BigDecimal.ZERO
      */
-    public KLineIterator(String symbol, long time, double open, double high, double low, double close, long volume, double amount) {
-        this(symbol, time, open, high, low, close, volume, amount, 0.0, 0.0, 0.0);
+    public KLineIterator(String symbol, long time, java.math.BigDecimal open, java.math.BigDecimal high, java.math.BigDecimal low, java.math.BigDecimal close, long volume, double amount) {
+        this(symbol, time, open, high, low, close, volume, amount, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO);
     }
 
-    public KLineIterator(String symbol, long time, double open, double high, double low, double close, long volume, double amount,
-                         double changePercent, double afterHours, double afterHoursChangePercent) {
+    public KLineIterator(String symbol, long time, java.math.BigDecimal open, java.math.BigDecimal high, java.math.BigDecimal low, java.math.BigDecimal close, long volume, double amount,
+                         java.math.BigDecimal changePercent, java.math.BigDecimal afterHours, java.math.BigDecimal afterHoursChangePercent) {
         this.symbol = symbol;
         this.time = time;
         this.open = open;
@@ -83,35 +83,35 @@ public class KLineIterator {
         this.timeString = timeString;
     }
 
-    public double getOpen() {
+    public java.math.BigDecimal getOpen() {
         return open;
     }
 
-    public void setOpen(double open) {
+    public void setOpen(java.math.BigDecimal open) {
         this.open = open;
     }
 
-    public double getHigh() {
+    public java.math.BigDecimal getHigh() {
         return high;
     }
 
-    public void setHigh(double high) {
+    public void setHigh(java.math.BigDecimal high) {
         this.high = high;
     }
 
-    public double getLow() {
+    public java.math.BigDecimal getLow() {
         return low;
     }
 
-    public void setLow(double low) {
+    public void setLow(java.math.BigDecimal low) {
         this.low = low;
     }
 
-    public double getClose() {
+    public java.math.BigDecimal getClose() {
         return close;
     }
 
-    public void setClose(double close) {
+    public void setClose(java.math.BigDecimal close) {
         this.close = close;
     }
 
@@ -131,27 +131,27 @@ public class KLineIterator {
         this.amount = amount;
     }
 
-    public double getChangePercent() {
+    public java.math.BigDecimal getChangePercent() {
         return changePercent;
     }
 
-    public void setChangePercent(double changePercent) {
+    public void setChangePercent(java.math.BigDecimal changePercent) {
         this.changePercent = changePercent;
     }
 
-    public double getAfterHours() {
+    public java.math.BigDecimal getAfterHours() {
         return afterHours;
     }
 
-    public void setAfterHours(double afterHours) {
+    public void setAfterHours(java.math.BigDecimal afterHours) {
         this.afterHours = afterHours;
     }
 
-    public double getAfterHoursChangePercent() {
+    public java.math.BigDecimal getAfterHoursChangePercent() {
         return afterHoursChangePercent;
     }
 
-    public void setAfterHoursChangePercent(double afterHoursChangePercent) {
+    public void setAfterHoursChangePercent(java.math.BigDecimal afterHoursChangePercent) {
         this.afterHoursChangePercent = afterHoursChangePercent;
     }
 

@@ -266,16 +266,19 @@ public class TigerStockServiceImpl implements StockScannerStrategy {
             // 标准涨跌幅计算：(今日收盘 - 昨日收盘) / 昨日收盘 * 100
             if (kLineData.getItems().size() >= 2) {
                 KLineIterator prev = kLineData.getItems().get(1);
-                double prevClose = prev.getClose();
-                stockInfo.setChange(latest.getClose() - prevClose);
-                if (prevClose != 0D) {
-                    stockInfo.setChangePercent((latest.getClose() - prevClose) / prevClose * 100);
+                java.math.BigDecimal prevClose = prev.getClose();
+                java.math.BigDecimal change = latest.getClose().subtract(prevClose);
+                stockInfo.setChange(change);
+                if (prevClose.compareTo(java.math.BigDecimal.ZERO) != 0) {
+                    stockInfo.setChangePercent(change
+                            .divide(prevClose, 8, java.math.RoundingMode.HALF_UP)
+                            .multiply(java.math.BigDecimal.valueOf(100)));
                 } else {
-                    stockInfo.setChangePercent(0D);
+                    stockInfo.setChangePercent(java.math.BigDecimal.ZERO);
                 }
             } else {
-                stockInfo.setChange(0D);
-                stockInfo.setChangePercent(0D);
+                stockInfo.setChange(java.math.BigDecimal.ZERO);
+                stockInfo.setChangePercent(java.math.BigDecimal.ZERO);
             }
             
             return stockInfo;
@@ -441,15 +444,15 @@ public class TigerStockServiceImpl implements StockScannerStrategy {
         return new KLineIterator(
             symbol,
             point.getTime(),
-            point.getOpen(),
-            point.getHigh(),
-            point.getLow(),
-            point.getClose(),
+            java.math.BigDecimal.valueOf(point.getOpen()),
+            java.math.BigDecimal.valueOf(point.getHigh()),
+            java.math.BigDecimal.valueOf(point.getLow()),
+            java.math.BigDecimal.valueOf(point.getClose()),
             point.getVolume(),
             point.getAmount(),
-            0.0,   // changePercent: SDK 不直接返回，由 Service 层计算
-            0.0,   // afterHours: 暂留空（P1 阶段通过 TradeSession.AfterHours 获取）
-            0.0    // afterHoursChangePercent: 暂留空
+            java.math.BigDecimal.ZERO,   // changePercent: SDK 不直接返回，由 Service 层计算
+            java.math.BigDecimal.ZERO,   // afterHours: 暂留空（P1 阶段通过 TradeSession.AfterHours 获取）
+            java.math.BigDecimal.ZERO    // afterHoursChangePercent: 暂留空
         );
     }
     public KLineData getDailyKLine(String symbol) {

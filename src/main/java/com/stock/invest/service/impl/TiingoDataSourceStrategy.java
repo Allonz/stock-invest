@@ -111,14 +111,17 @@ public class TiingoDataSourceStrategy implements StockScannerStrategy {
             // 标准涨跌幅计算：(今日收盘 - 昨日收盘) / 昨日收盘 * 100
             if (data.getItems().size() >= 2) {
                 com.stock.invest.model.KLineIterator prev = data.getItems().get(1);
-                double prevClose = prev.getClose();
-                info.setChange(latest.getClose() - prevClose);
-                if (prevClose != 0D) {
-                    info.setChangePercent((latest.getClose() - prevClose) / prevClose * 100D);
+                java.math.BigDecimal prevClose = prev.getClose();
+                java.math.BigDecimal change = latest.getClose().subtract(prevClose);
+                info.setChange(change);
+                if (prevClose.compareTo(java.math.BigDecimal.ZERO) != 0) {
+                    info.setChangePercent(change
+                            .divide(prevClose, 8, java.math.RoundingMode.HALF_UP)
+                            .multiply(java.math.BigDecimal.valueOf(100)));
                 }
             } else {
-                info.setChange(0D);
-                info.setChangePercent(0D);
+                info.setChange(java.math.BigDecimal.ZERO);
+                info.setChangePercent(java.math.BigDecimal.ZERO);
             }
             return info;
         } catch (Exception e) {
@@ -130,7 +133,8 @@ public class TiingoDataSourceStrategy implements StockScannerStrategy {
     @Override
     public List<String> getStockList() {
         try {
-            return tiingoRestClient.listUsSymbolsByPriceRange(100, 0.01D, 1000D);
+            return tiingoRestClient.listUsSymbolsByPriceRange(
+                    100, java.math.BigDecimal.valueOf(0.01D), java.math.BigDecimal.valueOf(1000D));
         } catch (Exception e) {
             log.warn("tiingo getStockList failed: {}", e.getMessage());
             return Collections.emptyList();
@@ -165,8 +169,9 @@ public class TiingoDataSourceStrategy implements StockScannerStrategy {
             if (market != Market.US) {
                 return Collections.emptyList();
             }
-            double min = minPrice == null ? 0.0D : minPrice;
-            double max = maxPrice == null ? Double.MAX_VALUE : maxPrice;
+            java.math.BigDecimal min = minPrice == null ? java.math.BigDecimal.ZERO : java.math.BigDecimal.valueOf(minPrice);
+            java.math.BigDecimal max = maxPrice == null
+                    ? java.math.BigDecimal.valueOf(Double.MAX_VALUE) : java.math.BigDecimal.valueOf(maxPrice);
             return tiingoRestClient.listUsSymbolsByPriceRange(limit, min, max);
         } catch (Exception e) {
             log.warn("tiingo scanStocks(Market) failed: {}", e.getMessage());
@@ -180,8 +185,10 @@ public class TiingoDataSourceStrategy implements StockScannerStrategy {
             if (market == null || !"US".equalsIgnoreCase(market)) {
                 return Collections.emptyList();
             }
-            double min = (minPrice == null || minPrice.trim().isEmpty()) ? 0.0D : Double.parseDouble(minPrice);
-            double max = (maxPrice == null || maxPrice.trim().isEmpty()) ? Double.MAX_VALUE : Double.parseDouble(maxPrice);
+            java.math.BigDecimal min = (minPrice == null || minPrice.trim().isEmpty())
+                    ? java.math.BigDecimal.ZERO : new java.math.BigDecimal(minPrice.trim());
+            java.math.BigDecimal max = (maxPrice == null || maxPrice.trim().isEmpty())
+                    ? java.math.BigDecimal.valueOf(Double.MAX_VALUE) : new java.math.BigDecimal(maxPrice.trim());
             return tiingoRestClient.listUsSymbolsByPriceRange(limit, min, max);
         } catch (Exception e) {
             log.warn("tiingo scanStocks(String) failed: {}", e.getMessage());

@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
@@ -32,13 +33,13 @@ public class StockDailyBarService {
             .map(bar -> {
                 return new StockDailyBarCandleDto(
                     bar.getTradeDate().toString(),
-                    bar.getOpenPrice(),
-                    bar.getHighPrice(),
-                    bar.getLowPrice(),
-                    bar.getClosePrice(),
-                    bar.getChangePercent(),
-                    bar.getAfterHours(),
-                    bar.getAfterHoursChangePercent(),
+                    strip(bar.getOpenPrice()),
+                    strip(bar.getHighPrice()),
+                    strip(bar.getLowPrice()),
+                    strip(bar.getClosePrice()),
+                    strip(bar.getChangePercent()),
+                    strip(bar.getAfterHours()),
+                    strip(bar.getAfterHoursChangePercent()),
                     bar.getVolume()
                 );
             })
@@ -85,15 +86,27 @@ public class StockDailyBarService {
                 bar.getSymbol(),
                 bar.getName(),
                 bar.getTradeDate(),
-                bar.getOpenPrice(),
-                bar.getHighPrice(),
-                bar.getLowPrice(),
-                bar.getClosePrice(),
-                bar.getChangePercent(),
-                bar.getAfterHours(),
-                bar.getAfterHoursChangePercent(),
+                strip(bar.getOpenPrice()),
+                strip(bar.getHighPrice()),
+                strip(bar.getLowPrice()),
+                strip(bar.getClosePrice()),
+                strip(bar.getChangePercent()),
+                strip(bar.getAfterHours()),
+                strip(bar.getAfterHoursChangePercent()),
                 bar.getVolume(),
                 bar.getSource()
         );
+    }
+
+    /**
+     * P2-6：BigDecimal 出站统一去尾零，保持 JSON 数字形态与既有 152.5 一致（避免 152.5000）。
+     * 整数值 stripTrailingZeros 会产生 1.5E+2 科学计数，统一回落为普通十进制（150）。
+     */
+    private static BigDecimal strip(BigDecimal value) {
+        if (value == null) {
+            return null;
+        }
+        BigDecimal stripped = value.stripTrailingZeros();
+        return stripped.scale() < 0 ? stripped.setScale(0) : stripped;
     }
 }

@@ -1,10 +1,11 @@
 package com.stock.invest.enums.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public record ScreeningResultDto(
     String symbol,
-    Double price,
+    BigDecimal price,
     Boolean rise,
     String source,
     LocalDate tradeDate

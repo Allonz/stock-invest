@@ -14,6 +14,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 
@@ -51,13 +52,13 @@ public class ScreeningMatch {
     private String symbol;
 
     @Column
-    private Double lastClose;
+    private BigDecimal lastClose;
 
     @Column(nullable = false)
     private LocalDate tradeDate;
 
     @Column
-    private Double price;
+    private BigDecimal price;
 
     @Column(nullable = false)
     private Boolean rise;

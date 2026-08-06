@@ -16,6 +16,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 
@@ -52,25 +53,25 @@ public class StockDailyBar {
     private LocalDate tradeDate;
 
     @Column(nullable = false)
-    private Double openPrice;
+    private BigDecimal openPrice;
 
     @Column(nullable = false)
-    private Double highPrice;   // 新增（最高价）
+    private BigDecimal highPrice;   // 新增（最高价）
 
     @Column(nullable = false)
-    private Double lowPrice;    // 新增（最低价）
+    private BigDecimal lowPrice;    // 新增（最低价）
 
     @Column(nullable = false)
-    private Double closePrice;
+    private BigDecimal closePrice;
 
     @Column(nullable = true)
-    private Double changePercent;           // 新增（涨跌幅 %）
+    private BigDecimal changePercent;           // 新增（涨跌幅 %）
 
     @Column(nullable = true)
-    private Double afterHours;              // 新增（盘后价）
+    private BigDecimal afterHours;              // 新增（盘后价）
 
     @Column(nullable = true)
-    private Double afterHoursChangePercent; // 新增（盘后涨跌幅 %）
+    private BigDecimal afterHoursChangePercent; // 新增（盘后涨跌幅 %）
 
     @Column(nullable = false)
     private Long volume;
