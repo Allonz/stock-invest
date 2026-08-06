@@ -13,6 +13,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import org.mockito.ArgumentCaptor;
+
 /**
  * UT-16 ~ UT-25: AlpacaRestClient 单元测试（Mock HTTP）
  */
@@ -170,6 +172,30 @@ class AlpacaRestClientTest {
     void getKeyIdMasked_normal() {
         AlpacaRestClient client = new AlpacaRestClient("ABCD1234", "secret", new ObjectMapper());
         assertEquals("ABCD****", client.getKeyIdMasked());
+    }
+
+    /** P1-9: 请求级 15s 总超时（含读），防止挂起线程 */
+    @SuppressWarnings("unchecked")
+    @Test @DisplayName("P1-9: isTradingDay 请求携带 15s 总超时")
+    void isTradingDay_requestHas15sTimeout() throws Exception {
+        HttpResponse<String> mockResp = mock(HttpResponse.class);
+        when(mockResp.statusCode()).thenReturn(200);
+        when(mockResp.body()).thenReturn("[]");
+
+        HttpClient mockClient = mock(HttpClient.class);
+        when(mockClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenReturn(mockResp);
+
+        AlpacaRestClient client = new AlpacaRestClient("key", "secret", objectMapper);
+        injectHttpClient(client, mockClient);
+
+        client.isTradingDay(LocalDate.of(2026, 6, 1));
+
+        ArgumentCaptor<HttpRequest> requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(mockClient).send(requestCaptor.capture(), any(HttpResponse.BodyHandler.class));
+        HttpRequest request = requestCaptor.getValue();
+        assertTrue(request.timeout().isPresent(), "request must carry a total timeout");
+        assertEquals(java.time.Duration.ofSeconds(15), request.timeout().get());
     }
 
     /** Reflection helper to inject mock HttpClient */
