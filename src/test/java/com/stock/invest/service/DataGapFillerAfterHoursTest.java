@@ -44,6 +44,7 @@ class DataGapFillerAfterHoursTest {
     @Mock private TigerStockServiceImpl tigerSource;
     @Mock private GapFillProperties gapFillProperties;
     @Mock private DataFillProgressService dataFillProgressService;
+    @Mock private com.stock.invest.service.RetryProgressService retryProgressService;
     @Mock private TradingCalendarDbService tradingCalendarDbService;
     @Mock private StockDataSourcePriorityService stockDataSourcePriorityService;
     @Mock private SymbolBlacklistService symbolBlacklistService;
@@ -67,7 +68,7 @@ class DataGapFillerAfterHoursTest {
         List<DataSourceStrategy> dataSources = List.of(tigerSource);
         service = new DataGapFillerServiceImpl(
                 stockDailyBarRepository, dataFillTaskRepository, dataSources,
-                gapFillProperties, dataFillProgressService, tradingCalendarDbService,
+                gapFillProperties, dataFillProgressService, retryProgressService, tradingCalendarDbService,
                 stockDataSourcePriorityService, symbolBlacklistService,
                 transactionManager);
         lenient().when(stockDataSourcePriorityService.getPriorityList(anyString()))
@@ -131,7 +132,7 @@ class DataGapFillerAfterHoursTest {
         List<DataSourceStrategy> dataSources = List.of(yfinanceSource);
         DataGapFillerServiceImpl yService = new DataGapFillerServiceImpl(
                 stockDailyBarRepository, dataFillTaskRepository, dataSources,
-                gapFillProperties, dataFillProgressService, tradingCalendarDbService,
+                gapFillProperties, dataFillProgressService, retryProgressService, tradingCalendarDbService,
                 stockDataSourcePriorityService, symbolBlacklistService,
                 transactionManager);
 

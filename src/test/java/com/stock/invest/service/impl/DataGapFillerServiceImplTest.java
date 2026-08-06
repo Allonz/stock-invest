@@ -48,6 +48,8 @@ class DataGapFillerServiceImplTest {
     @Mock
     private DataFillProgressService dataFillProgressService;
     @Mock
+    private com.stock.invest.service.RetryProgressService retryProgressService;
+    @Mock
     private com.stock.invest.service.TradingCalendarDbService tradingCalendarDbService;
     @Mock
     private com.stock.invest.service.StockDataSourcePriorityService stockDataSourcePriorityService;
@@ -71,6 +73,9 @@ class DataGapFillerServiceImplTest {
         lenient().when(twelvedataDataSource.isAvailable()).thenReturn(true);
         lenient().when(tiingoDataSource.getSourceName()).thenReturn("tiingo");
         lenient().when(tiingoDataSource.isAvailable()).thenReturn(true);
+        // P3-4：processRetryingTasks 接入进度追踪，mock 返回真实进度对象
+        lenient().when(retryProgressService.startRetry())
+                .thenReturn(new com.stock.invest.service.RetryProgressService.RetryProgress());
 
         // For retry tests: make all sources return non-null KLineData with epoch-0 items
         // that won't match any real tradeDate, so notFoundCount stays < 2 and retResult == 0
@@ -94,6 +99,7 @@ class DataGapFillerServiceImplTest {
                 dataSources,
                 gapFillProperties,
                 dataFillProgressService,
+                retryProgressService,
                 tradingCalendarDbService,
                 stockDataSourcePriorityService,
                 symbolBlacklistService,

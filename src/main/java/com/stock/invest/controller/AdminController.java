@@ -4,6 +4,7 @@ import com.stock.invest.enums.dto.ApiResponse;
 import com.stock.invest.entity.DataFillTask;
 import com.stock.invest.entity.StockDataSourcePriority;
 import com.stock.invest.service.DataFillProgressService;
+import com.stock.invest.service.RetryProgressService;
 import com.stock.invest.service.StockDataSourcePriorityService;
 import com.stock.invest.service.DataGapFillerService;
 import com.stock.invest.service.ScreeningProgressService;
@@ -45,6 +46,7 @@ public class AdminController {
     private final DataFillProgressService dataFillProgressService;
     private final StockDataSourcePriorityService stockDataSourcePriorityService;
     private final ScreeningProgressService screeningProgressService;
+    private final RetryProgressService retryProgressService;
     private final Executor scanExecutor;
 
     public AdminController(ScreeningService screeningService,
@@ -52,12 +54,14 @@ public class AdminController {
                            DataFillProgressService dataFillProgressService,
                            StockDataSourcePriorityService stockDataSourcePriorityService,
                            ScreeningProgressService screeningProgressService,
+                           RetryProgressService retryProgressService,
                            @Qualifier("scanExecutor") Executor scanExecutor) {
         this.screeningService = screeningService;
         this.dataGapFillerService = dataGapFillerService;
         this.dataFillProgressService = dataFillProgressService;
         this.stockDataSourcePriorityService = stockDataSourcePriorityService;
         this.screeningProgressService = screeningProgressService;
+        this.retryProgressService = retryProgressService;
         this.scanExecutor = scanExecutor;
     }
 
@@ -112,6 +116,8 @@ public class AdminController {
                 log.error("[Admin] async screening failed", e);
             } finally {
                 progress.setRunning(false);
+                // P2-12：任务结束移除进度条目，防 progressMap 只增不删
+                screeningProgressService.removeProgress(taskId);
             }
         });
 
@@ -155,6 +161,8 @@ public class AdminController {
                 log.error("[Admin] async advanced screening failed", e);
             } finally {
                 progress.setRunning(false);
+                // P2-12：任务结束移除进度条目，防 progressMap 只增不删
+                screeningProgressService.removeProgress(taskId);
             }
         });
 
@@ -196,7 +204,9 @@ public class AdminController {
                     .body(ApiResponse.error("数据补缺已在运行中，请稍后再试"));
         }
 
-        DataFillProgressService.FillProgress progress = dataFillProgressService.startFill();
+        // P2-12：startFill 生成 UUID taskId，多次触发不再互相覆盖
+        String taskId = dataFillProgressService.startFill();
+        DataFillProgressService.FillProgress progress = dataFillProgressService.getProgress(taskId);
         progress.setRunning(true);
         progress.setStartTime(System.currentTimeMillis());
 
@@ -209,11 +219,12 @@ public class AdminController {
             } finally {
                 progress.setStage("COMPLETED");
                 progress.setRunning(false);
+                // P2-12：进度保留至 TTL（24h）自动清理，taskId 在完成后仍可查询
             }
         });
 
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("taskId", "manual");
+        data.put("taskId", taskId);
         data.put("message", "Data fill triggered");
         return ResponseEntity.ok(ApiResponse.ok(data));
     }
@@ -237,20 +248,25 @@ public class AdminController {
 
     /**
      * GET /api/admin/retry-progress
-     * 返回历史任务重试的当前进度（暂未接入进度追踪，始终返回 IDLE）。
+     * 返回历史任务重试的当前进度（P3-4：接入 RetryProgressService，
+     * 由 DataGapFillerServiceImpl.processRetryingTasks 实时更新；无任务时返回 IDLE）。
      */
     @GetMapping("/retry-progress")
     public ResponseEntity<ApiResponse<?>> getRetryProgress() {
-        Map<String, Object> idle = new LinkedHashMap<>();
-        idle.put("running", false);
-        idle.put("stage", "IDLE");
-        idle.put("total", 0);
-        idle.put("processed", 0);
-        idle.put("succeeded", 0);
-        idle.put("failed", 0);
-        idle.put("elapsedSeconds", 0);
-        idle.put("startTime", 0);
-        return ResponseEntity.ok(ApiResponse.ok(idle));
+        RetryProgressService.RetryProgress p = retryProgressService.getProgress();
+        if (p == null) {
+            Map<String, Object> idle = new LinkedHashMap<>();
+            idle.put("running", false);
+            idle.put("stage", "IDLE");
+            idle.put("total", 0);
+            idle.put("processed", 0);
+            idle.put("succeeded", 0);
+            idle.put("failed", 0);
+            idle.put("elapsedSeconds", 0);
+            idle.put("startTime", 0);
+            return ResponseEntity.ok(ApiResponse.ok(idle));
+        }
+        return ResponseEntity.ok(ApiResponse.ok(p.toMap()));
     }
 
     /**
@@ -260,7 +276,7 @@ public class AdminController {
 
     /**
      * GET /api/admin/stock-data-source-priority
-     * 查询某支股票的数据源优先级列表。无 symbol 参数返回所有记录（分页待扩展）。
+     * 查询某支股票的数据源优先级列表。无 symbol 参数返回所有记录（P3-5：返回 DTO）。
      */
     @GetMapping("/stock-data-source-priority")
     public ResponseEntity<ApiResponse<?>> getStockDataSourcePriority(
@@ -268,10 +284,16 @@ public class AdminController {
         if (symbol != null && !symbol.isBlank()) {
             List<StockDataSourcePriority> records = stockDataSourcePriorityService
                     .getPriorityRecords(symbol);
-            return ResponseEntity.ok(ApiResponse.ok(records));
+            return ResponseEntity.ok(ApiResponse.ok(records.stream()
+                    .map(r -> new com.stock.invest.enums.dto.StockDataSourcePriorityDto(
+                            r.getSymbol(), r.getDataSource(), r.getLastSuccessTime()))
+                    .toList()));
         }
         return ResponseEntity.ok(ApiResponse.ok(
-                stockDataSourcePriorityService.getAllRecords()));
+                stockDataSourcePriorityService.getAllRecords().stream()
+                        .map(r -> new com.stock.invest.enums.dto.StockDataSourcePriorityDto(
+                                r.getSymbol(), r.getDataSource(), r.getLastSuccessTime()))
+                        .toList()));
     }
 
     @GetMapping("/data-fill-progress")

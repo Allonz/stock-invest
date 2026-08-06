@@ -28,8 +28,14 @@ public interface DataFillTaskRepository extends JpaRepository<DataFillTask, Long
 
     Page<DataFillTask> findByStatus(String status, Pageable pageable);
 
+    /**
+     * 多条件筛选分页查询（所有条件均为可选）。
+     * <p>P2-7：symbol 由前导通配 LIKE（'%...%'，索引失效）改为前缀匹配
+     * （'x%'，可命中 idx_data_fill_tasks_symbol）；语义从"包含"变为"前缀"，
+     * 股票代码按前缀搜索符合常规用法。</p>
+     */
     @Query("SELECT t FROM DataFillTask t WHERE "
-        + "(:symbol IS NULL OR :symbol = '' OR t.symbol LIKE CONCAT('%', :symbol, '%')) "
+        + "(:symbol IS NULL OR :symbol = '' OR t.symbol LIKE CONCAT(:symbol, '%')) "
         + "AND (:tradeDate IS NULL OR t.tradeDate = :tradeDate) "
         + "AND (:status IS NULL OR :status = '' OR t.status = :status)")
     Page<DataFillTask> findByFilters(

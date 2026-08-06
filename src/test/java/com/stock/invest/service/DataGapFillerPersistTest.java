@@ -46,6 +46,7 @@ class DataGapFillerPersistTest {
     @Mock private DataSourceStrategy yfinanceDataSource;
     @Mock private GapFillProperties gapFillProperties;
     @Mock private DataFillProgressService dataFillProgressService;
+    @Mock private com.stock.invest.service.RetryProgressService retryProgressService;
     @Mock private TradingCalendarDbService tradingCalendarDbService;
     @Mock private StockDataSourcePriorityService stockDataSourcePriorityService;
     @Mock private SymbolBlacklistService symbolBlacklistService;
@@ -75,7 +76,7 @@ class DataGapFillerPersistTest {
         List<DataSourceStrategy> dataSources = List.of(tigerDataSource, yfinanceDataSource);
         service = new DataGapFillerServiceImpl(
                 stockDailyBarRepository, dataFillTaskRepository, dataSources,
-                gapFillProperties, dataFillProgressService, tradingCalendarDbService,
+                gapFillProperties, dataFillProgressService, retryProgressService, tradingCalendarDbService,
                 stockDataSourcePriorityService, symbolBlacklistService,
                 transactionManager);
     }

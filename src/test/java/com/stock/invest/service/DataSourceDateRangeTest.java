@@ -166,6 +166,7 @@ class DataSourceDateRangeTest {
         StockDailyBarRepository barRepo = mock(StockDailyBarRepository.class);
         DataFillTaskRepository taskRepo = mock(DataFillTaskRepository.class);
         DataFillProgressService progressService = mock(DataFillProgressService.class);
+        com.stock.invest.service.RetryProgressService retryProgressService = mock(com.stock.invest.service.RetryProgressService.class);
         TradingCalendarDbService calendarService = mock(TradingCalendarDbService.class);
         StockDataSourcePriorityService priorityService = mock(StockDataSourcePriorityService.class);
         SymbolBlacklistService symbolBlacklistService = mock(SymbolBlacklistService.class);
@@ -217,7 +218,7 @@ class DataSourceDateRangeTest {
 
         List<DataSourceStrategy> sources = List.of(source1, source2);
         DataGapFillerServiceImpl service = new DataGapFillerServiceImpl(
-                barRepo, taskRepo, sources, gfProps, progressService,
+                barRepo, taskRepo, sources, gfProps, progressService, retryProgressService,
                 calendarService, priorityService, symbolBlacklistService,
                 mock(org.springframework.transaction.PlatformTransactionManager.class));
 
@@ -252,6 +253,7 @@ class DataSourceDateRangeTest {
         StockDailyBarRepository barRepo = mock(StockDailyBarRepository.class);
         DataFillTaskRepository taskRepo = mock(DataFillTaskRepository.class);
         DataFillProgressService progressService = mock(DataFillProgressService.class);
+        com.stock.invest.service.RetryProgressService retryProgressService = mock(com.stock.invest.service.RetryProgressService.class);
         TradingCalendarDbService calendarService = mock(TradingCalendarDbService.class);
         StockDataSourcePriorityService priorityService = mock(StockDataSourcePriorityService.class);
         SymbolBlacklistService symbolBlacklistService = mock(SymbolBlacklistService.class);
@@ -305,7 +307,7 @@ class DataSourceDateRangeTest {
 
         List<DataSourceStrategy> sources = List.of(source1, source2);
         DataGapFillerServiceImpl service = new DataGapFillerServiceImpl(
-                barRepo, taskRepo, sources, gfProps, progressService,
+                barRepo, taskRepo, sources, gfProps, progressService, retryProgressService,
                 calendarService, priorityService, symbolBlacklistService,
                 mock(org.springframework.transaction.PlatformTransactionManager.class));
 

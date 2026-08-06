@@ -93,9 +93,13 @@ public interface StockDailyBarRepository extends JpaRepository<StockDailyBar, Lo
     List<StockDailyBar> findBySourceOrderByTradeDateDesc(@Param("source") String source);
 
     /**
-     * 根据 symbol 列表查询有 name 的记录（取每个 symbol 最新的一条）
+     * 根据 symbol 列表查询有 name 的记录（取每个 symbol 最新的一条，P2-7）。
+     * <p>原实现返回全部匹配行（注释与实现不符，靠调用方 toMap 合并键兜底），
+     * 改为子查询精确取每个 symbol 的 tradeDate 最大行。</p>
      */
-    @Query("SELECT b FROM StockDailyBar b WHERE b.symbol IN :symbols AND b.name IS NOT NULL ORDER BY b.tradeDate DESC")
+    @Query("SELECT b FROM StockDailyBar b WHERE b.symbol IN :symbols AND b.name IS NOT NULL "
+            + "AND b.tradeDate = (SELECT MAX(b2.tradeDate) FROM StockDailyBar b2 "
+            + "WHERE b2.symbol = b.symbol AND b2.name IS NOT NULL) ORDER BY b.tradeDate DESC")
     List<StockDailyBar> findBySymbolInAndNameIsNotNull(@Param("symbols") List<String> symbols);
 
     /**

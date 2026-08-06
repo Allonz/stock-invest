@@ -88,6 +88,7 @@ public class TwelveDataRestClient {
 
     /**
      * 最新价（或最近收盘）用于价格带过滤。
+     * <p>P2-18：非数字 close 值不再抛 NumberFormatException 中断整批，返回 null 由调用方降级。</p>
      */
     public Double fetchLastClose(String symbol) throws Exception {
         String url = buildUrl("/quote", "?symbol=" + URLEncoder.encode(symbol, "UTF-8"));
@@ -98,7 +99,12 @@ public class TwelveDataRestClient {
         }
         JsonNode close = root.get("close");
         if (close != null && close.isTextual()) {
-            return Double.parseDouble(close.asText());
+            try {
+                return Double.parseDouble(close.asText());
+            } catch (NumberFormatException e) {
+                log.warn("TwelveData /quote non-numeric close for {}: '{}'", symbol, close.asText());
+                return null;
+            }
         }
         if (close != null && close.isNumber()) {
             return close.asDouble();
@@ -169,12 +175,22 @@ public class TwelveDataRestClient {
         }
     }
 
+    /**
+     * P2-18：字段解析容错 —— 非数字响应值（如错误码文案、空串）不再抛
+     * NumberFormatException 中断整批解析，返回 0D 并 debug 记录。
+     */
     private static double parseDouble(JsonNode v, String field) {
         JsonNode n = v.get(field);
         if (n == null || n.isNull()) {
             return 0D;
         }
-        return Double.parseDouble(n.asText());
+        String s = n.asText();
+        try {
+            return Double.parseDouble(s);
+        } catch (NumberFormatException e) {
+            log.debug("TwelveData non-numeric field '{}' value '{}', parsed as 0", field, s);
+            return 0D;
+        }
     }
 
     private static long parseLong(JsonNode v, String field) {

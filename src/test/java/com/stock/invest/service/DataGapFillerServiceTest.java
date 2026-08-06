@@ -31,6 +31,7 @@ import com.stock.invest.config.GapFillProperties;
 import com.stock.invest.entity.DataFillTask;
 import com.stock.invest.repository.DataFillTaskRepository;
 import com.stock.invest.repository.StockDailyBarRepository;
+import com.stock.invest.service.RetryProgressService;
 import com.stock.invest.service.impl.DataGapFillerServiceImpl;
 
 @ExtendWith(MockitoExtension.class)
@@ -56,6 +57,8 @@ class DataGapFillerServiceTest {
     @Mock
     private DataFillProgressService dataFillProgressService;
     @Mock
+    private RetryProgressService retryProgressService;
+    @Mock
     private com.stock.invest.service.TradingCalendarDbService tradingCalendarDbService;
     @Mock
     private StockDataSourcePriorityService stockDataSourcePriorityService;
@@ -79,6 +82,9 @@ class DataGapFillerServiceTest {
         lenient().when(twelvedataDataSource.isAvailable()).thenReturn(true);
         lenient().when(tiingoDataSource.getSourceName()).thenReturn("tiingo");
         lenient().when(tiingoDataSource.isAvailable()).thenReturn(true);
+        // P3-4：processRetryingTasks 接入进度追踪，mock 返回真实进度对象
+        lenient().when(retryProgressService.startRetry())
+                .thenReturn(new RetryProgressService.RetryProgress());
 
         List<DataSourceStrategy> dataSources = List.of(tigerDataSource, yfinanceDataSource, twelvedataDataSource, tiingoDataSource);
         service = new DataGapFillerServiceImpl(
@@ -87,6 +93,7 @@ class DataGapFillerServiceTest {
                 dataSources,
                 gapFillProperties,
                 dataFillProgressService,
+                retryProgressService,
                 tradingCalendarDbService,
                 stockDataSourcePriorityService,
                 symbolBlacklistService,

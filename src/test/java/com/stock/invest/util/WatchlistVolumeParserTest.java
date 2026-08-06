@@ -97,4 +97,26 @@ public class WatchlistVolumeParserTest {
         assertThrows(IllegalArgumentException.class,
                 () -> WatchlistVolumeParser.parseVolumeLong("100abc万"));
     }
+
+    // ── P2-19: 全角逗号 / 小数四舍五入 / 科学计数法 ─────────────────────
+
+    @Test
+    public void parseFullWidthComma() {
+        assertEquals(12_345_678L, WatchlistVolumeParser.parseVolumeLong("12，345，678"));
+    }
+
+    @Test
+    public void parseDecimalRoundsInsteadOfTruncates() {
+        assertEquals(13L, WatchlistVolumeParser.parseVolumeLong("12.6"));
+    }
+
+    @Test
+    public void parseScientificNotation() {
+        assertEquals(120_000L, WatchlistVolumeParser.parseVolumeLong("1.2E5"));
+    }
+
+    @Test
+    public void parseScientificNotationWithUnit() {
+        assertEquals(15_000_000L, WatchlistVolumeParser.parseVolumeLong("1.5E3万"));
+    }
 }

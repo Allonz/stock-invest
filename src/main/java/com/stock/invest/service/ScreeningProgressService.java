@@ -76,9 +76,10 @@ public class ScreeningProgressService {
     }
 
     public static class WindowProgress {
-        private int days;
-        private String status;
-        private int matched;
+        /** P2-12：跨线程可见性 —— 异步筛选线程写入、HTTP 线程读取 */
+        private volatile int days;
+        private volatile String status;
+        private volatile int matched;
 
         public int getDays() { return days; }
         public void setDays(int days) { this.days = days; }

@@ -136,24 +136,21 @@ class TradingCalendarFallbackTest {
 
     // ======= 3.2 全不可用场景 (CORE) =======
 
-    @Test @DisplayName("FT-07: ALL 3 sources unavailable -> DEFAULT true")
-    void allSourcesUnavailable_returnsDefault() {
+    @Test @DisplayName("FT-07: ALL 3 sources unavailable -> null (unknown, P2-11)")
+    void allSourcesUnavailable_returnsNull() {
         when(tiger.isAvailable()).thenReturn(false);
         when(tigerOpen.isAvailable()).thenReturn(false);
         when(alpaca.isAvailable()).thenReturn(false);
 
         TradingCalendarResult r = fallback.isTradingDay("US", DATE);
-        assertTrue(r.isTradingDay());
-        assertEquals("none", r.getSource());
-        assertEquals("DEFAULT", r.getType());
-        assertTrue(r.getDetail().contains("均不可用"));
+        assertNull(r);
         verify(tiger, never()).isTradingDay(any(), any());
         verify(tigerOpen, never()).isTradingDay(any(), any());
         verify(alpaca, never()).isTradingDay(any(), any());
     }
 
-    @Test @DisplayName("FT-08: ALL 3 timeout -> DEFAULT true")
-    void allSourcesTimeout_returnsDefault() {
+    @Test @DisplayName("FT-08: ALL 3 timeout -> null (unknown, P2-11)")
+    void allSourcesTimeout_returnsNull() {
         when(tiger.isAvailable()).thenReturn(true);
         when(tiger.isTradingDay("US", DATE)).thenReturn(null);
         when(tigerOpen.isAvailable()).thenReturn(true);
@@ -162,13 +159,11 @@ class TradingCalendarFallbackTest {
         when(alpaca.isTradingDay("US", DATE)).thenReturn(null);
 
         TradingCalendarResult r = fallback.isTradingDay("US", DATE);
-        assertTrue(r.isTradingDay());
-        assertEquals("none", r.getSource());
-        assertEquals("DEFAULT", r.getType());
+        assertNull(r);
     }
 
-    @Test @DisplayName("FT-09: ALL 3 throw exception -> DEFAULT true")
-    void allSourcesThrow_returnsDefault() {
+    @Test @DisplayName("FT-09: ALL 3 throw exception -> null (unknown, P2-11)")
+    void allSourcesThrow_returnsNull() {
         when(tiger.isAvailable()).thenReturn(true);
         when(tiger.isTradingDay("US", DATE)).thenReturn(null);
         when(tigerOpen.isAvailable()).thenReturn(true);
@@ -177,13 +172,11 @@ class TradingCalendarFallbackTest {
         when(alpaca.isTradingDay("US", DATE)).thenReturn(null);
 
         TradingCalendarResult r = fallback.isTradingDay("US", DATE);
-        assertTrue(r.isTradingDay());
-        assertEquals("none", r.getSource());
-        assertEquals("DEFAULT", r.getType());
+        assertNull(r);
     }
 
-    @Test @DisplayName("FT-10: Mixed (unavailable+timeout+error) -> DEFAULT true")
-    void mixedFailures_returnsDefault() {
+    @Test @DisplayName("FT-10: Mixed (unavailable+timeout+error) -> null (unknown, P2-11)")
+    void mixedFailures_returnsNull() {
         when(tiger.isAvailable()).thenReturn(false);
         when(tigerOpen.isAvailable()).thenReturn(true);
         when(tigerOpen.isTradingDay("US", DATE)).thenReturn(null);
@@ -191,13 +184,11 @@ class TradingCalendarFallbackTest {
         when(alpaca.isTradingDay("US", DATE)).thenReturn(null);
 
         TradingCalendarResult r = fallback.isTradingDay("US", DATE);
-        assertTrue(r.isTradingDay());
-        assertEquals("none", r.getSource());
-        assertEquals("DEFAULT", r.getType());
+        assertNull(r);
     }
 
-    @Test @DisplayName("FT-11: Tiger unavailable + remaining return null -> DEFAULT true")
-    void tigerUnavailable_othersReturnNull_returnsDefault() {
+    @Test @DisplayName("FT-11: Tiger unavailable + remaining return null -> null (unknown, P2-11)")
+    void tigerUnavailable_othersReturnNull_returnsNull() {
         when(tiger.isAvailable()).thenReturn(false);
         when(tigerOpen.isAvailable()).thenReturn(true);
         when(tigerOpen.isTradingDay("US", DATE)).thenReturn(null);
@@ -205,9 +196,7 @@ class TradingCalendarFallbackTest {
         when(alpaca.isTradingDay("US", DATE)).thenReturn(null);
 
         TradingCalendarResult r = fallback.isTradingDay("US", DATE);
-        assertTrue(r.isTradingDay());
-        assertEquals("none", r.getSource());
-        assertEquals("DEFAULT", r.getType());
+        assertNull(r);
     }
 
     // ======= 3.3 缓存测试 =======
@@ -271,19 +260,17 @@ class TradingCalendarFallbackTest {
         verify(tiger, times(2)).isTradingDay(any(), any());
     }
 
-    @Test @DisplayName("FT-16: Default result is also cached")
-    void defaultResult_isCached() {
+    @Test @DisplayName("FT-16: 全源失败结果不缓存（P2-11）")
+    void allSourcesUnavailable_notCached() {
         when(tiger.isAvailable()).thenReturn(false);
         when(tigerOpen.isAvailable()).thenReturn(false);
         when(alpaca.isAvailable()).thenReturn(false);
 
         TradingCalendarResult r1 = fallback.isTradingDay("US", DATE);
-        assertTrue(r1.isTradingDay());
-        assertEquals("DEFAULT", r1.getType());
+        assertNull(r1);
 
         TradingCalendarResult r2 = fallback.isTradingDay("US", DATE);
-        assertTrue(r2.isTradingDay());
-        assertEquals("DEFAULT", r2.getType());
+        assertNull(r2);
 
         verify(tiger, never()).isTradingDay(any(), any());
         verify(tigerOpen, never()).isTradingDay(any(), any());

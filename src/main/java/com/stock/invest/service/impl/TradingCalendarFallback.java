@@ -20,9 +20,12 @@ import java.util.concurrent.TimeUnit;
  *   1. Tiger Java SDK
  *   2. TigerOpen Python
  *   3. Alpaca Markets
- * 全部不可用时返回 tradingDay=true（默认交易日）。
+ * 全部不可用时返回 null（未知状态，P2-11）——不再默认 tradingDay=true：
+ * 补缺路径按"未知"跳过该日期（宁可漏一天，不可错补白打配额）；
+ * REST/MCP 查询端点自行决定未知态展示。
  *
- * 查询结果缓存 24 小时，key 格式为 "{market}:{yyyy-MM-dd}"。
+ * 查询结果缓存 24 小时（仅缓存成功结果，失败不缓存，P2-11），
+ * key 格式为 "{market}:{yyyy-MM-dd}"。
  */
 @Service
 public class TradingCalendarFallback implements TradingCalendarService {
@@ -86,11 +89,11 @@ public class TradingCalendarFallback implements TradingCalendarService {
             log.warn("[fallback] 源 {} 查询失败，fallback 到下一源", source.getSourceName());
         }
 
-        // 3. 全部失败 → 默认交易日（宁可重复，不要漏数据）
-        TradingCalendarResult defaultResult = TradingCalendarResult.defaultTradingDay(market, date);
-        cache.put(cacheKey, defaultResult);
-        log.warn("[fallback] 所有日历数据源均不可用，默认返回 tradingDay=true (market={}, date={})", market, date);
-        return defaultResult;
+        // 3. 全部失败 → 返回 null（未知状态，P2-11）
+        //    不再默认 tradingDay=true 并缓存 24h——数据源不可用时无法确认开盘状态，
+        //    补缺路径按未知跳过该日期；失败结果不缓存，避免放大影响。
+        log.warn("[fallback] 所有日历数据源均不可用，返回未知状态 (market={}, date={})", market, date);
+        return null;
     }
 
     /** 获取缓存统计信息 */

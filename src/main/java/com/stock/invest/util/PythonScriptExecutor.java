@@ -39,6 +39,11 @@ public class PythonScriptExecutor {
     /** 进程退出后等待读流结束的保险时间 */
     private static final int DRAIN_GRACE_SECONDS = 5;
 
+    /** P2-17：探活结果进程内缓存时长 —— 每次执行前不再都启动一次 Python 探活进程 */
+    private static final long PROBE_CACHE_MILLIS = 60_000L;
+    /** 最近一次探活成功时间（失败不缓存，下次重探） */
+    private static volatile long lastProbeOkAtMillis = 0L;
+
     /**
      * 读流专用小线程池（2 个进程 × 2 路输出）。
      * <p>P1-1：超时等待期间必须并行排空 stdout/stderr，否则子进程写满管道缓冲（约 64KB）会永久阻塞；
@@ -63,7 +68,9 @@ public class PythonScriptExecutor {
             throws IOException, InterruptedException {
         String pythonExec = resolvePythonExecutable();
 
-        if (!PythonRuntimeSupport.isPythonRunnable(pythonExec, true)) {
+        // P2-17：探活结果缓存 60s，避免每次执行都启动探活进程
+        if (System.currentTimeMillis() - lastProbeOkAtMillis >= PROBE_CACHE_MILLIS
+                && !probePythonRunnable(pythonExec)) {
             log.error("Python未安装或未添加到PATH环境变量中");
             throw new IOException("Python未安装或未添加到PATH环境变量中");
         }
@@ -123,13 +130,20 @@ public class PythonScriptExecutor {
                     log.info("Python脚本 stderr (script={}): {}", scriptName, stderr);
                 }
 
+                String result = output.trim();
+
                 int exitCode = process.exitValue();
                 if (exitCode != 0) {
+                    // P2-15：脚本失败优先从 stdout 解析统一错误 JSON（{"error":{"code","message"}}），
+                    // 错误码/消息随异常透出，供调用方分类（P1-5 账户级错误识别）
+                    String errorDetail = extractPythonError(result);
+                    if (errorDetail != null) {
+                        throw new IOException("Python脚本执行失败: " + errorDetail);
+                    }
                     log.warn("Python脚本执行失败，退出码: {}", exitCode);
                     throw new IOException("Python脚本执行失败，退出码: " + exitCode);
                 }
 
-                String result = output.trim();
                 // P1-1/P2-17：stdout 全量日志降为 DEBUG（每次执行可能是全量 K 线 JSON）
                 log.debug("Python脚本 stdout (script={}): {}", scriptName, result);
                 return result;
@@ -217,5 +231,43 @@ public class PythonScriptExecutor {
             log.warn("未使用项目 .venv，当前解析到的 Python: {}", exe);
         }
         return exe;
+    }
+
+    /**
+     * P2-15：从脚本 stdout 提取统一错误 JSON（{"error": {"code": ..., "message": ...}}）。
+     * 非 JSON 输出返回 null，由调用方按通用消息处理。
+     */
+    private static String extractPythonError(String output) {
+        if (output == null || output.isBlank()) {
+            return null;
+        }
+        try {
+            com.fasterxml.jackson.databind.JsonNode root = OBJECT_MAPPER.readTree(output.trim());
+            com.fasterxml.jackson.databind.JsonNode err = root.path("error");
+            if (err.isObject()) {
+                String code = err.path("code").asText("");
+                String message = err.path("message").asText("");
+                if (!message.isEmpty()) {
+                    return "code=" + code + ", message=" + message;
+                }
+            }
+        } catch (Exception ignored) {
+            // 普通报错文本 —— 按通用消息处理
+        }
+        return null;
+    }
+
+    private static final com.fasterxml.jackson.databind.ObjectMapper OBJECT_MAPPER =
+            new com.fasterxml.jackson.databind.ObjectMapper();
+
+    /**
+     * P2-17：执行探活并缓存成功结果（失败不缓存，下次执行重新探测）。
+     */
+    private static boolean probePythonRunnable(String pythonExec) {
+        boolean ok = PythonRuntimeSupport.isPythonRunnable(pythonExec, true);
+        if (ok) {
+            lastProbeOkAtMillis = System.currentTimeMillis();
+        }
+        return ok;
     }
 }
