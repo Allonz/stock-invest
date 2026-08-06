@@ -14,13 +14,15 @@ import com.stock.invest.entity.TradingCalendarEntity;
 import com.stock.invest.model.TradingCalendarResult;
 import com.stock.invest.repository.TradingCalendarRepository;
 import com.stock.invest.service.impl.TradingCalendarFallback;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 交易日历持久化服务。
  *
  * 职责：
  * 1. 优先从 trading_calendar 表查询，无记录则 fallback 到 TradingCalendarFallback 实时查并入库
- * 2. 支持整年日历批量抓取（逐天 upsert）
+ * 2. 支持整年日历批量抓取（逐天独立事务 upsert，P2-13）
  * 3. 所有日期使用 America/New_York 时区
  */
 @Service
@@ -30,11 +32,15 @@ public class TradingCalendarDbService {
 
     private final TradingCalendarRepository repository;
     private final TradingCalendarFallback fallback;
+    /** P2-13：单日持久化独立事务 —— 整年循环不再持有单个 DB 连接数小时，单日失败不回滚已入库日期 */
+    private final TransactionTemplate transactionTemplate;
 
     public TradingCalendarDbService(TradingCalendarRepository repository,
-                                    TradingCalendarFallback fallback) {
+                                    TradingCalendarFallback fallback,
+                                    PlatformTransactionManager transactionManager) {
         this.repository = repository;
         this.fallback = fallback;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
     /**
@@ -71,31 +77,44 @@ public class TradingCalendarDbService {
     /**
      * 抓取指定市场指定年份的完整开盘日历。
      * 逐天通过 fallback 链查询后 upsert 入库。
+     * <p>P2-13：不持有整年单事务 —— 每天独立事务，外部 I/O 失败只跳过当天，
+     * 已入库日期不回滚；返回成功 upsert 的记录数。</p>
      *
      * @param market 市场代码
      * @param year   年份
      * @return 成功 upsert 的记录数
      */
-    @Transactional
     public int fetchAndStoreFullYear(String market, int year) {
         LocalDate start = LocalDate.of(year, 1, 1);
         LocalDate end = LocalDate.of(year, 12, 31);
 
         int count = 0;
+        int skipped = 0;
         LocalDate cursor = start;
         while (!cursor.isAfter(end)) {
-            TradingCalendarResult result = fallback.isTradingDay(market, cursor);
-            if (result != null) {
-                int affected = upsert(market, cursor, result.isTradingDay(),
-                        result.getSource(), result.getType(), result.getDetail());
-                count += affected;
-            } else {
-                log.warn("[TradingCalendarDbService] fetchFullYear: 数据源不可用, 跳过 date={}", cursor);
+            final LocalDate date = cursor;
+            try {
+                TradingCalendarResult result = fallback.isTradingDay(market, date);
+                if (result != null) {
+                    Integer affected = transactionTemplate.execute(status ->
+                            upsert(market, date, result.isTradingDay(),
+                                    result.getSource(), result.getType(), result.getDetail()));
+                    count += (affected != null ? affected : 0);
+                } else {
+                    skipped++;
+                    log.warn("[TradingCalendarDbService] fetchFullYear: 数据源不可用, 跳过 date={}", date);
+                }
+            } catch (Exception e) {
+                // P2-13：单日失败只跳过当天，不中断整年同步
+                skipped++;
+                log.warn("[TradingCalendarDbService] fetchFullYear: 单日失败跳过 date={}, error={}",
+                        date, e.getMessage());
             }
             cursor = cursor.plusDays(1);
         }
 
-        log.info("[TradingCalendarDbService] fetchAndStoreFullYear 完成: market={}, year={}, count={}", market, year, count);
+        log.info("[TradingCalendarDbService] fetchAndStoreFullYear 完成: market={}, year={}, count={}, skipped={}",
+                market, year, count, skipped);
         return count;
     }
 

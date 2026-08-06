@@ -5,6 +5,7 @@ import com.stock.invest.enums.dto.ApiResponse;
 import com.stock.invest.service.TradingCalendarDbService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,6 +15,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 交易日历 API 控制器。
@@ -32,6 +34,11 @@ public class TradingCalendarController {
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final ZoneId NY_ZONE = ZoneId.of("America/New_York");
     private static final String DEFAULT_MARKET = "US";
+
+    /** P2-10：全量同步冷却窗口（分钟）—— 手动触发 365 天外部抓取限频，防打空配额 */
+    private static final int FULL_YEAR_COOLDOWN_MINUTES = 30;
+    /** 最近一次全量同步时间，key = "{market}:{year}" */
+    private final Map<String, Long> lastFullYearSyncAt = new ConcurrentHashMap<>();
 
     private final TradingCalendarDbService dbService;
 
@@ -87,6 +94,8 @@ public class TradingCalendarController {
 
     /**
      * 手动触发全年日历查询入库。
+     * <p>P2-10：year 缺省当年、范围限制 [当前年-1, 当前年+1]；同一市场同一年份
+     * 在冷却窗口（30 分钟）内重复触发返回 429，防止高频调用打空外部数据源配额。</p>
      */
     @PostMapping("/fetch-full-year")
     public ResponseEntity<ApiResponse<Map<String, Object>>> fetchFullYear(
@@ -94,7 +103,28 @@ public class TradingCalendarController {
             @RequestParam(value = "market", required = false, defaultValue = DEFAULT_MARKET) String market) {
 
         try {
-            int targetYear = (year != null) ? year : Year.now(NY_ZONE).getValue();
+            int currentYear = Year.now(NY_ZONE).getValue();
+            int targetYear = (year != null) ? year : currentYear;
+
+            // P2-10：年份范围校验 —— 只允许同步相邻年份，非法返回 400
+            if (targetYear < currentYear - 1 || targetYear > currentYear + 1) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("year 超出允许范围 [" + (currentYear - 1) + ", " + (currentYear + 1) + "]",
+                                "INVALID_YEAR"));
+            }
+
+            // P2-10：频控 —— 同一 (market, year) 冷却窗口内重复触发直接拒绝
+            String cooldownKey = market + ":" + targetYear;
+            long now = System.currentTimeMillis();
+            Long lastSync = lastFullYearSyncAt.get(cooldownKey);
+            if (lastSync != null && now - lastSync < FULL_YEAR_COOLDOWN_MINUTES * 60_000L) {
+                long remainingSec = (FULL_YEAR_COOLDOWN_MINUTES * 60_000L - (now - lastSync)) / 1000;
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                        .body(ApiResponse.error("该年份全量同步进行中/刚完成，请 " + remainingSec + " 秒后重试",
+                                "SYNC_IN_PROGRESS"));
+            }
+            lastFullYearSyncAt.put(cooldownKey, now);
+
             log.info("[TradingCalendarController] fetchFullYear: market={}, year={}", market, targetYear);
 
             int fetched = dbService.fetchAndStoreFullYear(market, targetYear);
