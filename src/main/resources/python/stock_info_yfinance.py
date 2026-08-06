@@ -80,6 +80,10 @@ def get_stock_info(symbol: str) -> str:
             "lowPrice": float(hist["Low"].iloc[-1]),
             "volume": int(hist["Volume"].iloc[-1]),
             "change": float(hist["Close"].iloc[-1] - hist["Open"].iloc[-1]),
+            # 涨跌幅（%）取自 yfinance info 的 regularMarketChangePercent；
+            # 缺失时置 0，保证输出恒含该键（Java StockInfo.changePercent 反序列化依赖）
+            "changePercent": float(info["regularMarketChangePercent"])
+            if info.get("regularMarketChangePercent") is not None else 0.0,
         }
         # 盘后交易数据（部分股票无盘后交易）
         if info.get("postMarketPrice") is not None:
