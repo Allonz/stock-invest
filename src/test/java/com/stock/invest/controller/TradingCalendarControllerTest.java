@@ -2,7 +2,10 @@ package com.stock.invest.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -115,5 +118,40 @@ class TradingCalendarControllerTest {
                         .param("year", "2025"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.fetched").value(250));
+    }
+
+    @Test @DisplayName("R2 P2-8: 并发双请求 → 仅一份执行，另一份 429（putIfAbsent 原子抢占）")
+    void fetchFullYear_concurrentDualRequest_onlyOneExecutes() throws Exception {
+        // 用 2027 年隔离冷却状态；同步服务仅成功返回一次
+        when(tradingCalendarDbService.fetchAndStoreFullYear(eq("US"), eq(2027))).thenReturn(251);
+
+        java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.ExecutorService pool =
+                java.util.concurrent.Executors.newFixedThreadPool(2);
+        try {
+            java.util.concurrent.Future<Integer> f1 = pool.submit(() -> {
+                start.await(5, java.util.concurrent.TimeUnit.SECONDS);
+                return mockMvc.perform(post("/api/v1/trading-calendar/fetch-full-year")
+                                .param("year", "2027"))
+                        .andReturn().getResponse().getStatus();
+            });
+            java.util.concurrent.Future<Integer> f2 = pool.submit(() -> {
+                start.await(5, java.util.concurrent.TimeUnit.SECONDS);
+                return mockMvc.perform(post("/api/v1/trading-calendar/fetch-full-year")
+                                .param("year", "2027"))
+                        .andReturn().getResponse().getStatus();
+            });
+
+            start.countDown();
+            int s1 = f1.get(10, java.util.concurrent.TimeUnit.SECONDS);
+            int s2 = f2.get(10, java.util.concurrent.TimeUnit.SECONDS);
+
+            // 一份 200、一份 429，恰好一次外部同步
+            assertEquals(java.util.Set.of(200, 429), java.util.Set.of(s1, s2),
+                    "one request must execute (200), the other must be rate-limited (429), got: " + s1 + "," + s2);
+            verify(tradingCalendarDbService, times(1)).fetchAndStoreFullYear(eq("US"), eq(2027));
+        } finally {
+            pool.shutdownNow();
+        }
     }
 }

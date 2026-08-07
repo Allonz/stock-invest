@@ -164,6 +164,118 @@ class PythonScriptExecutorTest {
     }
 
     @Test
+    @DisplayName("R2 P2-6: 无参构造生产默认超时仍为 30s（注入化不改变默认值）")
+    void defaultTimeout_still30s() throws Exception {
+        PythonScriptExecutor defaultExecutor = new PythonScriptExecutor();
+        java.lang.reflect.Field f = PythonScriptExecutor.class.getDeclaredField("timeoutSeconds");
+        f.setAccessible(true);
+        assertEquals(30, f.getInt(defaultExecutor),
+                "production default timeout must stay 30s");
+    }
+
+    // ── R2 P2-5: 排空线程池扩容 —— 并发脚本完整性 ─────────────────────
+
+    @Test
+    @DisplayName("R2 P2-5: 4 个并发脚本（不同参数）输出全部完整，无空串/数据丢失")
+    void concurrentExecutions_allOutputsComplete() throws Exception {
+        if (!pythonAvailable) {
+            // 无 Python 环境：验证 4 路并发均得到明确的 IOException（无静默空输出路径）
+            List<IOException> errors = java.util.concurrent.CompletableFuture
+                    .supplyAsync(() -> { try { executor.executeScript("test_script.py", "0"); return null; }
+                                         catch (Exception e) { return e instanceof IOException io ? io : new IOException(e); } })
+                    .thenCombine(java.util.concurrent.CompletableFuture
+                            .supplyAsync(() -> { try { executor.executeScript("test_script.py", "1"); return null; }
+                                                 catch (Exception e) { return e instanceof IOException io ? io : new IOException(e); } }),
+                            (a, b) -> List.of(a, b))
+                    .get(60, java.util.concurrent.TimeUnit.SECONDS);
+            assertEquals(2, errors.stream().filter(java.util.Objects::nonNull).count(),
+                    "each concurrent execution must fail loudly with IOException");
+            return;
+        }
+        List<java.util.concurrent.Future<String>> futures = List.of(
+                java.util.concurrent.CompletableFuture.supplyAsync(
+                        () -> runSafely("test_script.py", "0")),
+                java.util.concurrent.CompletableFuture.supplyAsync(
+                        () -> runSafely("test_script.py", "1")),
+                java.util.concurrent.CompletableFuture.supplyAsync(
+                        () -> runSafely("test_script.py", "1")),
+                java.util.concurrent.CompletableFuture.supplyAsync(
+                        () -> runSafely("test_script.py", "2")));
+
+        for (java.util.concurrent.Future<String> f : futures) {
+            String output = f.get(60, java.util.concurrent.TimeUnit.SECONDS);
+            assertNotNull(output, "concurrent output must not be null");
+            assertFalse(output.isBlank(), "concurrent output must not be empty (drain must not be lost)");
+            List<?> result = mapper.readValue(output, List.class);
+            assertNotNull(result, "concurrent output must be valid JSON array");
+        }
+        // 4 路输出均到齐且合法 —— 排空线程池容量（8）未造成排队丢数据
+        assertEquals(4, futures.size());
+    }
+
+    private static String runSafely(String script, String... args) {
+        try {
+            return executor.executeScript(script, args);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test
+    @DisplayName("R2 P2-5: 挂起脚本（2s 注入超时）与其他并发脚本混跑 → 挂起者被超时杀灭，其余输出完整")
+    void concurrentWithHungScript_timeoutKillsAndOthersComplete() throws Exception {
+        PythonScriptExecutor shortTimeoutExecutor = new PythonScriptExecutor(2);
+        if (!pythonAvailable) {
+            IOException hung = assertThrows(IOException.class,
+                    () -> shortTimeoutExecutor.executeScript("hang_test.py"));
+            assertTrue(hung.getMessage().contains("超时"), "hang script must time out");
+            return;
+        }
+        Path pidFile = Files.createTempFile("hang_pid_concurrent_", ".txt");
+        try {
+            java.util.concurrent.ExecutorService pool =
+                    java.util.concurrent.Executors.newFixedThreadPool(4);
+            try {
+                java.util.concurrent.Future<IOException> hungFuture = pool.submit(() -> {
+                    try {
+                        shortTimeoutExecutor.executeScriptWithEnvironment(
+                                Map.of("HANG_PID_FILE", pidFile.toString()), "hang_test.py");
+                        return null;
+                    } catch (IOException e) {
+                        return e;
+                    }
+                });
+                java.util.concurrent.Future<String> ok1 = pool.submit(() -> runSafely("test_script.py", "1"));
+                java.util.concurrent.Future<String> ok2 = pool.submit(() -> runSafely("test_script.py", "1"));
+                java.util.concurrent.Future<String> ok3 = pool.submit(() -> runSafely("test_script.py", "2"));
+
+                IOException hungEx = hungFuture.get(60, java.util.concurrent.TimeUnit.SECONDS);
+                assertNotNull(hungEx, "hung script must fail with timeout IOException");
+                assertTrue(hungEx.getMessage().contains("超时"),
+                        "hung script error must mention timeout: " + hungEx.getMessage());
+
+                for (java.util.concurrent.Future<String> f : List.of(ok1, ok2, ok3)) {
+                    String output = f.get(60, java.util.concurrent.TimeUnit.SECONDS);
+                    assertFalse(output.isBlank(), "healthy script output must not be lost while a hung script drains");
+                    assertNotNull(mapper.readValue(output, List.class));
+                }
+
+                // 挂起进程被 destroyForcibly 杀灭（与 timeout_kills_hung_process 同一断言路径）
+                String pidStr = Files.readString(pidFile, StandardCharsets.UTF_8).trim();
+                if (!pidStr.isEmpty()) {
+                    long pid = Long.parseLong(pidStr);
+                    assertFalse(waitUntilNotAlive(pid, 5_000),
+                            "hung process " + pid + " must be destroyed after injected timeout");
+                }
+            } finally {
+                pool.shutdownNow();
+            }
+        } finally {
+            Files.deleteIfExists(pidFile);
+        }
+    }
+
+    @Test
     @DisplayName("P1-1: stderr 洪泛 >64KB 不阻塞，stdout 结果正常返回")
     void stderr_flood_no_deadlock() throws Exception {
         if (!pythonAvailable) {

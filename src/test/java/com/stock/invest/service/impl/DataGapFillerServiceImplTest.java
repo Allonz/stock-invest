@@ -318,6 +318,75 @@ class DataGapFillerServiceImplTest {
     }
 
     @Test
+    @DisplayName("R2 P2-1: 终态保存两次冲突 → error + 冲突计数，无第三次重试（无死循环）")
+    void saveTaskWithOptimisticLock_secondConflictLogsError() throws Exception {
+        LocalDate today = nyToday();
+        Instant recent = Instant.now().minus(40, ChronoUnit.MINUTES);
+        DataFillTask task = new DataFillTask();
+        task.setId(1L);
+        task.setSymbol("AAPL");
+        task.setTradeDate(today.minusDays(1));
+        task.setStatus("retrying");
+        task.setRetryCount(2);
+        task.setDayCount(2);
+        task.setRetryDate(today);
+        task.setLastError("previous error");
+        task.setCreatedAt(recent);
+        task.setUpdatedAt(recent);
+        task.setVersion(0);
+
+        DataFillTask latestOnDb = new DataFillTask();
+        latestOnDb.setId(1L);
+        latestOnDb.setSymbol("AAPL");
+        latestOnDb.setTradeDate(today.minusDays(1));
+        latestOnDb.setStatus("retrying");
+        latestOnDb.setRetryCount(2);
+        latestOnDb.setDayCount(2);
+        latestOnDb.setRetryDate(today);
+        latestOnDb.setVersion(3);
+
+        when(dataFillTaskRepository.findRetryableTasks()).thenReturn(List.of(task));
+        when(dataFillTaskRepository.findById(1L)).thenReturn(java.util.Optional.of(latestOnDb));
+        // 首次保存与重放保存均冲突 → 不再第三次重试
+        when(dataFillTaskRepository.save(any(DataFillTask.class)))
+                .thenThrow(new org.springframework.orm.ObjectOptimisticLockingFailureException(
+                        DataFillTask.class, 1L, new RuntimeException("version mismatch")))
+                .thenThrow(new org.springframework.orm.ObjectOptimisticLockingFailureException(
+                        DataFillTask.class, 1L, new RuntimeException("version mismatch again")));
+        com.stock.invest.model.KLineData okKd = new com.stock.invest.model.KLineData();
+        okKd.setSymbol("AAPL");
+        com.stock.invest.model.KLineIterator okItem = new com.stock.invest.model.KLineIterator(
+                "AAPL", 0L, java.math.BigDecimal.ONE, java.math.BigDecimal.ONE,
+                java.math.BigDecimal.ONE, java.math.BigDecimal.ONE, 100, 0,
+                java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO);
+        okItem.setTimeString(today.minusDays(1).toString());
+        okKd.setItems(List.of(okItem));
+        when(tigerDataSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(okKd);
+
+        // 捕获 error 日志断言"重放后仍冲突"被观测
+        ch.qos.logback.classic.Logger logger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory
+                .getLogger(com.stock.invest.service.impl.DataGapFillerServiceImpl.class);
+        ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent> listAppender =
+                new ch.qos.logback.core.read.ListAppender<>();
+        listAppender.start();
+        logger.addAppender(listAppender);
+        try {
+            service.processRetryingTasks();
+
+            // 恰 2 次 save（首次 + 重放），冲突后无第三次重试
+            verify(dataFillTaskRepository, times(2)).save(any(DataFillTask.class));
+
+            boolean errorObserved = listAppender.list.stream()
+                    .filter(e -> e.getLevel().toString().equals("ERROR"))
+                    .map(ch.qos.logback.classic.spi.ILoggingEvent::getFormattedMessage)
+                    .anyMatch(m -> m.contains("after replay") && m.contains("conflictTotal=1"));
+            assertTrue(errorObserved, "second conflict must be logged as error with conflict counter");
+        } finally {
+            logger.detachAppender(listAppender);
+        }
+    }
+
+    @Test
     @DisplayName("processRetryingTasks finds retryable tasks")
     void processRetryingTasks_findsRetryableTasks() {
         LocalDate today = nyToday();

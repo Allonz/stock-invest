@@ -100,6 +100,14 @@ class ResilientHttpExecutorBackoffTest {
     }
 
     @Test
+    @DisplayName("R2 P2-6: HttpClientProperties 生产默认退避基数 500ms / jitter 250ms（注入化不改默认值）")
+    void backoffBaseDefault_500() {
+        HttpClientProperties defaults = new HttpClientProperties();
+        assertEquals(500, defaults.getBackoffBaseMs(), "production backoff base must stay 500ms");
+        assertEquals(250, defaults.getJitterMaxMs(), "production jitter max must stay 250ms");
+    }
+
+    @Test
     void getWithAuthHeadersShouldNotThrow() {
         lenient().when(props.getUserAgents()).thenReturn(Collections.singletonList("test-agent"));
         // Just verify the method exists and handles basic cases

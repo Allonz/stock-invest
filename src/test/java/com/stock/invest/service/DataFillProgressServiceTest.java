@@ -46,4 +46,40 @@ class DataFillProgressServiceTest {
 
         assertNotNull(svc.getProgress(taskId), "running entry must not be swept");
     }
+
+    @Test
+    @DisplayName("R2 P2-7: 每小时定时兜底 sweepExpiredHourly 清除过期条目")
+    void scheduledSweep_removesExpired() {
+        DataFillProgressService svc = new DataFillProgressService();
+        String expiredId = svc.startFill();
+        DataFillProgressService.FillProgress expired = svc.getProgress(expiredId);
+        expired.setRunning(false);
+        expired.setStartTime(System.currentTimeMillis() - TTL_PLUS);
+
+        String freshId = svc.startFill(); // 触发一次前置清理，但 fresh 未过期
+        assertNotNull(svc.getProgress(freshId));
+
+        // 定时兜底（生产每小时触发）—— 过期条目清除、未过期保留
+        svc.sweepExpiredHourly();
+
+        assertNull(svc.getProgress(expiredId), "expired entry must be removed by hourly sweep");
+        assertNotNull(svc.getProgress(freshId), "fresh entry must survive hourly sweep");
+    }
+
+    @Test
+    @DisplayName("R2 P2-7: startFill 前置清理行为保持（过期条目被清，新条目保留）")
+    void startFill_sweepsToo() {
+        DataFillProgressService svc = new DataFillProgressService();
+        String oldId = svc.startFill();
+        DataFillProgressService.FillProgress old = svc.getProgress(oldId);
+        old.setRunning(false);
+        old.setStartTime(System.currentTimeMillis() - TTL_PLUS);
+
+        String newId = svc.startFill();
+
+        assertNull(svc.getProgress(oldId), "startFill must sweep expired entries first");
+        assertNotNull(svc.getProgress(newId), "new task progress must be queryable");
+        // latestKey 指向新任务 → 无参读返回新任务进度（不为 null）
+        assertNotNull(svc.getProgress(), "no-arg read returns the latest (new) task");
+    }
 }
