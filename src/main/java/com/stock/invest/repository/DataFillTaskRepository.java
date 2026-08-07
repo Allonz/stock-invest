@@ -55,4 +55,26 @@ public interface DataFillTaskRepository extends JpaRepository<DataFillTask, Long
         @Param("newStatus") String newStatus,
         @Param("error") String error
     );
+
+    /**
+     * R2 P2-1：仅当 retryDate 非 today 时重置日计数（原子条件更新，替代读-改-写，无乐观锁冲突）。
+     * 返回受影响行数（0 = 无需重置）。
+     */
+    @Modifying
+    @Query("UPDATE DataFillTask t SET t.dayCount = 0, t.retryDate = :today "
+            + "WHERE t.id = :id AND (t.retryDate IS NULL OR t.retryDate <> :today)")
+    int resetDailyCounterIfDateChanged(@Param("id") Long id, @Param("today") LocalDate today);
+
+    /**
+     * R2 P2-1：重试计数原子自增（retryCount/dayCount +1，终态字段一并更新，版本无关）。
+     * 供 createRetryTask 与 processRetryingTasks 失败分支使用，杜绝乐观锁冲突丢更新。
+     */
+    @Modifying
+    @Query("UPDATE DataFillTask t SET t.retryCount = t.retryCount + 1, t.dayCount = t.dayCount + 1, "
+            + "t.status = :status, t.lastError = :error WHERE t.id = :id")
+    int incrementRetryCounters(
+        @Param("id") Long id,
+        @Param("status") String status,
+        @Param("error") String error
+    );
 }

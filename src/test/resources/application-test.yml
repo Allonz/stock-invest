@@ -12,10 +12,7 @@ spring:
   # 见 docs/optimization-plan.md P2-1 第 6 点）
   flyway:
     enabled: false
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+  # R2 P2-3：测试环境不需要 h2-console，已关闭
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:

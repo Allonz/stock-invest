@@ -30,7 +30,19 @@ import java.util.concurrent.TimeUnit;
 public class PythonScriptExecutor {
 
     private static final Logger log = LoggerFactory.getLogger(PythonScriptExecutor.class);
+    /** R2 P2-6：默认超时 30s；构造可注入短值用于测试（生产默认不变） */
     private static final int DEFAULT_TIMEOUT_SECONDS = 30;
+
+    private final int timeoutSeconds;
+
+    public PythonScriptExecutor() {
+        this(DEFAULT_TIMEOUT_SECONDS);
+    }
+
+    /** R2 P2-6：超时注入化 —— 测试用短超时验证挂起进程杀灭，避免真实等待 30s 拖慢 CI */
+    public PythonScriptExecutor(int timeoutSeconds) {
+        this.timeoutSeconds = timeoutSeconds;
+    }
 
     /** stdout 读取上限（约 8 MB / 20 万行），防止异常输出撑爆内存 */
     private static final int MAX_OUTPUT_CHARS = 8 * 1024 * 1024;
@@ -48,8 +60,13 @@ public class PythonScriptExecutor {
      * 读流专用小线程池（2 个进程 × 2 路输出）。
      * <p>P1-1：超时等待期间必须并行排空 stdout/stderr，否则子进程写满管道缓冲（约 64KB）会永久阻塞；
      * 超时后 destroyForcibly 使流 EOF，读流任务自然结束，不会长期占用线程。</p>
+     * <p>R2 P2-5：容量 = 2 × MAX_CONCURRENT_SCRIPTS（4 个并发脚本 × 2 路输出 = 8 线程）。
+     * 此前按单执行实例估算（4 线程），MCP / REST / 定时器跨路径并发 ≥3 个脚本时
+     * 排空任务排队，调用线程 30s 超时强杀进程后排队 drain 可能未开始 → 空输出丢数据。</p>
      */
-    private static final ExecutorService DRAIN_POOL = Executors.newFixedThreadPool(4, new ThreadFactory() {
+    private static final int MAX_CONCURRENT_SCRIPTS = 4;
+    private static final ExecutorService DRAIN_POOL = Executors.newFixedThreadPool(
+            2 * MAX_CONCURRENT_SCRIPTS, new ThreadFactory() {
         private int seq;
 
         @Override
@@ -115,12 +132,12 @@ public class PythonScriptExecutor {
                         () -> drainTail(process.getErrorStream(), MAX_STDERR_CHARS), DRAIN_POOL);
 
                 // 超时判定前置：子进程挂起时不再被 readLine() 永久阻塞
-                boolean completed = process.waitFor(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+                boolean completed = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
                 if (!completed) {
-                    log.warn("Python脚本执行超时 ({}秒)，强制终止进程: {}", DEFAULT_TIMEOUT_SECONDS, scriptName);
+                    log.warn("Python脚本执行超时 ({}秒)，强制终止进程: {}", timeoutSeconds, scriptName);
                     process.destroy();
                     process.destroyForcibly();
-                    throw new IOException("Python脚本执行超时 (" + DEFAULT_TIMEOUT_SECONDS + "秒)，已强制终止进程");
+                    throw new IOException("Python脚本执行超时 (" + timeoutSeconds + "秒)，已强制终止进程");
                 }
 
                 // 进程已退出，读流必然 EOF，get 仅为保险
@@ -171,7 +188,8 @@ public class PythonScriptExecutor {
             log.warn("Python输出读取失败 (script={}): {}", scriptName, cause.getMessage());
             return "";
         } catch (java.util.concurrent.TimeoutException e) {
-            log.warn("Python输出读取超时 (script={})，按空输出处理", scriptName);
+            // R2 P2-5：排空超时意味着输出可能丢失（调用线程可能已强杀进程），提级为 error 并带脚本名
+            log.error("Python输出读取超时 (script={}, 宽限={}s)，按空输出处理", scriptName, DRAIN_GRACE_SECONDS);
             return "";
         }
     }

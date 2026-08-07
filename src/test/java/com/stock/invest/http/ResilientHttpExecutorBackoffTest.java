@@ -113,6 +113,9 @@ class ResilientHttpExecutorBackoffTest {
 
     private ResilientHttpExecutor newExecutorWithRetries(int maxRetries) {
         lenient().when(props.getMaxRetries()).thenReturn(maxRetries);
+        // R2 P2-6：注入化退避 —— 基数 10ms、jitter 0，毫秒级验证时序，避免真实 1.5~2s 等待
+        lenient().when(props.getBackoffBaseMs()).thenReturn(10);
+        lenient().when(props.getJitterMaxMs()).thenReturn(0);
         return new ResilientHttpExecutor(props);
     }
 
@@ -139,8 +142,8 @@ class ResilientHttpExecutorBackoffTest {
         long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
 
         verify(rt, times(3)).exchange(anyString(), any(HttpMethod.class), any(HttpEntity.class), eq(String.class));
-        // 两次重试退避：500 + 1000 = 1.5s（未计 jitter 上界）
-        assertTrue(elapsedMs >= 1450, "backoff sleeps should happen, elapsed=" + elapsedMs);
+        // R2 P2-6：注入基数 10ms → 两次退避 10 + 20 = 30ms（jitter=0），毫秒级验证
+        assertTrue(elapsedMs >= 30, "backoff sleeps should happen, elapsed=" + elapsedMs);
     }
 
     @SuppressWarnings("unchecked")
@@ -171,9 +174,11 @@ class ResilientHttpExecutorBackoffTest {
         assertThrows(ResourceAccessException.class, () -> executor.get("http://127.0.0.1:1/quote"));
         long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
 
-        // 基数 500 + 1000 = 1500ms；jitter 每次 0~250ms → 上界 2000ms；CI 余量放宽
-        assertTrue(elapsedMs >= 1450, "at least exponential base, elapsed=" + elapsedMs);
-        assertTrue(elapsedMs <= 4000, "within jitter bounds, elapsed=" + elapsedMs);
+        // R2 P2-6：注入基数 10ms、jitter=0 → 基数 10 + 20 = 30ms（另加 attempt*50 线性项）；
+        // 断言毫秒级下界 + 调用次数，删除真实 1.5~2s 等待
+        assertTrue(elapsedMs >= 30, "at least exponential base, elapsed=" + elapsedMs);
+        assertTrue(elapsedMs <= 500, "within injected bounds, elapsed=" + elapsedMs);
+        verify(rt, times(3)).exchange(anyString(), any(HttpMethod.class), any(HttpEntity.class), eq(String.class));
     }
 
     @SuppressWarnings("unchecked")

@@ -113,7 +113,8 @@ public class TradingCalendarController {
                                 "INVALID_YEAR"));
             }
 
-            // P2-10：频控 —— 同一 (market, year) 冷却窗口内重复触发直接拒绝
+            // R2 P2-8：冷却时间戳改为 putIfAbsent 原子抢占（并发互斥），
+            // 且只在执行成功后覆盖为完成时刻 —— 失败不写冷却，可立即重试
             String cooldownKey = market + ":" + targetYear;
             long now = System.currentTimeMillis();
             Long lastSync = lastFullYearSyncAt.get(cooldownKey);
@@ -123,11 +124,21 @@ public class TradingCalendarController {
                         .body(ApiResponse.error("该年份全量同步进行中/刚完成，请 " + remainingSec + " 秒后重试",
                                 "SYNC_IN_PROGRESS"));
             }
-            lastFullYearSyncAt.put(cooldownKey, now);
+            Long first = lastFullYearSyncAt.putIfAbsent(cooldownKey, now);
+            if (first != null && now - first < FULL_YEAR_COOLDOWN_MINUTES * 60_000L) {
+                // 并发窗口内另一请求已开始同步 → 429
+                long remainingSec = (FULL_YEAR_COOLDOWN_MINUTES * 60_000L - (now - first)) / 1000;
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                        .body(ApiResponse.error("该年份全量同步进行中/刚完成，请 " + remainingSec + " 秒后重试",
+                                "SYNC_IN_PROGRESS"));
+            }
 
             log.info("[TradingCalendarController] fetchFullYear: market={}, year={}", market, targetYear);
 
             int fetched = dbService.fetchAndStoreFullYear(market, targetYear);
+
+            // R2 P2-8：成功后冷却时间戳以完成时刻为准（失败路径不写冷却）
+            lastFullYearSyncAt.put(cooldownKey, System.currentTimeMillis());
 
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("fetched", fetched);
@@ -137,6 +148,9 @@ public class TradingCalendarController {
             return ResponseEntity.ok(ApiResponse.ok(data));
 
         } catch (Exception e) {
+            // R2 P2-8：失败不写冷却（抢占的占位时间戳一并移除），可立即重试
+            String cooldownKey = market + ":" + (year != null ? year : Year.now(NY_ZONE).getValue());
+            lastFullYearSyncAt.remove(cooldownKey);
             log.error("[TradingCalendarController] fetchFullYear failed", e);
             return ResponseEntity.internalServerError()
                     .body(ApiResponse.error("Fetch failed: " + e.getMessage()));

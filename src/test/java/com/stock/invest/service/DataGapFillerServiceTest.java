@@ -187,13 +187,10 @@ class DataGapFillerServiceTest {
 
         service.processRetryingTasks();
 
-        verify(dataFillTaskRepository).save(taskCaptor.capture());
-        DataFillTask saved = taskCaptor.getValue();
-
-        assertEquals(1, saved.getDayCount());
-        assertEquals(today, saved.getRetryDate());
-        assertEquals(4, saved.getRetryCount());
-        assertEquals("retrying", saved.getStatus());
+        // R2 P2-1：计数递增走 JPQL 原子自增 —— retryDate!=today 时先条件重置日计数，再 +1
+        verify(dataFillTaskRepository).resetDailyCounterIfDateChanged(1L, today);
+        verify(dataFillTaskRepository).incrementRetryCounters(1L, "retrying", "retry attempt failed again");
+        verify(dataFillTaskRepository, never()).save(any(DataFillTask.class));
     }
 
     // T-3
@@ -265,14 +262,9 @@ class DataGapFillerServiceTest {
 
         service.processRetryingTasks();
 
-        verify(dataFillTaskRepository, times(1)).save(taskCaptor.capture());
-        DataFillTask saved = taskCaptor.getValue();
-
-        assertEquals(3, saved.getDayCount());
-        assertEquals(4, saved.getRetryCount());
-        assertEquals("retrying", saved.getStatus());
-
-        assertTrue(saved.getDayCount() > 2);
-        assertTrue(saved.getRetryCount() > 3);
+        // R2 P2-1：计数递增走 JPQL 原子自增 —— 失败分支不再实体 save
+        verify(dataFillTaskRepository).resetDailyCounterIfDateChanged(1L, today);
+        verify(dataFillTaskRepository).incrementRetryCounters(1L, "retrying", "retry attempt failed again");
+        verify(dataFillTaskRepository, never()).save(any(DataFillTask.class));
     }
 }

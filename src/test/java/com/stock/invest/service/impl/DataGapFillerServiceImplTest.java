@@ -226,7 +226,7 @@ class DataGapFillerServiceImplTest {
     // ========== Retry task logic tests ==========
 
     @Test
-    @DisplayName("retryTask sets status to retrying, increments retryCount")
+    @DisplayName("retryTask sets status to retrying, increments retryCount (R2 P2-1: JPQL 原子自增)")
     void retryTask_setsStatusToRetrying() {
         LocalDate today = nyToday();
         Instant recent = Instant.now().minus(40, ChronoUnit.MINUTES);
@@ -255,12 +255,66 @@ class DataGapFillerServiceImplTest {
 
         service.processRetryingTasks();
 
-        verify(dataFillTaskRepository).save(taskCaptor.capture());
-        DataFillTask saved = taskCaptor.getValue();
+        // R2 P2-1：失败分支计数递增走 JPQL 原子自增（不再实体 save），重置条件更新先行
+        verify(dataFillTaskRepository).resetDailyCounterIfDateChanged(eq(1L), eq(today));
+        verify(dataFillTaskRepository).incrementRetryCounters(
+                eq(1L), eq("retrying"), eq("retry attempt failed again"));
+        verify(dataFillTaskRepository, never()).save(any(DataFillTask.class));
+    }
 
-        assertEquals("retrying", saved.getStatus(), "status should remain retrying after failed retry");
-        assertEquals(3, saved.getRetryCount(), "retryCount should increment from 2 to 3");
-        assertEquals("retry attempt failed again", saved.getLastError());
+    @Test
+    @DisplayName("R2 P2-1: 终态保存乐观锁冲突 → 重读 + 重放一次，终态字段落库")
+    void saveTaskWithOptimisticLock_replaysOnceOnConflict() throws Exception {
+        LocalDate today = nyToday();
+        Instant recent = Instant.now().minus(40, ChronoUnit.MINUTES);
+        DataFillTask task = new DataFillTask();
+        task.setId(1L);
+        task.setSymbol("AAPL");
+        task.setTradeDate(today.minusDays(1));
+        task.setStatus("retrying");
+        task.setRetryCount(2);
+        task.setDayCount(2);
+        task.setRetryDate(today);
+        task.setLastError("previous error");
+        task.setCreatedAt(recent);
+        task.setUpdatedAt(recent);
+
+        // 冲突：findRetryableTasks 读到旧版本（version=0），重试成功 → 保存时版本已变
+        task.setVersion(0);
+        DataFillTask latestOnDb = new DataFillTask();
+        latestOnDb.setId(1L);
+        latestOnDb.setSymbol("AAPL");
+        latestOnDb.setTradeDate(today.minusDays(1));
+        latestOnDb.setStatus("retrying");
+        latestOnDb.setRetryCount(2);
+        latestOnDb.setDayCount(2);
+        latestOnDb.setRetryDate(today);
+        latestOnDb.setVersion(3);
+
+        when(dataFillTaskRepository.findRetryableTasks()).thenReturn(List.of(task));
+        when(dataFillTaskRepository.findById(1L)).thenReturn(java.util.Optional.of(latestOnDb));
+        // 首次保存冲突、重放保存成功
+        when(dataFillTaskRepository.save(any(DataFillTask.class)))
+                .thenThrow(new org.springframework.orm.ObjectOptimisticLockingFailureException(
+                        DataFillTask.class, 1L, new RuntimeException("version mismatch")))
+                .thenReturn(latestOnDb);
+        com.stock.invest.model.KLineData okKd = new com.stock.invest.model.KLineData();
+        okKd.setSymbol("AAPL");
+        com.stock.invest.model.KLineIterator okItem = new com.stock.invest.model.KLineIterator(
+                "AAPL", 0L, java.math.BigDecimal.ONE, java.math.BigDecimal.ONE,
+                java.math.BigDecimal.ONE, java.math.BigDecimal.ONE, 100, 0,
+                java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO);
+        okItem.setTimeString(today.minusDays(1).toString());
+        okKd.setItems(List.of(okItem));
+        when(tigerDataSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(okKd);
+
+        service.processRetryingTasks();
+
+        // 重放保存的是重读的 latest（终态字段按本次意图覆盖）
+        verify(dataFillTaskRepository, times(2)).save(taskCaptor.capture());
+        DataFillTask replayed = taskCaptor.getAllValues().get(1);
+        assertEquals("completed", replayed.getStatus(), "replay should carry terminal status intent");
+        assertSame(latestOnDb, replayed, "replay should save the re-read latest entity");
     }
 
     @Test

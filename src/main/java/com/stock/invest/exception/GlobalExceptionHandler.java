@@ -4,6 +4,7 @@ import com.stock.invest.enums.dto.ApiResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.core.task.TaskRejectedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -97,6 +98,17 @@ public class GlobalExceptionHandler {
         log.warn("[405] 方法不支持: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
                 .body(ApiResponse.error("请求方法不支持: " + e.getMethod(), "MethodNotAllowed"));
+    }
+
+    /**
+     * 处理任务提交被拒（503）——R2 P2-2：scanExecutor 队列满（AbortPolicy）时
+     * 表达"服务忙"而非 500；各端点已前置 try/catch 走 QUEUE_FULL，此处为兜底防遗漏。
+     */
+    @ExceptionHandler(TaskRejectedException.class)
+    public ResponseEntity<ApiResponse<?>> handleTaskRejected(TaskRejectedException e) {
+        log.warn("[503] 任务队列已满: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ApiResponse.error("任务队列已满，请稍后重试", "QUEUE_FULL"));
     }
 
     /**

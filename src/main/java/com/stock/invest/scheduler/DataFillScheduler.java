@@ -30,7 +30,10 @@ public class DataFillScheduler {
         log.info("[DataFillScheduler] fillGaps: === SCHEDULER START === at {}", LocalDateTime.now());
 
         try {
-            dataGapFillerService.fillGaps();
+            if (!dataGapFillerService.fillGaps()) {
+                // R2 P3-9：互斥拒绝（手动/MCP 触发中）—— 记录即可，不必当错误
+                log.warn("[DataFillScheduler] fillGaps skipped: already running");
+            }
         } catch (Exception e) {
             log.error("[DataFillScheduler] fillGaps: failed — error={}", e.getMessage(), e);
         }

@@ -80,7 +80,7 @@ public class ResilientHttpExecutor {
                     continue;
                 }
                 if ((ex.getStatusCode().value() >= 500 || ex.getStatusCode().value() == 408) && attempts < max) {
-                    long backoffMs = (long) (500 * Math.pow(2, attempts - 1)) + jitter(attempts);
+                    long backoffMs = backoffForAttempt(attempts);
                     log.warn("[ResilientHttp] get: HTTP {} retry in {} ms (attempt {}/{})",
                             ex.getStatusCode().value(), backoffMs, attempts, max);
                     sleepQuietly(backoffMs);
@@ -91,7 +91,7 @@ public class ResilientHttpExecutor {
             } catch (org.springframework.web.client.ResourceAccessException ex) {
                 // P1-9：网络层故障（连接拒绝、SocketTimeout、DNS 失败）——最常见的瞬时故障，按指数退避重试
                 if (attempts < max) {
-                    long backoffMs = (long) (500 * Math.pow(2, attempts - 1)) + jitter(attempts);
+                    long backoffMs = backoffForAttempt(attempts);
                     log.warn("[ResilientHttp] get: network error, retry in {} ms (attempt {}/{}) — url={}, error={}",
                             backoffMs, attempts, max, url, ex.getMessage());
                     sleepQuietly(backoffMs);
@@ -149,8 +149,17 @@ public class ResilientHttpExecutor {
         return 2_000L;
     }
 
-    private static long jitter(int attempt) {
-        return (long) (Math.random() * 250) + (attempt * 50L);
+    /**
+     * R2 P2-6：指数退避 = 基数 × 2^(attempt-1) + jitter；基数/抖动上界均可注入（HttpClientProperties）。
+     */
+    private long backoffForAttempt(int attempt) {
+        long base = Math.max(1, props.getBackoffBaseMs());
+        return (long) (base * Math.pow(2, attempt - 1)) + jitter(attempt);
+    }
+
+    private long jitter(int attempt) {
+        long max = Math.max(0, props.getJitterMaxMs());
+        return (long) (Math.random() * (max + 1)) + (attempt * 50L);
     }
 
     private static void sleepQuietly(long ms) {

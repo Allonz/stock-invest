@@ -116,16 +116,17 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
     }
 
     @Override
-    public void fillGaps() {
+    public boolean fillGaps() {
         // P1-2：运行互斥 —— 已有一份补缺在跑则直接跳过，避免定时/手动/MCP 并发重复补缺、双倍配额
         if (!running.compareAndSet(false, true)) {
             log.warn("[DataGapFiller] fillGaps: already running, skip concurrent trigger");
-            return;
+            return false;
         }
         Instant batchStart = Instant.now();
         log.info("[DataGapFiller] fillGaps: === BEGIN ===");
         try {
             fillGapsInternal(batchStart);
+            return true;
         } finally {
             running.set(false);
         }
@@ -446,7 +447,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
             } catch (Exception e) {
                 // P1-3：未知异常（非 StockDataException）——按关键词判 not-found，否则视为瞬态，不计黑名单
                 String errorMsg = e.getMessage();
-                boolean isNotFound = isNotFoundError(null, errorMsg);
+                boolean isNotFound = isNotFoundError(errorMsg);
                 if (isNotFound) {
                     sourceNotFoundResults.put(source.name, true);
                 }
@@ -515,6 +516,8 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         bar.setLowPrice(item.getLow());
         bar.setClosePrice(item.getClose());
         bar.setVolume(item.getVolume());
+        // R2 P3-4：透传路径 —— 数据源侧原始值原样透传，落库时由 DECIMAL(12,4) 隐式四舍五入归一；
+        // 计算型 changePercent（Tiger/Tiingo/盘后）已在计算点 setScale(4, HALF_UP)
         bar.setChangePercent(item.getChangePercent());
         bar.setAfterHours(item.getAfterHours());
         bar.setAfterHoursChangePercent(item.getAfterHoursChangePercent());
@@ -575,11 +578,11 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         Optional<DataFillTask> existing = dataFillTaskRepository.findBySymbolAndTradeDate(symbol, tradeDate);
         if (existing.isPresent()) {
             DataFillTask task = existing.get();
+            // R2 P2-1：retryCount 递增走 JPQL 原子自增（不校验版本，杜绝乐观锁冲突丢更新）
+            runInTx(() -> dataFillTaskRepository.incrementRetryCounters(task.getId(), "retrying", error));
             task.setRetryCount(task.getRetryCount() + 1);
             task.setStatus("retrying");
             task.setLastError(error);
-            // dayCount 和 retryDate 由 processRetryingTasks 统一管理
-            saveTaskWithOptimisticLock(task);
             log.info("[DataGapFiller] createRetryTask: updated symbol={}, date={}, retryCount={}, error={}",
                     symbol, tradeDate, task.getRetryCount(), error);
             return;
@@ -706,11 +709,18 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
                         log.info("[DataGapFiller] processRetryingTasks: task stopped (newly blacklisted) taskId={}, symbol={}, date={}",
                                 task.getId(), symbol, tradeDate);
                     } else {
+                        // R2 P2-1：计数递增走 JPQL 原子自增（retryCount/dayCount +1、状态/错误一并更新，
+                        // 版本无关）—— 读-改-写 + 乐观锁在此路径废弃，冲突不再可能丢更新；
+                        // retryDate 非 today 时的日计数重置也由原子条件更新承接（下方第 1 条语句）
+                        final long taskId = task.getId();
+                        runInTx(() -> {
+                            dataFillTaskRepository.resetDailyCounterIfDateChanged(taskId, today);
+                            dataFillTaskRepository.incrementRetryCounters(taskId, "retrying", "retry attempt failed again");
+                        });
                         task.setRetryCount(task.getRetryCount() + 1);
                         task.setDayCount(task.getDayCount() + 1);
                         task.setStatus("retrying");
                         task.setLastError("retry attempt failed again");
-                        saveTaskWithOptimisticLock(task);
                         progress.incrementFailed();
                         log.warn("[DataGapFiller] processRetryingTasks: retry failed taskId={}, symbol={}, date={}, retryCount={}, dayCount={}",
                                 task.getId(), symbol, tradeDate, task.getRetryCount(), task.getDayCount());
@@ -807,8 +817,9 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
     /**
      * 判断异常消息是否明确匹配 not-found 关键词（P1-3 路径 B 白名单）。
      * <p>仅在数据源未抛带分类的 {@link StockDataException} 时兜底使用；成功但空结果一律不计黑名单。</p>
+     * <p>R2 P3-2：原 klineData 参数（路径 A 空结果判定移除后遗留）已删除，仅保留 errorMessage。</p>
      */
-    private boolean isNotFoundError(KLineData klineData, String errorMessage) {
+    private boolean isNotFoundError(String errorMessage) {
         if (errorMessage != null && !errorMessage.isEmpty()) {
             return StockDataException.isNotFoundMessage(errorMessage.toLowerCase());
         }
@@ -864,16 +875,42 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
     }
 
     /**
-     * P2-4：乐观锁兜底保存 —— retryCount/dayCount 读-改-写冲突时（版本号不匹配）
-     * 重读成本高于跳过：P1-2 互斥已保证同类批次不并发，此处仅在极端并发下
-     * 放弃本次更新，交由下一轮重试批次处理。
+     * R2 P2-1：乐观锁兜底保存 —— 终态类保存（status/lastError/retryDate）冲突时
+     * 重读 + 重放一次：终态字段以本次意图为准直接覆盖；若本次携带日计数重置
+     * （retryDate 变更 → dayCount 置 0）则一并重放。再次冲突 → error + 原子计数，可观测。
+     * <p>计数递增（retryCount/dayCount）已改走 JPQL 原子自增（incrementRetryCounters），
+     * 不再经过本方法，从根上消除计数丢失。</p>
      */
+    private final java.util.concurrent.atomic.AtomicInteger optimisticLockConflicts =
+            new java.util.concurrent.atomic.AtomicInteger(0);
+
     private void saveTaskWithOptimisticLock(DataFillTask task) {
         try {
             runInTx(() -> dataFillTaskRepository.save(task));
         } catch (org.springframework.orm.ObjectOptimisticLockingFailureException e) {
-            log.warn("[DataGapFiller] optimistic lock conflict on taskId={}, skip update: {}",
+            DataFillTask latest = dataFillTaskRepository.findById(task.getId()).orElse(null);
+            if (latest == null) {
+                log.error("[DataGapFiller] optimistic lock conflict on taskId={} but row not found, update dropped: {}",
+                        task.getId(), e.getMessage());
+                return;
+            }
+            log.warn("[DataGapFiller] optimistic lock conflict on taskId={}, re-read and replay once: {}",
                     task.getId(), e.getMessage());
+            // 终态字段以本次意图为准直接覆盖（status/lastError/retryDate）
+            latest.setStatus(task.getStatus());
+            latest.setLastError(task.getLastError());
+            latest.setRetryDate(task.getRetryDate());
+            // 日计数重置意图（retryDate 变更 → dayCount 置 0）一并重放
+            if (!java.util.Objects.equals(task.getRetryDate(), latest.getRetryDate())) {
+                latest.setDayCount(task.getDayCount());
+            }
+            try {
+                runInTx(() -> dataFillTaskRepository.save(latest));
+            } catch (org.springframework.orm.ObjectOptimisticLockingFailureException e2) {
+                optimisticLockConflicts.incrementAndGet();
+                log.error("[DataGapFiller] optimistic lock conflict on taskId={} after replay, update dropped (conflictTotal={}): {}",
+                        task.getId(), optimisticLockConflicts.get(), e2.getMessage());
+            }
         }
     }
 

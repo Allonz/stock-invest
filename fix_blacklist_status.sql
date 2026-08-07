@@ -1,1 +1,0 @@
-UPDATE symbol_blacklist SET status = 'active' WHERE status = 'cleared' AND consecutive_404_count > 0

@@ -33,13 +33,15 @@ public class DataFillProgressService {
         return taskId;
     }
 
-    /** 最近一次任务的进度（兼容旧端点） */
+    /** 最近一次任务的进度（兼容旧端点）—— R2 P2-7：读路径先做惰性 TTL 清理 */
     public FillProgress getProgress() {
+        sweepExpired();
         return latestKey == null ? null : progressMap.get(latestKey);
     }
 
-    /** 按 taskId 查进度 */
+    /** 按 taskId 查进度 —— R2 P2-7：读路径先做惰性 TTL 清理 */
     public FillProgress getProgress(String taskId) {
+        sweepExpired();
         return taskId == null ? null : progressMap.get(taskId);
     }
 
@@ -53,7 +55,11 @@ public class DataFillProgressService {
         }
     }
 
-    /** 惰性 TTL 清理：移除超过 24h 的条目，防止内存泄漏 */
+    /**
+     * 惰性 TTL 清理：移除超过 24h 的条目，防止内存泄漏。
+     * <p>R2 P2-7：除 startFill 外，读路径（getProgress）与每小时定时兜底也会触发，
+     * 保证"长期仅定时运行"场景下手动遗留的已完成条目也能收敛。</p>
+     */
     private void sweepExpired() {
         long cutoff = System.currentTimeMillis() - TTL_MILLIS;
         Iterator<Map.Entry<String, FillProgress>> it = progressMap.entrySet().iterator();
@@ -64,6 +70,12 @@ public class DataFillProgressService {
                 it.remove();
             }
         }
+    }
+
+    /** R2 P2-7：每小时定时兜底清理（ConcurrentHashMap 迭代安全，仅移除过期项） */
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 3_600_000)
+    public void sweepExpiredHourly() {
+        sweepExpired();
     }
 
     public static class FillProgress {

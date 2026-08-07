@@ -117,25 +117,27 @@ class PythonScriptExecutorTest {
 
     // ── P1-1: 超时 / 管道排空 / 截断 / destroyForcibly ──────────────────
 
-    /** 执行器固定 30s 超时（DEFAULT_TIMEOUT_SECONDS），无法注入短值 —— 用例真实等待 30s。 */
+    /** R2 P2-6：超时注入化 —— 2s 超时实例验证挂起进程杀灭，不再真实等待 30s。 */
     @Test
-    @DisplayName("P1-1: 挂起脚本 30s 超时 → IOException 且进程被 destroyForcibly 销毁")
+    @DisplayName("R2 P2-6: 挂起脚本 2s 超时（注入）→ IOException 且进程被 destroyForcibly 销毁")
     void timeout_kills_hung_process() throws Exception {
+        PythonScriptExecutor shortTimeoutExecutor = new PythonScriptExecutor(2);
         if (!pythonAvailable) {
-            assertThrows(IOException.class, () -> executor.executeScript("hang_test.py"));
+            assertThrows(IOException.class, () -> shortTimeoutExecutor.executeScript("hang_test.py"));
             return;
         }
         Path pidFile = Files.createTempFile("hang_pid_", ".txt");
         try {
             long start = System.nanoTime();
             IOException ex = assertThrows(IOException.class, () ->
-                    executor.executeScriptWithEnvironment(
+                    shortTimeoutExecutor.executeScriptWithEnvironment(
                             Map.of("HANG_PID_FILE", pidFile.toString()), "hang_test.py"));
             long elapsedMs = Duration.ofNanos(System.nanoTime() - start).toMillis();
 
             assertTrue(ex.getMessage().contains("超时"), "message should mention timeout: " + ex.getMessage());
-            // 超时固定 30s：断言确实等待了超时窗口，而非提前报错
-            assertTrue(elapsedMs >= 25_000, "should have waited for the 30s timeout, elapsed=" + elapsedMs);
+            // 注入 2s 超时：断言确实等待了超时窗口（≥1.5s），而非提前报错
+            assertTrue(elapsedMs >= 1500, "should have waited for the 2s timeout, elapsed=" + elapsedMs);
+            assertTrue(elapsedMs < 20_000, "should not wait the full default 30s, elapsed=" + elapsedMs);
 
             // 脚本已把自身 PID 写入文件 —— destroyForcibly 后进程必须消失
             String pidStr = Files.readString(pidFile, StandardCharsets.UTF_8).trim();

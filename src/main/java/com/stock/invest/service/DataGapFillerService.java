@@ -19,8 +19,11 @@ public interface DataGapFillerService {
      * 2. 检查日期连续性，发现缺失日期
      * 3. 检查最新价，> $1.00 跳过
      * 4. 按 fallback 链补查
+     *
+     * @return R2 P3-9：是否实际执行（CAS 抢占成功 true；互斥拒绝 false），
+     *         供异步触发端点将"被调度器抢先"呈现为 SKIPPED 而非静默成功
      */
-    void fillGaps();
+    boolean fillGaps();
 
     /**
      * 处理 data_fill_tasks 中 status='retrying' 的任务。
