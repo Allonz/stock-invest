@@ -65,14 +65,34 @@ public class AdminController {
         this.scanExecutor = scanExecutor;
     }
 
+    /**
+     * R2 P2-2：统一提交异步任务到 scanExecutor —— AbortPolicy 拒绝（队列满）时
+     * 不落 500，返回 false 由调用方映射 503 QUEUE_FULL（并清理已创建的进度条目）。
+     */
+    private boolean submitOrBusy(Runnable task) {
+        try {
+            scanExecutor.execute(task);
+            return true;
+        } catch (org.springframework.core.task.TaskRejectedException e) {
+            log.warn("[Admin] scanExecutor rejected task (queue full): {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * POST /api/admin/trigger-screening — 同步筛选（一键路径，前端无参调用）
+     * <p>R2 P1-3：limit/windowDays 无默认值（required=false）—— 无参 = 全窗口 2~7 天、
+     * 全量 symbol，与 trigger-screening-async 无参语义一致；显式传参则收窄范围。
+     * 无参全量同步可能耗时数分钟，前端需有等待/超时预期。</p>
+     */
     @PostMapping("/trigger-screening")
     public ResponseEntity<ApiResponse<?>> triggerScreening(
             @RequestParam(value = "date", required = false) String date,
-            @RequestParam(value = "limit", defaultValue = "20") Integer limit,
-            @RequestParam(value = "windowDays", defaultValue = "7") Integer windowDays) {
+            @RequestParam(value = "limit", required = false) Integer limit,
+            @RequestParam(value = "windowDays", required = false) Integer windowDays) {
         LocalDate targetDate = (date != null) ? LocalDate.parse(date) : ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate();
-        log.info("[Admin] triggerScreening: date={}, limit={}, windowDays={}", targetDate, limit, windowDays);
-        // P1-7：参数生效 —— windowDays/limit 透传筛选逻辑
+        log.info("[Admin] triggerScreening: date={}, limit={}, windowDays={} (null = 全窗口全量)", targetDate, limit, windowDays);
+        // R2 P1-3：null 由 Service 层映射为全窗口（2~7 天）+ limit 不限（ScreeningServiceImpl）
         screeningService.runScreening(targetDate, windowDays, limit);
         return ResponseEntity.ok(ApiResponse.ok("Screening triggered. date=" + targetDate));
     }
@@ -88,7 +108,7 @@ public class AdminController {
         final String taskId = screeningProgressService.startScreening(windows, limit);
         final ScreeningProgress progress = screeningProgressService.getProgress(taskId);
 
-        scanExecutor.execute(() -> {
+        if (!submitOrBusy(() -> {
             LocalDate tradeDate = ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate();
             try {
                 // Run screening ONCE — it processes all windows (2~7d) internally
@@ -119,7 +139,12 @@ public class AdminController {
                 // P2-12：任务结束移除进度条目，防 progressMap 只增不删
                 screeningProgressService.removeProgress(taskId);
             }
-        });
+        })) {
+            // R2 P2-2：队列满拒绝 → 清理已创建的进度条目，503 呈现
+            screeningProgressService.removeProgress(taskId);
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(ApiResponse.error("任务队列已满，请稍后重试", "QUEUE_FULL"));
+        }
 
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("taskId", taskId);
@@ -140,7 +165,7 @@ public class AdminController {
         final String taskId = screeningProgressService.startScreening(windows, limit);
         final ScreeningProgress progress = screeningProgressService.getProgress(taskId);
 
-        scanExecutor.execute(() -> {
+        if (!submitOrBusy(() -> {
             LocalDate tradeDate = ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate();
             try {
                 List<ScreeningProgressService.WindowProgress> windowList = progress.getWindows();
@@ -164,7 +189,12 @@ public class AdminController {
                 // P2-12：任务结束移除进度条目，防 progressMap 只增不删
                 screeningProgressService.removeProgress(taskId);
             }
-        });
+        })) {
+            // R2 P2-2：队列满拒绝 → 清理已创建的进度条目，503 呈现
+            screeningProgressService.removeProgress(taskId);
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(ApiResponse.error("任务队列已满，请稍后重试", "QUEUE_FULL"));
+        }
 
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("taskId", taskId);
@@ -211,17 +241,29 @@ public class AdminController {
         progress.setStartTime(System.currentTimeMillis());
 
         // 在线程池中异步执行 fillGaps
-        scanExecutor.execute(() -> {
+        if (!submitOrBusy(() -> {
             try {
-                dataGapFillerService.fillGaps();
+                if (dataGapFillerService.fillGaps()) {
+                    progress.setStage("COMPLETED");
+                } else {
+                    // R2 P3-9：互斥拒绝（调度器/MCP 已启动补缺）→ 客户端经进度可见 SKIPPED
+                    progress.setStage("SKIPPED");
+                    log.warn("[Admin] async fillGaps skipped (already running), taskId={}", taskId);
+                }
             } catch (Exception e) {
                 log.error("[Admin] async fillGaps failed", e);
-            } finally {
+                // 与原语义一致：异常按任务结束处理（进度保留至 TTL）
                 progress.setStage("COMPLETED");
+            } finally {
                 progress.setRunning(false);
                 // P2-12：进度保留至 TTL（24h）自动清理，taskId 在完成后仍可查询
             }
-        });
+        })) {
+            // R2 P2-2：队列满拒绝 → 清理已创建的进度条目，503 呈现
+            dataFillProgressService.removeProgress(taskId);
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(ApiResponse.error("任务队列已满，请稍后重试", "QUEUE_FULL"));
+        }
 
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("taskId", taskId);
@@ -239,10 +281,14 @@ public class AdminController {
                     .body(ApiResponse.error("补缺/重试任务已在运行中，请稍后再试"));
         }
 
-        scanExecutor.execute(() -> {
+        if (!submitOrBusy(() -> {
             try { dataGapFillerService.processRetryingTasks(); }
             catch (Exception e) { log.error("[Admin] processRetryingTasks failed", e); }
-        });
+        })) {
+            // R2 P2-2：队列满拒绝 → 503（该端点无进度条目需清理）
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(ApiResponse.error("任务队列已满，请稍后重试", "QUEUE_FULL"));
+        }
         return ResponseEntity.ok(ApiResponse.ok(Map.of("message", "Retry tasks triggered")));
     }
 

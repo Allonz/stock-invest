@@ -72,7 +72,7 @@ class AdminControllerTest {
     }
 
     @Test
-    @DisplayName("P1-7: windowDays=1 原样透传（回退全窗口是 Service 侧约定）")
+    @DisplayName("P1-7: windowDays=1 原样透传（回退全窗口是 Service 侧约定），limit 缺省为 null")
     void triggerScreening_invalidWindowPassedThrough() throws Exception {
         mockMvc.perform(post("/api/admin/trigger-screening")
                         .param("date", "2026-05-18")
@@ -80,7 +80,18 @@ class AdminControllerTest {
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
 
-        verify(screeningService).runScreening(LocalDate.of(2026, 5, 18), 1, 20);
+        verify(screeningService).runScreening(LocalDate.of(2026, 5, 18), 1, null);
+    }
+
+    @Test
+    @DisplayName("R2 P1-3: 无参调用 → limit/windowDays 均为 null（全窗口全量，与 async 语义一致）")
+    void triggerScreening_noParamsDefaultsToNull() throws Exception {
+        mockMvc.perform(post("/api/admin/trigger-screening")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        verify(screeningService).runScreening(any(LocalDate.class), isNull(), isNull());
     }
 
     // ---- P1-8: 409 并发拒绝 ----
@@ -113,7 +124,7 @@ class AdminControllerTest {
     // ---- P1-8: AbortPolicy 拒绝 ----
 
     @Test
-    @DisplayName("P1-8: scanExecutor 拒绝（AbortPolicy）→ 拒绝立即上抛为 5xx，不排队不吞掉")
+    @DisplayName("R2 P2-2: scanExecutor 拒绝（AbortPolicy）→ 503 + QUEUE_FULL + 进度条目已清理")
     void triggerScreeningAsync_rejectedTaskSurfacesError() throws Exception {
         when(screeningProgressService.startScreening(anyList(), anyInt())).thenReturn("task123");
         when(screeningProgressService.getProgress("task123"))
@@ -123,8 +134,30 @@ class AdminControllerTest {
 
         mockMvc.perform(post("/api/admin/trigger-screening-async")
                         .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError())
-                .andExpect(jsonPath("$.success").value(false));
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.errorType").value("QUEUE_FULL"));
+
+        // 拒绝路径清理已创建的进度条目，防幽灵条目残留
+        verify(screeningProgressService).removeProgress("task123");
+    }
+
+    @Test
+    @DisplayName("R2 P2-2: trigger-data-fill 队列满 → 503 + QUEUE_FULL + 进度条目已清理")
+    void triggerDataFill_rejectedReturns503AndCleansProgress() throws Exception {
+        when(dataFillProgressService.startFill()).thenReturn("fill123");
+        when(dataFillProgressService.getProgress("fill123"))
+                .thenReturn(new DataFillProgressService.FillProgress());
+        doThrow(new TaskRejectedException("queue full"))
+                .when(scanExecutor).execute(any(Runnable.class));
+
+        mockMvc.perform(post("/api/admin/trigger-data-fill")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.errorType").value("QUEUE_FULL"));
+
+        verify(dataFillProgressService).removeProgress("fill123");
     }
 
     // ---- 回归：正常提交 ----
