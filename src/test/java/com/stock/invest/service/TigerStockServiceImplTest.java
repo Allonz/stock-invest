@@ -103,4 +103,54 @@ class TigerStockServiceImplTest {
         // Assert
         assertNotNull(result);
     }
+
+    // ---- R2 P3-4: changePercent 精度统一（计算点 setScale(4, HALF_UP)） ----
+
+    @Test
+    @DisplayName("R2 P3-4: getStockInfo changePercent 精度统一 —— scale() <= 4（与 DB DECIMAL(12,4) 对齐）")
+    void getStockInfo_changePercentScaleLimitedTo4() {
+        com.tigerbrokers.stock.openapi.client.https.domain.quote.item.KlineItem item1 =
+                new com.tigerbrokers.stock.openapi.client.https.domain.quote.item.KlineItem();
+        item1.setSymbol("AAPL");
+        com.tigerbrokers.stock.openapi.client.https.domain.quote.item.KlinePoint p1 =
+                new com.tigerbrokers.stock.openapi.client.https.domain.quote.item.KlinePoint();
+        p1.setTime(1719331200000L);
+        p1.setOpen(150.0);
+        p1.setHigh(152.0);
+        p1.setLow(149.0);
+        p1.setClose(151.0);
+        p1.setVolume(1000000L);
+        p1.setAmount(0.0);
+        item1.setItems(List.of(p1));
+
+        com.tigerbrokers.stock.openapi.client.https.domain.quote.item.KlineItem item2 =
+                new com.tigerbrokers.stock.openapi.client.https.domain.quote.item.KlineItem();
+        item2.setSymbol("AAPL");
+        com.tigerbrokers.stock.openapi.client.https.domain.quote.item.KlinePoint p2 =
+                new com.tigerbrokers.stock.openapi.client.https.domain.quote.item.KlinePoint();
+        p2.setTime(1719244800000L);
+        p2.setOpen(148.0);
+        p2.setHigh(150.0);
+        p2.setLow(147.0);
+        p2.setClose(149.0);
+        p2.setVolume(900000L);
+        p2.setAmount(0.0);
+        item2.setItems(List.of(p2));
+
+        com.tigerbrokers.stock.openapi.client.https.response.quote.QuoteKlineResponse resp =
+                mock(com.tigerbrokers.stock.openapi.client.https.response.quote.QuoteKlineResponse.class);
+        when(resp.isSuccess()).thenReturn(true);
+        when(resp.getKlineItems()).thenReturn(List.of(item1, item2));
+        when(tigerHttpClient.execute(any(QuoteKlineRequest.class))).thenReturn(resp);
+
+        com.stock.invest.model.StockInfo info = service.getStockInfo("AAPL");
+
+        assertNotNull(info.getChangePercent());
+        // (151 - 149) / 149 * 100 —— 计算点 setScale(4, HALF_UP) 后必须收敛到 4 位
+        assertTrue(info.getChangePercent().scale() <= 4,
+                "R2 P3-4: changePercent scale must be capped at 4, got scale="
+                        + info.getChangePercent().scale() + " value=" + info.getChangePercent());
+        assertEquals(0, new java.math.BigDecimal("1.3423").compareTo(info.getChangePercent()),
+                "changePercent must round to 4 decimal places (1.3423)");
+    }
 }

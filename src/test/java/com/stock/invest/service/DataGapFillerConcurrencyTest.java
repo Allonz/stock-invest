@@ -76,21 +76,26 @@ class DataGapFillerConcurrencyTest {
         CountDownLatch release = new CountDownLatch(1);
         blockOnFindAllSymbols(entered, release);
 
-        Thread a = new Thread(() -> service.fillGaps(), "fillA");
+        java.util.concurrent.atomic.AtomicReference<Boolean> firstResult =
+                new java.util.concurrent.atomic.AtomicReference<>();
+        Thread a = new Thread(() -> firstResult.set(service.fillGaps()), "fillA");
         a.start();
         assertTrue(entered.await(5, TimeUnit.SECONDS), "thread A should enter fillGaps");
         assertTrue(service.isRunning(), "running flag must be visible while fillGaps in progress");
 
-        service.fillGaps(); // B —— 拒绝
+        // R2 P3-9：互斥拒绝返回 false（调用方据此呈现 SKIPPED）
+        assertFalse(service.fillGaps(), "mutex-rejected fillGaps must return false");
 
         verify(stockDailyBarRepository, times(1)).findAllSymbols(); // 无翻倍
         release.countDown();
         a.join(5000);
         assertFalse(a.isAlive(), "thread A should finish");
         assertFalse(service.isRunning(), "running flag must clear after completion");
+        // R2 P3-9：正常执行返回 true
+        assertEquals(Boolean.TRUE, firstResult.get(), "executed fillGaps must return true");
 
         // 释放后可再次进入
-        service.fillGaps();
+        assertTrue(service.fillGaps(), "fillGaps after release must execute and return true");
         verify(stockDailyBarRepository, times(2)).findAllSymbols();
     }
 
@@ -108,7 +113,8 @@ class DataGapFillerConcurrencyTest {
 
         // 手动路径（AdminController.triggerDataFill → isRunning 检查 → fillGaps）
         assertTrue(service.isRunning(), "manual path should observe running flag");
-        service.fillGaps(); // 手动触发被拒绝
+        // R2 P3-9：手动路径被定时任务抢占 → 返回 false（SKIPPED 语义）
+        assertFalse(service.fillGaps(), "manual fillGaps rejected by scheduler must return false");
 
         verify(stockDailyBarRepository, times(1)).findAllSymbols();
         release.countDown();
@@ -162,7 +168,8 @@ class DataGapFillerConcurrencyTest {
         assertThrows(RuntimeException.class, () -> service.fillGaps());
         assertFalse(service.isRunning(), "mutex must be released in finally");
 
-        assertDoesNotThrow(() -> service.fillGaps()); // 可再次进入
+        // R2 P3-9：异常恢复后再次调用正常执行并返回 true
+        assertTrue(service.fillGaps(), "fillGaps after exception recovery must return true");
         verify(stockDailyBarRepository, times(2)).findAllSymbols();
     }
 
@@ -178,9 +185,10 @@ class DataGapFillerConcurrencyTest {
         assertTrue(entered.await(5, TimeUnit.SECONDS));
 
         long t0 = System.nanoTime();
-        service.fillGaps(); // 拒绝
+        boolean rejected = service.fillGaps(); // 拒绝
         long elapsedMs = Duration.ofNanos(System.nanoTime() - t0).toMillis();
 
+        assertFalse(rejected, "rejected fillGaps must return false");
         assertTrue(elapsedMs < 1000, "rejected concurrent call must return immediately, elapsed=" + elapsedMs);
 
         release.countDown();

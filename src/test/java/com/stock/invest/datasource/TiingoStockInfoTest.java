@@ -77,6 +77,37 @@ class TiingoStockInfoTest {
         assertEquals(0, bd("2.0").compareTo(info.getChange()));
         // (151 - 149) / 149 * 100 —— divide scale 8 HALF_UP 后乘 100，R2 P3-4 再 setScale(4) = 1.3423
         assertEquals(0, bd("1.3423").compareTo(info.getChangePercent()));
+        assertTrue(info.getChangePercent().scale() <= 4,
+                "R2 P3-4: changePercent scale must be capped at 4, got " + info.getChangePercent().scale());
+    }
+
+    // ---- R2 P3-4: changePercent 精度统一（循环小数触发长除法） ----
+
+    @Test
+    @DisplayName("R2 P3-4: changePercent 循环小数 → setScale(4) 后 scale() <= 4 且数值精确")
+    void changePercent_scaleLimitedTo4() throws Exception {
+        KLineData kd = new KLineData();
+        kd.setSymbol("AAPL");
+        KLineIterator latest = new KLineIterator();
+        latest.setSymbol("AAPL");
+        latest.setClose(bd("4.0"));
+        KLineIterator prev = new KLineIterator();
+        prev.setSymbol("AAPL");
+        prev.setClose(bd("3.0"));
+        kd.setItems(List.of(latest, prev));
+
+        when(tiingoRestClient.fetchDailyBars(eq("AAPL"), anyInt())).thenReturn(kd);
+
+        StockInfo info = strategy.getStockInfo("AAPL");
+
+        assertNotNull(info);
+        assertNotNull(info.getChangePercent());
+        // (4-3)/3*100 = 33.3333... 循环小数 —— 计算点 setScale(4, HALF_UP) 后必须收敛
+        assertTrue(info.getChangePercent().scale() <= 4,
+                "R2 P3-4: repeating decimal must be rounded to scale<=4, got scale="
+                        + info.getChangePercent().scale() + " value=" + info.getChangePercent());
+        assertEquals(0, bd("33.3333").compareTo(info.getChangePercent()),
+                "33.3333... must round to 4 decimal places");
     }
 
     // ---- TG-INFO-002: 只有一条数据时 change 为 0 ----
