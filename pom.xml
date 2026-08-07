@@ -212,6 +212,16 @@
                 <version>3.2.5</version>
                 <configuration>
                     <argLine>-Xmx512m -Dfile.encoding=UTF-8 @{jacocoArgLine}</argLine>
+                    <!-- R2 测试方案：FlywayMigrationIT 等 *IT 集成测试纳入默认 surefire 执行（与
+                         BarsControllerIntegrationTest 等既有 @Tag("integration") 类同约定；
+                         CI 可用 -Dgroups='!integration' 排除）。不新增/升级任何依赖。 -->
+                    <includes>
+                        <include>**/Test*.java</include>
+                        <include>**/*Test.java</include>
+                        <include>**/*Tests.java</include>
+                        <include>**/*TestCase.java</include>
+                        <include>**/*IT.java</include>
+                    </includes>
                 </configuration>
             </plugin>
             <plugin>

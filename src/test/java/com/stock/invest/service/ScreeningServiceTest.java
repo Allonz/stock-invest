@@ -25,6 +25,7 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -38,6 +39,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.stock.invest.config.ScannerProperties;
+import com.stock.invest.entity.ScreeningMatch;
 import com.stock.invest.entity.StockDailyBar;
 import com.stock.invest.repository.ScreeningMatchRepository;
 import com.stock.invest.repository.StockDailyBarRepository;
@@ -292,6 +294,63 @@ class ScreeningServiceTest {
             }
             assertEquals(Set.of("SYM0", "SYM1", "SYM2", "SYM3"), evaluatedSymbols,
                     "without limit every candidate should be evaluated");
+        }
+
+        @Test
+        @DisplayName("R2 P1-3: windowDays=7 显式传参 → 只评估 7 天窗口（与默认全窗口可区分）")
+        void windowDays7_defaultNoLongerApplied() {
+            LocalDate tradeDate = LocalDate.of(2026, 5, 18);
+            when(stockDailyBarRepository.findByTradeDateBetweenOrderByTradeDateDesc(any(LocalDate.class), eq(tradeDate)))
+                    .thenReturn(barsFor("TEST", tradeDate));
+
+            screeningService.runScreening(tradeDate, 7, null);
+
+            ArgumentCaptor<Integer> windowCaptor = ArgumentCaptor.forClass(Integer.class);
+            verify(patternEvaluateService, atLeastOnce())
+                    .matchesIncreasingVolumePattern(anyList(), windowCaptor.capture());
+            for (Integer w : windowCaptor.getAllValues()) {
+                assertEquals(7, w, "explicit windowDays=7 must NOT fall back to all windows");
+            }
+            // 与 nullParams_defaultAllWindows 的 {2,3,4,5,6,7} 全窗口语义形成回归护栏
+            Set<Integer> evaluated = new HashSet<>(windowCaptor.getAllValues());
+            assertEquals(Set.of(7), evaluated, "only the 7d window may be evaluated");
+        }
+
+        @Test
+        @DisplayName("R2 P1-5: 同日已存在的键在 saveAll 前被滤除（应用层查重纵深防御）")
+        void duplicateSameDayRowsFiltered() {
+            LocalDate tradeDate = LocalDate.of(2026, 5, 18);
+            when(stockDailyBarRepository.findByTradeDateBetweenOrderByTradeDateDesc(any(LocalDate.class), eq(tradeDate)))
+                    .thenReturn(barsFor("AAPL", tradeDate));
+            // 两个算法都命中 → 每窗口 2 行（6 窗口 × 2 算法 = 12 行）
+            when(patternEvaluateService.matchesIncreasingVolumePattern(anyList(), anyInt())).thenReturn(true);
+            when(patternEvaluateService.matchesVolumeSpikePattern(anyList(), anyInt())).thenReturn(true);
+
+            // 同日已存在 2 个键（不同窗口不同算法）
+            ScreeningMatch existing1 = new ScreeningMatch();
+            existing1.setSymbol("AAPL");
+            existing1.setWindowDays(2);
+            existing1.setAlgorithm("increasing_volume");
+            ScreeningMatch existing2 = new ScreeningMatch();
+            existing2.setSymbol("AAPL");
+            existing2.setWindowDays(5);
+            existing2.setAlgorithm("volume_spike");
+            when(screeningMatchRepository.findByTradeDate(tradeDate)).thenReturn(List.of(existing1, existing2));
+
+            screeningService.runScreening(tradeDate);
+
+            @SuppressWarnings("unchecked")
+            ArgumentCaptor<List<ScreeningMatch>> saveCaptor = ArgumentCaptor.forClass(List.class);
+            verify(screeningMatchRepository).saveAll(saveCaptor.capture());
+            List<ScreeningMatch> saved = saveCaptor.getValue();
+
+            // 12 行候选 - 2 个已存在键 = 10 行落库
+            assertEquals(10, saved.size(), "existing same-day keys must be filtered before saveAll");
+            Set<String> savedKeys = saved.stream()
+                    .map(m -> m.getSymbol() + "|" + m.getWindowDays() + "|" + m.getAlgorithm())
+                    .collect(Collectors.toSet());
+            assertFalse(savedKeys.contains("AAPL|2|increasing_volume"), "existing key must not be re-inserted");
+            assertFalse(savedKeys.contains("AAPL|5|volume_spike"), "existing key must not be re-inserted");
         }
 
         @Test

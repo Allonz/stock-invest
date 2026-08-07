@@ -18,6 +18,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDate;
 import java.util.concurrent.Executor;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -94,6 +96,19 @@ class AdminControllerTest {
         verify(screeningService).runScreening(any(LocalDate.class), isNull(), isNull());
     }
 
+    @Test
+    @DisplayName("R2 P1-3: 只传 windowDays=4 → limit 不绑定默认值（null）")
+    void triggerScreening_explicitWindowDaysOnly() throws Exception {
+        mockMvc.perform(post("/api/admin/trigger-screening")
+                        .param("date", "2026-05-18")
+                        .param("windowDays", "4")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        verify(screeningService).runScreening(LocalDate.of(2026, 5, 18), 4, null);
+    }
+
     // ---- P1-8: 409 并发拒绝 ----
 
     @Test
@@ -160,6 +175,44 @@ class AdminControllerTest {
         verify(dataFillProgressService).removeProgress("fill123");
     }
 
+    @Test
+    @DisplayName("R2 P2-2: run-screening-async 队列满 → 503 + QUEUE_FULL + 筛选进度条目已清理")
+    void runScreeningAsync_rejectedReturns503AndCleansProgress() throws Exception {
+        when(screeningProgressService.startScreening(anyList(), anyInt())).thenReturn("adv123");
+        when(screeningProgressService.getProgress("adv123"))
+                .thenReturn(new ScreeningProgressService.ScreeningProgress());
+        doThrow(new TaskRejectedException("queue full"))
+                .when(scanExecutor).execute(any(Runnable.class));
+
+        mockMvc.perform(post("/api/admin/run-screening-async")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.errorType").value("QUEUE_FULL"));
+
+        verify(screeningProgressService).removeProgress("adv123");
+    }
+
+    @Test
+    @DisplayName("R2 P2-2: trigger-retry-tasks 队列满 → 503 + QUEUE_FULL")
+    void triggerRetryTasks_rejectedReturns503() throws Exception {
+        when(dataGapFillerService.isRunning()).thenReturn(false);
+        doThrow(new TaskRejectedException("queue full"))
+                .when(scanExecutor).execute(any(Runnable.class));
+
+        mockMvc.perform(post("/api/admin/trigger-retry-tasks")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.errorType").value("QUEUE_FULL"));
+
+        // 该端点无进度条目创建，无需清理
+        verify(screeningProgressService, never()).removeProgress(anyString());
+        verify(dataFillProgressService, never()).removeProgress(anyString());
+    }
+
     // ---- 回归：正常提交 ----
 
     @Test
@@ -176,5 +229,51 @@ class AdminControllerTest {
                 .andExpect(jsonPath("$.data.taskId").value("fill-001"));
 
         verify(scanExecutor, times(1)).execute(any(Runnable.class));
+    }
+
+    // ---- R2 P3-9: fillGaps 返回值 → 进度 stage ----
+
+    @Test
+    @DisplayName("R2 P3-9: fillGaps 返回 false（互斥被抢）→ 进度 stage=SKIPPED")
+    void triggerDataFill_skippedSetsStage() throws Exception {
+        when(dataGapFillerService.isRunning()).thenReturn(false);
+        when(dataGapFillerService.fillGaps()).thenReturn(false);
+        when(dataFillProgressService.startFill()).thenReturn("fill-skip");
+        DataFillProgressService.FillProgress progress = new DataFillProgressService.FillProgress();
+        when(dataFillProgressService.getProgress("fill-skip")).thenReturn(progress);
+
+        mockMvc.perform(post("/api/admin/trigger-data-fill")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.taskId").value("fill-skip"));
+
+        // 执行被提交的异步体 —— 互斥拒绝应把 stage 置为 SKIPPED 而非静默成功
+        org.mockito.ArgumentCaptor<Runnable> captor = org.mockito.ArgumentCaptor.forClass(Runnable.class);
+        verify(scanExecutor).execute(captor.capture());
+        captor.getValue().run();
+
+        assertEquals("SKIPPED", progress.getStage(), "mutex-rejected fill must surface SKIPPED");
+        assertFalse(progress.isRunning(), "running flag must clear after task body");
+    }
+
+    @Test
+    @DisplayName("R2 P3-9: fillGaps 返回 true → 进度 stage=COMPLETED")
+    void triggerDataFill_completedSetsStage() throws Exception {
+        when(dataGapFillerService.isRunning()).thenReturn(false);
+        when(dataGapFillerService.fillGaps()).thenReturn(true);
+        when(dataFillProgressService.startFill()).thenReturn("fill-ok");
+        DataFillProgressService.FillProgress progress = new DataFillProgressService.FillProgress();
+        when(dataFillProgressService.getProgress("fill-ok")).thenReturn(progress);
+
+        mockMvc.perform(post("/api/admin/trigger-data-fill")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+
+        org.mockito.ArgumentCaptor<Runnable> captor = org.mockito.ArgumentCaptor.forClass(Runnable.class);
+        verify(scanExecutor).execute(captor.capture());
+        captor.getValue().run();
+
+        assertEquals("COMPLETED", progress.getStage());
+        assertFalse(progress.isRunning(), "running flag must clear after task body");
     }
 }
