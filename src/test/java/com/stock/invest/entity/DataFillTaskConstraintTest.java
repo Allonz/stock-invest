@@ -18,12 +18,12 @@ class DataFillTaskConstraintTest {
 
         boolean found = false;
         for (UniqueConstraint uc : constraints) {
-            if ("uk_data_fill_task_symbol_trade_date".equals(uc.name())) {
+            if ("uk_data_fill_task_symbol_missing_date".equals(uc.name())) {
                 found = true;
                 break;
             }
         }
-        assertTrue(found, "Should have unique constraint named 'uk_data_fill_task_symbol_trade_date'");
+        assertTrue(found, "Should have unique constraint named 'uk_data_fill_task_symbol_missing_date'");
     }
 
     @Test
@@ -32,7 +32,7 @@ class DataFillTaskConstraintTest {
         assertNotNull(table);
 
         for (UniqueConstraint uc : table.uniqueConstraints()) {
-            if ("uk_data_fill_task_symbol_trade_date".equals(uc.name())) {
+            if ("uk_data_fill_task_symbol_missing_date".equals(uc.name())) {
                 assertArrayEquals(new String[]{"symbol", "tradeDate"}, uc.columnNames(),
                         "Unique constraint should be on symbol and tradeDate columns");
             }

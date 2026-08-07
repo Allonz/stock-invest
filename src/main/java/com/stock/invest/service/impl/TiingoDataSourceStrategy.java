@@ -115,9 +115,11 @@ public class TiingoDataSourceStrategy implements StockScannerStrategy {
                 java.math.BigDecimal change = latest.getClose().subtract(prevClose);
                 info.setChange(change);
                 if (prevClose.compareTo(java.math.BigDecimal.ZERO) != 0) {
+                    // R2 P3-4：精度统一 —— setScale(4, HALF_UP)，与 DB DECIMAL(12,4) 对齐
                     info.setChangePercent(change
                             .divide(prevClose, 8, java.math.RoundingMode.HALF_UP)
-                            .multiply(java.math.BigDecimal.valueOf(100)));
+                            .multiply(java.math.BigDecimal.valueOf(100))
+                            .setScale(4, java.math.RoundingMode.HALF_UP));
                 }
             } else {
                 info.setChange(java.math.BigDecimal.ZERO);

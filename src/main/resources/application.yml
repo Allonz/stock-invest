@@ -57,6 +57,7 @@ scanner:
 
 # 数据补全相关配置
 gap-fill:
+  # R2 P3-10：最低价格阈值 —— 最新收盘价 ≤ 阈值才补缺（低价股优先，main 遗留语义，待产品确认）
   min-price-threshold: 1.00 # 最低价格阈值
 
 server:

@@ -36,14 +36,22 @@ public final class WatchlistVolumeParser {
         BigDecimal base = new BigDecimal(m.group(1));
         String unit = m.group(2);
         if ("万".equals(unit)) {
-            return base.multiply(BigDecimal.valueOf(10_000L))
-                    .setScale(0, RoundingMode.HALF_UP).longValue();
+            return toLongChecked(base.multiply(BigDecimal.valueOf(10_000L)), raw);
         }
         if ("亿".equals(unit)) {
-            return base.multiply(BigDecimal.valueOf(100_000_000L))
-                    .setScale(0, RoundingMode.HALF_UP).longValue();
+            return toLongChecked(base.multiply(BigDecimal.valueOf(100_000_000L)), raw);
         }
         // 无单位：四舍五入而非截断
-        return base.setScale(0, RoundingMode.HALF_UP).longValue();
+        return toLongChecked(base, raw);
+    }
+
+    /**
+     * R2 P3-11：超出 long 范围时抛异常而非静默截断 —— 数据失真比报错更危险。
+     */
+    private static long toLongChecked(BigDecimal value, String raw) {
+        if (value.compareTo(BigDecimal.valueOf(Long.MAX_VALUE)) > 0) {
+            throw new IllegalArgumentException("成交量超出 long 范围: " + raw);
+        }
+        return value.setScale(0, RoundingMode.HALF_UP).longValue();
     }
 }

@@ -74,6 +74,11 @@ class BigDecimalSerializationTest {
         assertEquals(0, new BigDecimal("1.67").compareTo(dto.changePercent()));
         assertEquals(0, new BigDecimal("153").compareTo(dto.afterHours()));
         assertEquals(0, new BigDecimal("0.33").compareTo(dto.afterHoursChangePercent()));
+
+        // R2 P3-4：出站涨跌幅精度 ≤4 位小数（计算点 setScale(4) + DB DECIMAL(12,4) 双重保证）
+        assertTrue(dto.changePercent().scale() <= 4, "changePercent scale must be <= 4, got " + dto.changePercent());
+        assertTrue(dto.afterHoursChangePercent().scale() <= 4,
+                "afterHoursChangePercent scale must be <= 4, got " + dto.afterHoursChangePercent());
     }
 
     @Test

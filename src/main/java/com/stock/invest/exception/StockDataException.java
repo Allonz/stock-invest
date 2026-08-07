@@ -137,14 +137,4 @@ public class StockDataException extends RuntimeException {
             super(symbol, dataSource, "数据解析失败", cause);
         }
     }
-
-    /**
-     * 符号不存在异常
-     */
-    public static class SymbolNotFoundException extends StockDataException {
-        private static final long serialVersionUID = 1L;
-        public SymbolNotFoundException(String symbol, String dataSource) {
-            super(symbol, dataSource, "股票代码不存在或无数据");
-        }
-    }
 }

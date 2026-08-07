@@ -12,6 +12,7 @@ import jakarta.persistence.Version;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -21,13 +22,15 @@ import java.time.LocalDate;
 
 @Getter
 @Setter
+@ToString
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Entity
 @EntityListeners(AuditingEntityListener.class)
 @Table(
         name = "data_fill_task",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_data_fill_task_symbol_trade_date", columnNames = {"symbol", "tradeDate"})
+                // R2 P3-6：约束名对齐 V1__baseline.sql 实际名（生产库 DDL）
+                @UniqueConstraint(name = "uk_data_fill_task_symbol_missing_date", columnNames = {"symbol", "tradeDate"})
         }
 )
 public class DataFillTask {

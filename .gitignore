@@ -26,3 +26,6 @@ Untitled
 
 # Windows mount point (WSL accidental tracking)
 C:/
+
+# R2 P3-13: 本地工具配置不入库
+.cursorrules

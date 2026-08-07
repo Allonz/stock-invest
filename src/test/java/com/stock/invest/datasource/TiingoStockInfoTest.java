@@ -75,8 +75,8 @@ class TiingoStockInfoTest {
         assertEquals(0, bd("150.0").compareTo(info.getOpenPrice()));
         assertEquals(1000000L, info.getVolume());
         assertEquals(0, bd("2.0").compareTo(info.getChange()));
-        // (151 - 149) / 149 * 100 —— BigDecimal divide scale 8 HALF_UP 后乘 100
-        assertEquals(0, bd("1.342282").compareTo(info.getChangePercent()));
+        // (151 - 149) / 149 * 100 —— divide scale 8 HALF_UP 后乘 100，R2 P3-4 再 setScale(4) = 1.3423
+        assertEquals(0, bd("1.3423").compareTo(info.getChangePercent()));
     }
 
     // ---- TG-INFO-002: 只有一条数据时 change 为 0 ----

@@ -119,4 +119,32 @@ public class WatchlistVolumeParserTest {
     public void parseScientificNotationWithUnit() {
         assertEquals(15_000_000L, WatchlistVolumeParser.parseVolumeLong("1.5E3万"));
     }
+
+    // ── R2 P3-11: long 溢出保护 ───────────────────────────────────
+
+    @Test
+    public void parseOverflowPlainNumberThrows() {
+        // 19 位数字远超 Long.MAX_VALUE（9223372036854775807）
+        assertThrows(IllegalArgumentException.class,
+                () -> WatchlistVolumeParser.parseVolumeLong("99999999999999999999"));
+    }
+
+    @Test
+    public void parseOverflowYiUnitThrows() {
+        // 100亿亿 = 1e18 亿 → 1e26，远超 long 范围
+        assertThrows(IllegalArgumentException.class,
+                () -> WatchlistVolumeParser.parseVolumeLong("100亿亿"));
+    }
+
+    @Test
+    public void parseOverflowScientificNotationThrows() {
+        assertThrows(IllegalArgumentException.class,
+                () -> WatchlistVolumeParser.parseVolumeLong("1E25"));
+    }
+
+    @Test
+    public void parseLongMaxValueBoundaryOk() {
+        // Long.MAX_VALUE 边界值本身可解析（compareTo 严格大于才抛）
+        assertEquals(Long.MAX_VALUE, WatchlistVolumeParser.parseVolumeLong("9223372036854775807"));
+    }
 }

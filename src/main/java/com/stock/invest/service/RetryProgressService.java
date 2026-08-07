@@ -7,7 +7,8 @@ import java.util.concurrent.atomic.AtomicLong;
 @org.springframework.stereotype.Service
 public class RetryProgressService {
 
-    private RetryProgress current;
+    /** R2 P3-1：跨线程读写可见性 —— startRetry（异步线程）写、getProgress（HTTP 线程）读 */
+    private volatile RetryProgress current;
 
     public RetryProgress startRetry() {
         RetryProgress p = new RetryProgress();
