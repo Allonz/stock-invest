@@ -3,7 +3,7 @@ spring:
     log-startup-info: true
   application:
     name: stock-invest
-  # P1-6：调度线程池 ≥3，避免补缺（19:00 数小时）堵死筛选（21:30）与日历同步（周一 4:30）；
+  # P1-6：调度线程池 ≥3，避免补缺（23:00 数小时）堵死筛选（次日 01:30）与日历同步（周一 4:30）；
   # 同类任务并发由 Service 层互斥保证（P1-2）
   task:
     scheduling:
