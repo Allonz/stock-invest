@@ -134,7 +134,6 @@ class ResilientHttpExecutorBackoffTest {
         f.set(executor, mockRt);
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     @DisplayName("P1-9: 连接拒绝（ConnectException）→ 重试 maxRetries 次后抛 ResourceAccessException")
     void networkError_retriesThenThrows() throws Exception {
@@ -145,7 +144,7 @@ class ResilientHttpExecutorBackoffTest {
         injectRestTemplate(executor, rt);
 
         long start = System.nanoTime();
-        ResourceAccessException ex = assertThrows(ResourceAccessException.class,
+        assertThrows(ResourceAccessException.class,
                 () -> executor.get("http://127.0.0.1:1/quote"));
         long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
 
@@ -154,7 +153,6 @@ class ResilientHttpExecutorBackoffTest {
         assertTrue(elapsedMs >= 30, "backoff sleeps should happen, elapsed=" + elapsedMs);
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     @DisplayName("P1-9: maxRetries=1 → 仅 1 次调用后抛错")
     void maxRetriesRespected_singleAttempt() throws Exception {
@@ -168,7 +166,6 @@ class ResilientHttpExecutorBackoffTest {
         verify(rt, times(1)).exchange(anyString(), any(HttpMethod.class), any(HttpEntity.class), eq(String.class));
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     @DisplayName("P1-9: 重试间隔符合指数退避（500ms→1000ms，外加 0~250ms jitter）")
     void networkError_backoffSequence() throws Exception {
@@ -189,7 +186,6 @@ class ResilientHttpExecutorBackoffTest {
         verify(rt, times(3)).exchange(anyString(), any(HttpMethod.class), any(HttpEntity.class), eq(String.class));
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     @DisplayName("P1-9: 一次瞬态失败后恢复成功 → 返回 body，调用 2 次")
     void successAfterTransientRetry() throws Exception {
@@ -206,7 +202,6 @@ class ResilientHttpExecutorBackoffTest {
         verify(rt, times(2)).exchange(anyString(), any(HttpMethod.class), any(HttpEntity.class), eq(String.class));
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     @DisplayName("P1-9: DNS 失败（UnknownHostException）同样走重试")
     void dnsFailure_retries() throws Exception {

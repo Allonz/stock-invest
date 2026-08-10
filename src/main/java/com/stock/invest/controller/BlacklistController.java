@@ -1,7 +1,6 @@
 package com.stock.invest.controller;
 
 import com.stock.invest.entity.SymbolBlacklist;
-import com.stock.invest.enums.dto.ApiResponse;
 import com.stock.invest.enums.dto.SymbolBlacklistDto;
 import com.stock.invest.service.SymbolBlacklistService;
 import org.springframework.http.ResponseEntity;

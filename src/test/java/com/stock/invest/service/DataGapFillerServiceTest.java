@@ -2,11 +2,9 @@ package com.stock.invest.service;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
@@ -31,7 +29,6 @@ import com.stock.invest.config.GapFillProperties;
 import com.stock.invest.entity.DataFillTask;
 import com.stock.invest.repository.DataFillTaskRepository;
 import com.stock.invest.repository.StockDailyBarRepository;
-import com.stock.invest.service.RetryProgressService;
 import com.stock.invest.service.impl.DataGapFillerServiceImpl;
 
 @ExtendWith(MockitoExtension.class)

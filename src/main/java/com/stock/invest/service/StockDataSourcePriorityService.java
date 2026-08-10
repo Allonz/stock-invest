@@ -36,7 +36,6 @@ public class StockDataSourcePriorityService {
      * 有历史成功记录的先排（按 last_success_time DESC），
      * 无记录的使用默认顺序。
      */
-    @SuppressWarnings("null")
     public List<String> getPriorityList(String symbol) {
         List<StockDataSourcePriority> records =
                 repository.findBySymbolOrderByLastSuccessTimeDesc(symbol);

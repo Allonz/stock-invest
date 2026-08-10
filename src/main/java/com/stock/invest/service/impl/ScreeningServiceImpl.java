@@ -67,14 +67,12 @@ public class ScreeningServiceImpl implements ScreeningService {
 
     @Override
     @Transactional
-    @SuppressWarnings("null")
     public String runScreening(LocalDate tradeDate) {
         return runScreening(tradeDate, null, null);
     }
 
     @Override
     @Transactional
-    @SuppressWarnings("null")
     public String runScreening(LocalDate tradeDate, Integer windowDays, Integer limit) {
         // P1-2：互斥 —— 已有一份筛选在跑则跳过，避免重复触发插入重复行、双倍计算
         if (!running.compareAndSet(false, true)) {
@@ -322,7 +320,6 @@ public class ScreeningServiceImpl implements ScreeningService {
     /**
      * 为匹配列表批量补充 stock name，构建带 name 的匹配项列表。
      */
-    @SuppressWarnings("null")
     private List<Map<String, Object>> buildMatchesWithName(List<ScreeningMatch> matches) {
         if (matches == null || matches.isEmpty()) {
             return List.of();
@@ -391,7 +388,6 @@ public class ScreeningServiceImpl implements ScreeningService {
 
         // 从日历获取 range 内的开盘日（已升序）
         List<TradingCalendarEntity> calEntries = tradingCalendarDbService.getRange("US", firstDate, lastDate);
-        @SuppressWarnings("null")
         List<LocalDate> openDaysInRange = calEntries.stream()
                 .filter(TradingCalendarEntity::getIsOpen)
                 .map(TradingCalendarEntity::getTradeDate)
@@ -399,7 +395,6 @@ public class ScreeningServiceImpl implements ScreeningService {
                 .toList();
 
         // 窗口数据的日期（已升序，因为 bars 在外部已排序）
-        @SuppressWarnings("null")
         List<LocalDate> actualDates = windowSlice.stream()
                 .map(StockDailyBar::getTradeDate)
                 .toList();

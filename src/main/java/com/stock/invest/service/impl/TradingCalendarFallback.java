@@ -56,7 +56,6 @@ public class TradingCalendarFallback implements TradingCalendarService {
     }
 
     @Override
-    @SuppressWarnings("null")
     public boolean isAvailable() {
         return sources.stream().anyMatch(TradingCalendarService::isAvailable);
     }

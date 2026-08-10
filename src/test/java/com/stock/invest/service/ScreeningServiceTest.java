@@ -259,6 +259,7 @@ class ScreeningServiceTest {
 
             screeningService.runScreening(tradeDate, null, 5);
 
+            @SuppressWarnings("unchecked")
             ArgumentCaptor<List<StockDailyBar>> sliceCaptor = ArgumentCaptor.forClass(List.class);
             verify(patternEvaluateService, atLeastOnce())
                     .matchesIncreasingVolumePattern(sliceCaptor.capture(), anyInt());
@@ -285,6 +286,7 @@ class ScreeningServiceTest {
 
             screeningService.runScreening(tradeDate, null, null);
 
+            @SuppressWarnings("unchecked")
             ArgumentCaptor<List<StockDailyBar>> sliceCaptor = ArgumentCaptor.forClass(List.class);
             verify(patternEvaluateService, atLeastOnce())
                     .matchesIncreasingVolumePattern(sliceCaptor.capture(), anyInt());

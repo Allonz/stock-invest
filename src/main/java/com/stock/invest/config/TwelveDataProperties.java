@@ -27,7 +27,6 @@ public class TwelveDataProperties {
     @ToString.Exclude
     private String apiKeys = "";
 
-    @SuppressWarnings("null")
     public List<String> resolvedKeys() {
         List<String> keys = new ArrayList<>();
         if (apiKeys != null && !apiKeys.trim().isEmpty()) {

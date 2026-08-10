@@ -62,7 +62,6 @@ public class DataSourceAvailabilityChecker {
     }
 
     /** 获取当前所有可用数据源的名称列表（按注册顺序） */
-    @SuppressWarnings("null")
     public List<String> getAvailableSourceNames() {
         return statusMap.values().stream()
                 .filter(SourceStatus::isAvailable)

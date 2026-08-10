@@ -42,7 +42,6 @@ public class SymbolBlacklistService {
     /**
      * 获取所有活跃的黑名单记录（完整实体列表）。
      */
-    @SuppressWarnings("null")
     public List<SymbolBlacklist> listActiveEntries() {
         return repository.findByStatus("active");
     }
