@@ -171,6 +171,13 @@
                     </excludes>
                     <jvmArguments>-Dfile.encoding=UTF-8</jvmArguments>
                 </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

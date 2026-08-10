@@ -25,6 +25,10 @@ if [[ -n "${EXISTING_PID}" ]]; then
   sleep 1
 fi
 
-echo "[backend] starting Spring Boot..."
+echo "[backend] building jar (incremental)..."
 
-mvn spring-boot:run -Dspring-boot.run.profiles=default
+mvn -q package -DskipTests
+
+echo "[backend] starting Spring Boot (java -jar)..."
+
+exec java -jar target/stock-invest-1.0-SNAPSHOT.jar --spring.profiles.active=default
