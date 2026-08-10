@@ -11,6 +11,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -120,6 +121,18 @@ public class GlobalExceptionHandler {
                 ? e.getMostSpecificCause().getMessage() : e.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiResponse.error("数据冲突或违反约束", "Conflict"));
+    }
+
+    /**
+     * 处理异步请求超时（503）——重启/关停时 MCP SSE 长连接等被切断会触发
+     * {@link AsyncRequestTimeoutException}。返回空响应体：此类请求的响应
+     * Content-Type 已是 text/event-stream，若返回 JSON 对象体会因无转换器而
+     * 让 @ExceptionHandler 自身失败（HttpMessageNotWritableException 刷 ERROR）。
+     */
+    @ExceptionHandler(AsyncRequestTimeoutException.class)
+    public ResponseEntity<Void> handleAsyncTimeout(AsyncRequestTimeoutException e) {
+        log.warn("[503] 异步请求超时（长连接/SSE 中断）: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
     }
 
     /**
