@@ -30,10 +30,10 @@ Java version: 21.0.10, vendor: Ubuntu, runtime: /usr/lib/jvm/java-21-openjdk-amd
 ```
 
 **⚠️ Java 21 注意事项：**
-- pom.xml 中 `<java.version>17</java.version>` 是指定源码/目标字节码版本为 17，不是运行时 JDK 版本
+- pom.xml 中 `<java.version>21</java.version>` 指定源码/目标字节码版本为 21，与运行时 JDK 一致
 - WSL 已安装 OpenJDK 21，且 `mvn` 默认使用 JDK 21 运行
 - Spring Boot 3.3.13 原生支持 Java 17+，JDK 21 兼容性良好
-- **不需要安装 openjdk-17-jdk**，保持 `java.version=17` 在 pom.xml 里，用 JDK 21 编译 17 字节码
+- pom.xml 已升级为 `java.version=21`，用 JDK 21 编译 21 字节码，无需额外安装 JDK
 
 ### 现有核心编码规范
 
@@ -683,9 +683,9 @@ javax.persistence.EntityListeners → jakarta.persistence.EntityListeners
 
 ```bash
 # WSL 实际环境：JDK 21
-# pom.xml 中 java.version=17 保持不变
+# pom.xml 中 java.version=21
 # Spring Boot 3.3.13 需要 Java 17+
-# mvn 用 JDK 21 编译 Java 17 字节码完全兼容
+# mvn 用 JDK 21 编译 Java 21 字节码
 # 不需要安装 openjdk-17-jdk
 mvn clean compile -DskipTests
 ```

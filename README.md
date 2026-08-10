@@ -48,7 +48,7 @@ stock-invest/
 
 ### 环境要求
 
-- JDK 8+
+- JDK 21+
 - Maven 3.6+
 - Python 3.8+（仅 Tiger 数据源需要）
 - MySQL（生产环境）/ H2（测试环境）
