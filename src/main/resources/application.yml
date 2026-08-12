@@ -110,3 +110,8 @@ stock-invest:
       enabled: true
       not-found-threshold: 2
       skip-count-threshold: 3
+
+# ── 串行编排（tiger 导入 → 补缺 → 筛选 → 汇报）──
+orchestration:
+  webhook-url: http://localhost:8644/webhooks/tiger-orch
+  webhook-secret: 3BJOXKLFLzZX2bACPOxJy87lkPw93tFHY1LzE_-QWh0
