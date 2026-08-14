@@ -32,7 +32,7 @@ import java.util.Map;
  * 低价股扫描（原 IEX /iex/ 端点）确认用不到，getStockList/scanStocks 空实现（2026-08-14）。
  */
 @Component
-@Order(5)
+@Order(3)
 public class TiingoDataSourceStrategy implements StockScannerStrategy {
 
     private static final Logger log = LoggerFactory.getLogger(TiingoDataSourceStrategy.class);

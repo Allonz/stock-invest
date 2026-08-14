@@ -22,8 +22,10 @@ import com.stock.invest.model.StockInfo;
 import com.stock.invest.service.StockScannerStrategy;
 import com.stock.invest.util.PythonScriptExecutor;
 import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
+import org.springframework.core.annotation.Order;
 
 @Service("twelveDataStockService")
+@Order(2)
 public class TwelveDataStockServiceImpl implements StockScannerStrategy {
     private static final Logger log = LoggerFactory.getLogger(TwelveDataStockServiceImpl.class);
     private static final DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");

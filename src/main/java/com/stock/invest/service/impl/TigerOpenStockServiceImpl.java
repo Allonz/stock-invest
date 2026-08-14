@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.core.annotation.Order;
 
 /**
  * 基于 Tiger OpenAPI (Python SDK) 桥接的数据源实现。
@@ -27,6 +28,7 @@ import java.util.Map;
  * </p>
  */
 @Service("tigerOpenStockService")
+@Order(4)
 public class TigerOpenStockServiceImpl implements StockScannerStrategy {
 
     private static final Logger log = LoggerFactory.getLogger(TigerOpenStockServiceImpl.class);

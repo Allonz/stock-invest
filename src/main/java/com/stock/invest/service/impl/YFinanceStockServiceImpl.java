@@ -18,12 +18,14 @@ import com.stock.invest.model.StockInfo;
 import com.stock.invest.service.StockScannerStrategy;
 import com.stock.invest.util.PythonScriptExecutor;
 import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
+import org.springframework.core.annotation.Order;
 
 
 /**
  * StockService接口的Yahoo Finance实现
  */
 @Service("yFinanceStockService")
+@Order(1)
 public class YFinanceStockServiceImpl implements StockScannerStrategy {
 
     private static final Logger log = LoggerFactory.getLogger(YFinanceStockServiceImpl.class);
