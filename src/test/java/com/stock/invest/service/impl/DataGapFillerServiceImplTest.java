@@ -586,7 +586,7 @@ class DataGapFillerServiceImplTest {
     @Test
     @DisplayName("P1-3: 2 源确认 not-found → 入黑名单并停 retry")
     void confirmedNotFound_countsAndBlacklists() {
-        LocalDate probeDate = nyToday().minusDays(9);
+        LocalDate probeDate = nyToday().minusDays(3);
         while (probeDate.getDayOfWeek().getValue() > 5) {
             probeDate = probeDate.minusDays(1);
         }
@@ -611,7 +611,7 @@ class DataGapFillerServiceImplTest {
     @Test
     @DisplayName("P1-3: 全部源瞬态失败 → 不入黑名单，生成 retry 任务")
     void transientFailure_neverCountsToBlacklist() {
-        LocalDate probeDate = nyToday().minusDays(9);
+        LocalDate probeDate = nyToday().minusDays(3);
         while (probeDate.getDayOfWeek().getValue() > 5) {
             probeDate = probeDate.minusDays(1);
         }
@@ -636,7 +636,7 @@ class DataGapFillerServiceImplTest {
     @Test
     @DisplayName("P1-3: 账户级错误终止 fallback 链（后续源不再请求）")
     void accountLevelError_abortsFallbackChain() {
-        LocalDate probeDate = nyToday().minusDays(9);
+        LocalDate probeDate = nyToday().minusDays(3);
         while (probeDate.getDayOfWeek().getValue() > 5) {
             probeDate = probeDate.minusDays(1);
         }
@@ -659,9 +659,9 @@ class DataGapFillerServiceImplTest {
     }
 
     @Test
-    @DisplayName("P1-3: 成功但空结果（EMPTY）不计入 not-found 计数")
+    @DisplayName("P1-3: 成功但空结果（EMPTY）计入 not-found 计数（8/13 口径：≥2 源报空进黑名单）")
     void emptySuccess_doesNotCountAsNotFound() {
-        LocalDate probeDate = nyToday().minusDays(9);
+        LocalDate probeDate = nyToday().minusDays(3);
         while (probeDate.getDayOfWeek().getValue() > 5) {
             probeDate = probeDate.minusDays(1);
         }
@@ -670,7 +670,7 @@ class DataGapFillerServiceImplTest {
         when(tigerDataSource.getDailyKLineDataByDateRange(eq("AAPL"), any()))
                 .thenThrow(new StockDataException("AAPL", "tiger", "symbol not found",
                         StockDataException.ErrorCategory.CONFIRMED_NOT_FOUND));
-        // yfinance 成功但空列表（EMPTY）
+        // yfinance 成功但空列表（EMPTY）—— 8/13 修正：计入 not-found
         com.stock.invest.model.KLineData empty = new com.stock.invest.model.KLineData();
         empty.setSymbol("AAPL");
         empty.setItems(List.of());
@@ -683,15 +683,16 @@ class DataGapFillerServiceImplTest {
 
         service.fillGaps();
 
-        // notFoundCount = 1（仅 tiger 确认）< 2 → 不入黑名单
-        verify(symbolBlacklistService, never()).recordNotFound(anyString(), anyMap());
-        verify(dataFillTaskRepository, atLeastOnce()).save(any(DataFillTask.class));
+        // notFoundCount = 2（tiger 确认 + yfinance EMPTY）≥ 2 → 入黑名单（2026-08-13 口径）
+        verify(symbolBlacklistService).recordNotFound(eq("AAPL"), anyMap());
+        // 黑名单路径 skipRetry → 不再创建 retry 任务
+        verify(dataFillTaskRepository, never()).save(any(DataFillTask.class));
     }
 
     @Test
     @DisplayName("P1-3: 1 确认 + 3 瞬态 → 不入黑名单")
     void threeTransientOneConfirmed_noBlacklist() {
-        LocalDate probeDate = nyToday().minusDays(9);
+        LocalDate probeDate = nyToday().minusDays(3);
         while (probeDate.getDayOfWeek().getValue() > 5) {
             probeDate = probeDate.minusDays(1);
         }
@@ -716,7 +717,7 @@ class DataGapFillerServiceImplTest {
     @Test
     @DisplayName("P1-3: 2 确认 + 1 瞬态 → 入黑名单（确认计数优先）")
     void twoConfirmedOneTransient_blacklists() {
-        LocalDate probeDate = nyToday().minusDays(9);
+        LocalDate probeDate = nyToday().minusDays(3);
         while (probeDate.getDayOfWeek().getValue() > 5) {
             probeDate = probeDate.minusDays(1);
         }

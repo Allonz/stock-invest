@@ -110,7 +110,7 @@ class CircuitBreakerTest {
     }
 
     private static LocalDate probeDate(LocalDate today) {
-        LocalDate d = today.minusDays(9);
+        LocalDate d = today.minusDays(3);
         while (d.getDayOfWeek().getValue() > 5) {
             d = d.minusDays(1);
         }

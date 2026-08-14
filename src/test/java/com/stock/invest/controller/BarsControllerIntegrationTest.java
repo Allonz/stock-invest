@@ -99,7 +99,8 @@ class BarsControllerIntegrationTest {
         for (Map<String, Object> candle : data) {
             String dateStr = (String) candle.get("date");
             LocalDate tradeDate = LocalDate.parse(dateStr);
-            Double apiChangePercent = (Double) candle.get("changePercent");
+            // JSON 数字可能是 Integer 或 Double（Jackson 对整数值解析为 Integer）→ 用 Number 兼容
+            Number apiChangePercent = (Number) candle.get("changePercent");
 
             // Query DB for the same row
             List<StockDailyBar> bars = repository
@@ -109,7 +110,7 @@ class BarsControllerIntegrationTest {
             if (!bars.isEmpty()) {
                 java.math.BigDecimal dbChangePercent = bars.get(0).getChangePercent();
                 if (dbChangePercent != null && apiChangePercent != null) {
-                    assertEquals(0, dbChangePercent.compareTo(java.math.BigDecimal.valueOf(apiChangePercent)),
+                    assertEquals(0, dbChangePercent.compareTo(java.math.BigDecimal.valueOf(apiChangePercent.doubleValue())),
                             "changePercent mismatch for " + symbol + " on " + dateStr);
                 }
             }
