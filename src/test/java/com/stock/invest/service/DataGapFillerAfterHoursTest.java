@@ -40,6 +40,7 @@ class DataGapFillerAfterHoursTest {
 
     private static final ZoneId AMERICA_NY = ZoneId.of("America/New_York");
 
+    @Mock private com.stock.invest.service.FieldCapabilityService fieldCapabilityService;
     @Mock private StockDailyBarRepository stockDailyBarRepository;
     @Mock private DataFillTaskRepository dataFillTaskRepository;
     @Mock private TigerOpenStockServiceImpl tigerOpenSource;
@@ -60,6 +61,13 @@ class DataGapFillerAfterHoursTest {
         lenient().when(tigerOpenSource.getSourceName()).thenReturn("tigeropen");
         lenient().when(tigerOpenSource.isAvailable()).thenReturn(true);
 
+        // 能力表驱动：tigeropen 支持盘后字段（supportsAfterHoursMerge 改查表后必须 stub）
+        lenient().when(fieldCapabilityService.isMarkable(anyString(), eq("after_hours"))).thenReturn(false);
+        lenient().when(fieldCapabilityService.isMarkable(eq("tigeropen"), eq("after_hours"))).thenReturn(true);
+        lenient().when(fieldCapabilityService.isMarkable(eq("tigeropen"), eq("after_hours_change_percent"))).thenReturn(true);
+        lenient().when(fieldCapabilityService.isMarkable(eq("yfinance"), eq("after_hours"))).thenReturn(true);
+        lenient().when(fieldCapabilityService.isMarkable(eq("yfinance"), eq("after_hours_change_percent"))).thenReturn(true);
+
         lenient().when(gapFillProperties.getMinPriceThreshold()).thenReturn(java.math.BigDecimal.valueOf(1.0));
 
         // Allow trading on weekdays so findMissingTradeDates finds gaps
@@ -71,7 +79,7 @@ class DataGapFillerAfterHoursTest {
                 stockDailyBarRepository, dataFillTaskRepository, dataSources,
                 gapFillProperties, dataFillProgressService, retryProgressService, tradingCalendarDbService,
                 stockDataSourcePriorityService, symbolBlacklistService,
-                transactionManager);
+                transactionManager, fieldCapabilityService);
         lenient().when(stockDataSourcePriorityService.getPriorityList(anyString()))
                 .thenReturn(java.util.List.of("tigeropen", "yfinance"));
     }
@@ -138,7 +146,7 @@ class DataGapFillerAfterHoursTest {
                 stockDailyBarRepository, dataFillTaskRepository, dataSources,
                 gapFillProperties, dataFillProgressService, retryProgressService, tradingCalendarDbService,
                 stockDataSourcePriorityService, symbolBlacklistService,
-                transactionManager);
+                transactionManager, fieldCapabilityService);
 
         LocalDate today = nyToday();
         LocalDate stopDate = today.minusDays(5);

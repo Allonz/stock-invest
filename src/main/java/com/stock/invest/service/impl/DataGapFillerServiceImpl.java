@@ -32,6 +32,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import com.stock.invest.config.GapFillProperties;
 import com.stock.invest.entity.DataFillTask;
+import com.stock.invest.entity.FieldCapability;
 import com.stock.invest.entity.StockDailyBar;
 import com.stock.invest.exception.StockDataException;
 import com.stock.invest.model.KLineData;
@@ -41,6 +42,7 @@ import com.stock.invest.repository.StockDailyBarRepository;
 import com.stock.invest.service.DataFillProgressService;
 import com.stock.invest.service.DataGapFillerService;
 import com.stock.invest.service.DataSourceStrategy;
+import com.stock.invest.service.FieldCapabilityService;
 import com.stock.invest.service.RetryProgressService;
 import com.stock.invest.service.StockDataSourcePriorityService;
 import com.stock.invest.service.SymbolBlacklistService;
@@ -73,6 +75,27 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
     /** P1-5：账户级错误（权限/配额）触发源级熔断的冷却时长 */
     private static final long SOURCE_COOLDOWN_MILLIS = 30 * 60 * 1000L;
 
+    /** 字段增补单次上限：防止存量 PENDING 过多时一次性打爆外部 API（2026-08-14） */
+    static final int MAX_FILL_FIELDS_PER_RUN = 100;
+
+    /** 字段增补窗口：只补最近 30 个交易日内的记录（≈45 日历日，含周末/节假日宽松覆盖）。
+     *  用户 2026-08-14：历史太久的不补（yfinance 盘后分钟数据 30 天窗口外不可得）。 */
+    static final int FILL_WINDOW_CALENDAR_DAYS = 45;
+
+    // ---- 字段增补（2026-08-14）----
+    /** 字段名常量 */
+    static final String F_OPEN = "open_price";
+    static final String F_HIGH = "high_price";
+    static final String F_LOW = "low_price";
+    static final String F_CLOSE = "close_price";
+    static final String F_VOLUME = "volume";
+    static final String F_CHANGE_PERCENT = "change_percent";
+    static final String F_AFTER_HOURS = "after_hours";
+    static final String F_AFTER_HOURS_CHANGE_PERCENT = "after_hours_change_percent";
+    /** 字段增补状态 */
+    static final String STATUS_PENDING = "PENDING";
+    static final String STATUS_CONFIRMED = "CONFIRMED";
+
     private final StockDailyBarRepository stockDailyBarRepository;
     private final DataFillTaskRepository dataFillTaskRepository;
     private final List<DataSourceStrategy> dataSources;
@@ -82,6 +105,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
     private final TradingCalendarDbService tradingCalendarDbService;
     private final StockDataSourcePriorityService stockDataSourcePriorityService;
     private final SymbolBlacklistService symbolBlacklistService;
+    private final FieldCapabilityService fieldCapabilityService;
 
     /** P1-2：批次运行互斥 —— 定时、REST、MCP 三路共用同一 Service 实例，天然互斥 */
     private final AtomicBoolean running = new AtomicBoolean(false);
@@ -102,7 +126,8 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
             TradingCalendarDbService tradingCalendarDbService,
             StockDataSourcePriorityService stockDataSourcePriorityService,
             SymbolBlacklistService symbolBlacklistService,
-            PlatformTransactionManager transactionManager) {
+            PlatformTransactionManager transactionManager,
+            FieldCapabilityService fieldCapabilityService) {
         this.stockDailyBarRepository = stockDailyBarRepository;
         this.dataFillTaskRepository = dataFillTaskRepository;
         this.dataSources = dataSources;
@@ -112,6 +137,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         this.tradingCalendarDbService = tradingCalendarDbService;
         this.stockDataSourcePriorityService = stockDataSourcePriorityService;
         this.symbolBlacklistService = symbolBlacklistService;
+        this.fieldCapabilityService = fieldCapabilityService;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
@@ -204,6 +230,19 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
                 progress.incrementProcessedSymbols();
                 progress.addGapsFound(result.gapsFound);
             }
+        }
+
+        // 字段增补：发现 + 增补已有记录的缺失字段（2026-08-14，开关 gap-fill.field-fill-enabled）
+        int discovered = 0;
+        int filledFields = 0;
+        if (gapFillProperties.isFieldFillEnabled()) {
+            try {
+                discovered = discoverMissingFields();
+                filledFields = fillMissingFields();
+            } catch (Exception e) {
+                log.error("[DataGapFiller] fillMissingFields failed, continue — error={}", e.getMessage(), e);
+            }
+            log.info("[DataGapFiller] fillMissingFields: discovered={}, filledFields={}", discovered, filledFields);
         }
 
         log.info("[DataGapFiller] fillGaps: === COMPLETED === " +
@@ -546,9 +585,67 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
                     });
         }
         bar.setSource(source);
+        // 字段缺失标记（2026-08-14）：按能力表计算缺失字段集 + 增补状态
+        applyMissingFieldsMark(bar);
         // P1-2：单次持久化独立事务，失败不回滚整批
         runInTx(() -> stockDailyBarRepository.save(bar));
         return bar;
+    }
+
+    /**
+     * 计算并设置记录的字段缺失标记（missingFields + fieldFillStatus）。
+     * <p>
+     * 规则（由能力表驱动）：字段缺失（NULL/0，按字段类型）且 markable(source, field) → 加入缺失集。
+     * 有缺失 → PENDING；无缺失 → CONFIRMED。
+     * </p>
+     */
+    void applyMissingFieldsMark(StockDailyBar bar) {
+        List<String> missing = new ArrayList<>();
+        String source = bar.getSource();
+        if (isMissingPrice(bar.getOpenPrice()) && fieldCapabilityService.isMarkable(source, F_OPEN)) {
+            missing.add(F_OPEN);
+        }
+        if (isMissingPrice(bar.getHighPrice()) && fieldCapabilityService.isMarkable(source, F_HIGH)) {
+            missing.add(F_HIGH);
+        }
+        if (isMissingPrice(bar.getLowPrice()) && fieldCapabilityService.isMarkable(source, F_LOW)) {
+            missing.add(F_LOW);
+        }
+        if (isMissingPrice(bar.getClosePrice()) && fieldCapabilityService.isMarkable(source, F_CLOSE)) {
+            missing.add(F_CLOSE);
+        }
+        if (isMissingVolume(bar.getVolume()) && fieldCapabilityService.isMarkable(source, F_VOLUME)) {
+            missing.add(F_VOLUME);
+        }
+        // change_percent：仅 NULL 算缺（0 = 真实没涨跌，不补）
+        if (bar.getChangePercent() == null && fieldCapabilityService.isMarkable(source, F_CHANGE_PERCENT)) {
+            missing.add(F_CHANGE_PERCENT);
+        }
+        // 盘后字段：NULL 且源支持盘后（markable 由能力表决定）
+        if (bar.getAfterHours() == null && fieldCapabilityService.isMarkable(source, F_AFTER_HOURS)) {
+            missing.add(F_AFTER_HOURS);
+        }
+        if (bar.getAfterHoursChangePercent() == null
+                && fieldCapabilityService.isMarkable(source, F_AFTER_HOURS_CHANGE_PERCENT)) {
+            missing.add(F_AFTER_HOURS_CHANGE_PERCENT);
+        }
+        if (missing.isEmpty()) {
+            bar.setMissingFields(null);
+            bar.setFieldFillStatus(STATUS_CONFIRMED);
+        } else {
+            bar.setMissingFields(String.join(",", missing));
+            bar.setFieldFillStatus(STATUS_PENDING);
+        }
+    }
+
+    /** 价格字段缺失判定：NULL 或 0（美股价格恒 > 0） */
+    private static boolean isMissingPrice(java.math.BigDecimal v) {
+        return v == null || v.compareTo(java.math.BigDecimal.ZERO) == 0;
+    }
+
+    /** 成交量缺失判定：NULL 或 0（无成交异常） */
+    private static boolean isMissingVolume(Long v) {
+        return v == null || v <= 0L;
     }
 
     /**
@@ -580,6 +677,8 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
                             .multiply(java.math.BigDecimal.valueOf(100))
                             .setScale(4, java.math.RoundingMode.HALF_UP));
                 }
+                // 盘后合并成功后清除盘后相关缺失标记（2026-08-14）
+                clearMissingFields(bar, F_AFTER_HOURS, F_AFTER_HOURS_CHANGE_PERCENT);
                 runInTx(() -> stockDailyBarRepository.save(bar));
                 return;
             }
@@ -590,12 +689,329 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
     }
 
     private boolean supportsAfterHoursMerge(DataSourceStrategy source) {
-        String name = source.getSourceName();
-        // yfinance 有独立盘后价来源（get_stock_info 的 postMarketPrice），放行合并；
-        // tiingo 无盘后价 API，保持拦截（2026-08-13 修复，此前 yfinance 被误拦截导致
-        // 已实现的 getAfterHoursKLineDataByDateRange 从未被调用）
-        // 2026-08-14：Tiger Java 数据源已删除，仅 tigeropen（Python）保留
-        return "tigeropen".equals(name) || "yfinance".equals(name);
+        // 数据驱动：查能力表该源是否支持盘后字段（yfinance/tigeropen/tiger_snap 支持；
+        // tiingo/twelvedata 不支持）。2026-08-14 由硬编码改为查表。
+        return fieldCapabilityService.isMarkable(source.getSourceName(), F_AFTER_HOURS);
+    }
+
+    // ==================== 字段增补：发现 + 增补（2026-08-14） ====================
+
+    /**
+     * 发现阶段：扫描 field_fill_status 为 NULL 的记录（存量），按能力表计算缺失字段并标记。
+     * 仅最近 {@link #FILL_WINDOW_CALENDAR_DAYS} 天内（≈30 交易日）的记录参与增补标记；
+     * 超窗记录直接 CONFIRMED（终态，不补，用户 2026-08-14）。
+     *
+     * @return 处理的记录数
+     */
+    int discoverMissingFields() {
+        List<StockDailyBar> unchecked = stockDailyBarRepository.findUnchecked();
+        LocalDate windowStart = fillWindowStart();
+        int discovered = 0;
+        for (StockDailyBar bar : unchecked) {
+            try {
+                if (bar.getTradeDate().isBefore(windowStart)) {
+                    // 超窗：不参与增补，确认终态
+                    if (bar.getFieldFillStatus() == null || bar.getMissingFields() != null) {
+                        bar.setMissingFields(null);
+                        bar.setFieldFillStatus(STATUS_CONFIRMED);
+                        runInTx(() -> stockDailyBarRepository.save(bar));
+                    }
+                } else {
+                    applyMissingFieldsMark(bar);
+                    runInTx(() -> stockDailyBarRepository.save(bar));
+                }
+                discovered++;
+            } catch (Exception e) {
+                log.warn("[DataGapFiller] discoverMissingFields failed for {} {}: {}",
+                        bar.getSymbol(), bar.getTradeDate(), e.getMessage());
+            }
+        }
+        if (!unchecked.isEmpty()) {
+            log.info("[DataGapFiller] discoverMissingFields: scanned {} unchecked records, marked {} (window={}~today)",
+                    unchecked.size(), discovered, windowStart);
+        }
+        return discovered;
+    }
+
+    /** 字段增补窗口起点（美东今天 - FILL_WINDOW_CALENDAR_DAYS） */
+    private LocalDate fillWindowStart() {
+        return ZonedDateTime.now(AMERICA_NY).toLocalDate().minusDays(FILL_WINDOW_CALENDAR_DAYS);
+    }
+
+    /**
+     * 增补阶段：对 field_fill_status=PENDING 的记录逐条增补缺失字段。
+     * <ul>
+     *   <li>增补成功 / 源确认无值 → 清标记 + CONFIRMED</li>
+     *   <li>瞬态失败 → 保留 PENDING + 缺失标记（下次再试）</li>
+     * </ul>
+     *
+     * @return 本次处理完成的记录数
+     */
+    int fillMissingFields() {
+        // 超窗 PENDING 批量确认终态（30 交易日窗口外不补）——存量一次性清理
+        LocalDate windowStart = fillWindowStart();
+        java.util.concurrent.atomic.AtomicInteger staleRef = new java.util.concurrent.atomic.AtomicInteger();
+        runInTx(() -> staleRef.set(stockDailyBarRepository.confirmStalePending(windowStart)));
+        int stale = staleRef.get();
+        if (stale > 0) {
+            log.info("[DataGapFiller] fillMissingFields: confirmed {} stale pending (tradeDate < {}) as terminal",
+                    stale, windowStart);
+        }
+        List<StockDailyBar> pending = stockDailyBarRepository.findByFieldFillStatus(STATUS_PENDING);
+        if (pending.size() > MAX_FILL_FIELDS_PER_RUN) {
+            log.info("[DataGapFiller] fillMissingFields: pending={} exceeds per-run limit {}, processing newest {} only",
+                    pending.size(), MAX_FILL_FIELDS_PER_RUN, MAX_FILL_FIELDS_PER_RUN);
+            pending = pending.subList(0, MAX_FILL_FIELDS_PER_RUN);
+        }
+        int completed = 0;
+        for (StockDailyBar bar : pending) {
+            try {
+                if (fillMissingFieldsForBar(bar)) {
+                    completed++;
+                }
+            } catch (Exception e) {
+                log.warn("[DataGapFiller] fillMissingFields failed for {} {}: {}",
+                        bar.getSymbol(), bar.getTradeDate(), e.getMessage());
+            }
+        }
+        if (!pending.isEmpty()) {
+            log.info("[DataGapFiller] fillMissingFields: processed {} pending records, completed {}",
+                    pending.size(), completed);
+        }
+        return completed;
+    }
+
+    /**
+     * 单条 PENDING 记录字段增补。返回 true = 本次处理完成（成功或确认无值，状态置 CONFIRMED）；
+     * false = 存在瞬态失败，保留 PENDING 待下次。
+     */
+    boolean fillMissingFieldsForBar(StockDailyBar bar) {
+        List<String> missing = parseMissingFields(bar.getMissingFields());
+        if (missing.isEmpty()) {
+            bar.setFieldFillStatus(STATUS_CONFIRMED);
+            runInTx(() -> stockDailyBarRepository.save(bar));
+            return true;
+        }
+
+        String sourceName = bar.getSource();
+        DataSourceStrategy ds = findDataSource(sourceName);
+        if (ds == null) {
+            // 所有数据源都不可用 → 保留 PENDING（下次再试）
+            log.warn("[DataGapFiller] fillMissingFields: no available source for sourceName={}, symbol={}",
+                    sourceName, bar.getSymbol());
+            return false;
+        }
+
+        boolean transientFailure = false;
+        boolean anyUpdated = false;
+
+        // 1. 行情字段（DAILY_KLINE / CALC）：open/high/low/close/volume/change_percent
+        List<String> klineFields = missing.stream()
+                .filter(f -> !F_AFTER_HOURS.equals(f) && !F_AFTER_HOURS_CHANGE_PERCENT.equals(f))
+                .toList();
+        if (!klineFields.isEmpty()) {
+            try {
+                KLineData data = ds.getDailyKLineDataByDateRange(bar.getSymbol(), bar.getTradeDate());
+                KLineIterator item = findItemByDate(data, bar.getTradeDate());
+                if (item != null) {
+                    boolean updated = applyKlineItemToBar(bar, item, klineFields);
+                    anyUpdated |= updated;
+                } else {
+                    // 源返回成功但无当日数据 = 确认该日无值 → 清行情字段标记
+                    clearMissingFields(bar, klineFields.toArray(new String[0]));
+                }
+            } catch (StockDataException e) {
+                if (e.getCategory() == StockDataException.ErrorCategory.CONFIRMED_NOT_FOUND) {
+                    // 源确认不存在 → 清行情字段标记（不再补）
+                    clearMissingFields(bar, klineFields.toArray(new String[0]));
+                } else {
+                    transientFailure = true;
+                }
+            } catch (Exception e) {
+                transientFailure = true;
+            }
+        }
+
+        // 2. 盘后字段（AFTER_HOURS_API）：仅源支持盘后时处理
+        boolean hasAhMissing = missing.contains(F_AFTER_HOURS) || missing.contains(F_AFTER_HOURS_CHANGE_PERCENT);
+        if (hasAhMissing && supportsAfterHoursMerge(ds)) {
+            try {
+                KLineData ahData = ds.getAfterHoursKLineDataByDateRange(bar.getSymbol(), bar.getTradeDate());
+                if (isKLineDataEmpty(ahData)) {
+                    // 源确认无盘后数据 → 清盘后标记（不再补，防死循环）
+                    clearMissingFields(bar, F_AFTER_HOURS, F_AFTER_HOURS_CHANGE_PERCENT);
+                } else {
+                    KLineIterator ahItem = findItemByDate(ahData, bar.getTradeDate());
+                    if (ahItem != null && ahItem.getClose() != null) {
+                        bar.setAfterHours(ahItem.getClose());
+                        java.math.BigDecimal regClose = bar.getClosePrice();
+                        if (regClose != null && regClose.compareTo(java.math.BigDecimal.ZERO) != 0) {
+                            bar.setAfterHoursChangePercent(ahItem.getClose().subtract(regClose)
+                                    .divide(regClose, 8, java.math.RoundingMode.HALF_UP)
+                                    .multiply(java.math.BigDecimal.valueOf(100))
+                                    .setScale(4, java.math.RoundingMode.HALF_UP));
+                        }
+                        clearMissingFields(bar, F_AFTER_HOURS, F_AFTER_HOURS_CHANGE_PERCENT);
+                        anyUpdated = true;
+                    } else {
+                        clearMissingFields(bar, F_AFTER_HOURS, F_AFTER_HOURS_CHANGE_PERCENT);
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[DataGapFiller] fillMissingFields after-hours failed for {} {}: {}",
+                        bar.getSymbol(), bar.getTradeDate(), e.getMessage());
+                transientFailure = true;
+            }
+        }
+
+        boolean stillMissing = !parseMissingFields(bar.getMissingFields()).isEmpty();
+        if (transientFailure && stillMissing) {
+            // 保留 PENDING + 剩余缺失标记，下次再试
+            if (anyUpdated) {
+                runInTx(() -> stockDailyBarRepository.save(bar));
+            }
+            return false;
+        }
+        // 全部完成 / 确认无值 → CONFIRMED（强制清残留标记，保证状态一致）
+        bar.setMissingFields(null);
+        bar.setFieldFillStatus(STATUS_CONFIRMED);
+        runInTx(() -> stockDailyBarRepository.save(bar));
+        return true;
+    }
+
+    /**
+     * 用日 K item 更新 bar 的缺失行情字段（只更新缺失项，不覆盖已有值）。
+     * 返回是否发生了更新。
+     */
+    private boolean applyKlineItemToBar(StockDailyBar bar, KLineIterator item, List<String> missing) {
+        boolean updated = false;
+        if (missing.contains(F_OPEN) && item.getOpen() != null) {
+            bar.setOpenPrice(item.getOpen());
+            updated = true;
+        }
+        if (missing.contains(F_HIGH) && item.getHigh() != null) {
+            bar.setHighPrice(item.getHigh());
+            updated = true;
+        }
+        if (missing.contains(F_LOW) && item.getLow() != null) {
+            bar.setLowPrice(item.getLow());
+            updated = true;
+        }
+        if (missing.contains(F_CLOSE) && item.getClose() != null) {
+            bar.setClosePrice(item.getClose());
+            updated = true;
+        }
+        if (missing.contains(F_VOLUME) && item.getVolume() > 0) {
+            bar.setVolume(item.getVolume());
+            updated = true;
+        }
+        if (missing.contains(F_CHANGE_PERCENT)) {
+            if (recalcChangePercent(bar)) {
+                updated = true;
+            }
+        }
+        // 已补上的字段从缺失集移除
+        List<String> remaining = parseMissingFields(bar.getMissingFields());
+        if (remaining.isEmpty()) {
+            return updated;
+        }
+        remaining.removeAll(missing.stream()
+                .filter(f -> {
+                    switch (f) {
+                        case F_OPEN: return bar.getOpenPrice() != null;
+                        case F_HIGH: return bar.getHighPrice() != null;
+                        case F_LOW: return bar.getLowPrice() != null;
+                        case F_CLOSE: return bar.getClosePrice() != null;
+                        case F_VOLUME: return bar.getVolume() != null && bar.getVolume() > 0;
+                        case F_CHANGE_PERCENT: return bar.getChangePercent() != null;
+                        default: return false;
+                    }
+                }).toList());
+        if (remaining.size() != parseMissingFields(bar.getMissingFields()).size()) {
+            bar.setMissingFields(remaining.isEmpty() ? null : String.join(",", remaining));
+        }
+        return updated;
+    }
+
+    /**
+     * 重算 change_percent：(今日收盘 - 前一日收盘) / 前一日收盘 * 100。
+     * 前一日数据缺失时返回 false（保留缺失标记，等前一日补上后再算）。
+     */
+    private boolean recalcChangePercent(StockDailyBar bar) {
+        if (bar.getClosePrice() == null
+                || bar.getClosePrice().compareTo(java.math.BigDecimal.ZERO) == 0) {
+            return false;
+        }
+        Optional<StockDailyBar> prev = stockDailyBarRepository
+                .findTopBySymbolAndTradeDateBeforeOrderByTradeDateDesc(bar.getSymbol(), bar.getTradeDate());
+        if (prev.isEmpty() || prev.get().getClosePrice() == null
+                || prev.get().getClosePrice().compareTo(java.math.BigDecimal.ZERO) == 0) {
+            return false;
+        }
+        java.math.BigDecimal currClose = bar.getClosePrice();
+        java.math.BigDecimal prevClose = prev.get().getClosePrice();
+        java.math.BigDecimal pct = currClose.subtract(prevClose)
+                .divide(prevClose, 8, java.math.RoundingMode.HALF_UP)
+                .multiply(java.math.BigDecimal.valueOf(100))
+                .setScale(4, java.math.RoundingMode.HALF_UP);
+        bar.setChangePercent(pct);
+        return true;
+    }
+
+    /** 从 KLineData 中找指定交易日的 item（优先 timeString，回退毫秒转美东日期） */
+    private KLineIterator findItemByDate(KLineData data, LocalDate tradeDate) {
+        if (data == null || data.getItems() == null) {
+            return null;
+        }
+        for (KLineIterator item : data.getItems()) {
+            LocalDate itemDate = item.getTimeString() != null && !item.getTimeString().isEmpty()
+                    ? LocalDate.parse(item.getTimeString())
+                    : epochMillisToLocalDate(item.getTime());
+            if (itemDate.equals(tradeDate)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 从缺失标记中移除指定字段；清空后置 CONFIRMED。
+     */
+    void clearMissingFields(StockDailyBar bar, String... fields) {
+        List<String> missing = parseMissingFields(bar.getMissingFields());
+        if (missing.isEmpty()) {
+            return;
+        }
+        Set<String> toClear = new HashSet<>(java.util.Arrays.asList(fields));
+        missing.removeIf(toClear::contains);
+        if (missing.isEmpty()) {
+            bar.setMissingFields(null);
+            bar.setFieldFillStatus(STATUS_CONFIRMED);
+        } else {
+            bar.setMissingFields(String.join(",", missing));
+        }
+    }
+
+    private static List<String> parseMissingFields(String s) {
+        if (s == null || s.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+        return new ArrayList<>(java.util.Arrays.asList(s.split(",")));
+    }
+
+    /** 按源名找数据源；找不到时回退到第一个可用源（截图等无 bean 源的数据用其他源补，用户设计）。 */
+    private DataSourceStrategy findDataSource(String name) {
+        if (name != null) {
+            for (DataSourceStrategy ds : dataSources) {
+                if (name.equals(ds.getSourceName()) && ds.isAvailable()) {
+                    return ds;
+                }
+            }
+        }
+        return dataSources.stream()
+                .filter(DataSourceStrategy::isAvailable)
+                .findFirst()
+                .orElse(null);
     }
 
     private void createRetryTask(String symbol, LocalDate tradeDate, String error) {

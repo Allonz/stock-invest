@@ -31,6 +31,7 @@ import static org.mockito.Mockito.*;
 @DisplayName("DataGapFiller — 并发互斥专项 (§4.1)")
 class DataGapFillerConcurrencyTest {
 
+    @Mock private com.stock.invest.service.FieldCapabilityService fieldCapabilityService;
     @Mock private StockDailyBarRepository stockDailyBarRepository;
     @Mock private DataFillTaskRepository dataFillTaskRepository;
     @Mock private DataSourceStrategy tigerSource;
@@ -55,7 +56,7 @@ class DataGapFillerConcurrencyTest {
         service = new DataGapFillerServiceImpl(
                 stockDailyBarRepository, dataFillTaskRepository, List.of(tigerSource),
                 gapFillProperties, dataFillProgressService, retryProgressService, tradingCalendarDbService,
-                stockDataSourcePriorityService, symbolBlacklistService, transactionManager);
+                stockDataSourcePriorityService, symbolBlacklistService, transactionManager, fieldCapabilityService);
     }
 
     /** 让 findAllSymbols 在调用时阻塞，用于把线程 A 卡在 fillGaps 内部。 */

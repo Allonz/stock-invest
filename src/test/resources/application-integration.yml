@@ -28,3 +28,5 @@ scanner:
 
 gap-fill:
   min-price-threshold: 1.00
+  # 字段增补开关：集成测试关闭（避免 fillGaps 触发真实外部 API 调用拖慢测试）
+  field-fill-enabled: false

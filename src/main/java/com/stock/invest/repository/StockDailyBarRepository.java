@@ -2,6 +2,7 @@ package com.stock.invest.repository;
 
 import com.stock.invest.entity.StockDailyBar;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -114,4 +115,20 @@ public interface StockDailyBarRepository extends JpaRepository<StockDailyBar, Lo
             @Param("tradeDate") LocalDate tradeDate,
             @Param("source") String source,
             Pageable pageable);
+
+    // ---- 字段增补（2026-08-14）----
+
+    /** 发现阶段：从未检查过的记录（存量回填标记用） */
+    @Query("SELECT b FROM StockDailyBar b WHERE b.fieldFillStatus IS NULL")
+    List<StockDailyBar> findUnchecked();
+
+    /** 增补阶段：待增补记录（最新日期优先，保证当日/近期待补先处理） */
+    @Query("SELECT b FROM StockDailyBar b WHERE b.fieldFillStatus = :status ORDER BY b.tradeDate DESC")
+    List<StockDailyBar> findByFieldFillStatus(@Param("status") String status);
+
+    /** 超窗 PENDING 批量确认终态（30 交易日窗口外不补，用户 2026-08-14） */
+    @Modifying
+    @Query("UPDATE StockDailyBar b SET b.missingFields = NULL, b.fieldFillStatus = 'CONFIRMED' "
+            + "WHERE b.fieldFillStatus = 'PENDING' AND b.tradeDate < :minDate")
+    int confirmStalePending(@Param("minDate") LocalDate minDate);
 }

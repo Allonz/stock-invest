@@ -41,6 +41,7 @@ class DataGapFillerPersistTest {
 
     private static final ZoneId AMERICA_NY = ZoneId.of("America/New_York");
 
+    @Mock private com.stock.invest.service.FieldCapabilityService fieldCapabilityService;
     @Mock private StockDailyBarRepository stockDailyBarRepository;
     @Mock private DataFillTaskRepository dataFillTaskRepository;
     @Mock private DataSourceStrategy tigerDataSource;
@@ -79,7 +80,7 @@ class DataGapFillerPersistTest {
                 stockDailyBarRepository, dataFillTaskRepository, dataSources,
                 gapFillProperties, dataFillProgressService, retryProgressService, tradingCalendarDbService,
                 stockDataSourcePriorityService, symbolBlacklistService,
-                transactionManager);
+                transactionManager, fieldCapabilityService);
     }
 
     private LocalDate nyToday() {

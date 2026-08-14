@@ -40,6 +40,7 @@ class CircuitBreakerTest {
 
     private static final ZoneId AMERICA_NY = ZoneId.of("America/New_York");
 
+    @Mock private com.stock.invest.service.FieldCapabilityService fieldCapabilityService;
     @Mock private StockDailyBarRepository stockDailyBarRepository;
     @Mock private DataFillTaskRepository dataFillTaskRepository;
     @Mock private DataSourceStrategy tigerSource;
@@ -85,7 +86,7 @@ class CircuitBreakerTest {
                 stockDailyBarRepository, dataFillTaskRepository,
                 List.of(tigerSource, yfinanceSource, twelvedataSource, tiingoSource),
                 gapFillProperties, dataFillProgressService, retryProgressService, tradingCalendarDbService,
-                stockDataSourcePriorityService, symbolBlacklistService, transactionManager);
+                stockDataSourcePriorityService, symbolBlacklistService, transactionManager, fieldCapabilityService);
     }
 
     private LocalDate nyToday() {

@@ -58,7 +58,9 @@ class DataGapFillerServiceTest {
     @Mock
     private com.stock.invest.service.TradingCalendarDbService tradingCalendarDbService;
     @Mock
-    private StockDataSourcePriorityService stockDataSourcePriorityService;
+    private com.stock.invest.service.StockDataSourcePriorityService stockDataSourcePriorityService;
+    @Mock
+    private com.stock.invest.service.FieldCapabilityService fieldCapabilityService;
     @Mock
     private SymbolBlacklistService symbolBlacklistService;
     @Mock
@@ -94,7 +96,7 @@ class DataGapFillerServiceTest {
                 tradingCalendarDbService,
                 stockDataSourcePriorityService,
                 symbolBlacklistService,
-                transactionManager);
+                transactionManager, fieldCapabilityService);
 
         // Priority service returns fallback chain order
         lenient().when(stockDataSourcePriorityService.getPriorityList(anyString()))

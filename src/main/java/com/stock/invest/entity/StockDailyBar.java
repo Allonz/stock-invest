@@ -81,6 +81,14 @@ public class StockDailyBar {
     @Column(nullable = false, length = 16)
     private String source;
 
+    /** 缺失字段列表（逗号分隔，如 "after_hours,after_hours_change_percent"），NULL/空 = 无缺失（2026-08-14） */
+    @Column(name = "missing_fields", length = 255)
+    private String missingFields;
+
+    /** 字段增补状态：NULL=未检查 / PENDING=待增补 / CONFIRMED=已确认（2026-08-14） */
+    @Column(name = "field_fill_status", length = 20)
+    private String fieldFillStatus;
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
