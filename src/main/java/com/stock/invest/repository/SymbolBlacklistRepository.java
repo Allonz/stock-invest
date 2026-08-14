@@ -14,8 +14,8 @@ public interface SymbolBlacklistRepository extends JpaRepository<SymbolBlacklist
 
     List<SymbolBlacklist> findByStatus(String status);
 
-    @Query("SELECT b.symbol FROM SymbolBlacklist b WHERE b.status = 'active' AND b.consecutive404Count >= 3")
-    List<String> findBlacklistedSymbolsWithCountGE3();
+    @Query("SELECT b.symbol FROM SymbolBlacklist b WHERE b.status = 'active'")
+    List<String> findBlacklistedSymbols();
 
     void deleteBySymbol(String symbol);
 }

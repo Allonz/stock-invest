@@ -67,7 +67,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
 
 
     private static final int MAX_SYMBOLS_PER_RUN = 200;
-    private static final int MAX_LOOKBACK_DAYS = 30;
+    private static final int MAX_LOOKBACK_DAYS = 7;
     private static final int MAX_MISSING_DATES_PER_SYMBOL = 5;
 
     /** P1-5：账户级错误（权限/配额）触发源级熔断的冷却时长 */
@@ -376,9 +376,12 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
             try {
                 klineData = source.fetcher.fetch(symbol, tradeDate);
                 if (isKLineDataEmpty(klineData)) {
-                    // P1-3：成功但无数据（EMPTY）——默认不计黑名单，避免限流/超时/解析失败
-                    // 被数据源"包装成空结果"后误伤真实股票
-                    log.warn("[DataGapFiller] {} source then received response: returned empty result for symbol={}",
+                    // 成功但无数据（EMPTY）——视为该源确认无此数据，计入黑名单判定。
+                    // 原 P1-3 曾将 EMPTY 排除（避免限流/超时被包装成空结果后误伤），
+                    // 但会导致 4 源全空时 notFoundCount=0、永不进黑名单、任务无限重试。
+                    // 用户原设计：≥2 源报空即 1 次确认不存在 → 进黑名单（2026-08-13 修正）。
+                    sourceNotFoundResults.put(source.name, true);
+                    log.warn("[DataGapFiller] {} source then received response: returned empty result for symbol={} (counted as not-found)",
                             source.name, symbol);
                     log.info("[DataGapFiller] {} source end", source.name);
                     log.info("");
@@ -393,10 +396,11 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
                     log.info("[DataGapFiller] {} source item: symbol={}, epochTime={}, timeString='{}', parsedDate={}, open={}, close={}",
                             source.name, item.getSymbol(), item.getTime(), item.getTimeString(), itemDate,
                             item.getOpen(), item.getClose());
-                    // 跳过零价格无效数据
-                    if (item.getOpen() != null && item.getClose() != null
-                            && item.getOpen().compareTo(java.math.BigDecimal.ZERO) == 0
-                            && item.getClose().compareTo(java.math.BigDecimal.ZERO) == 0) {
+                    // 跳过零价格无效数据（含字段缺失反序列化为 null 的情况 —— 2026-08-14 修复：
+                    // ANTI 等 tiingo 返回无数据股票时 item 字段为 null，旧检查只匹配显式 0，
+                    // null 落库成 0 且不计 not-found，导致每天重复补缺每天写 0 记录）
+                    if ((item.getOpen() == null || item.getOpen().compareTo(java.math.BigDecimal.ZERO) == 0)
+                            && (item.getClose() == null || item.getClose().compareTo(java.math.BigDecimal.ZERO) == 0)) {
                         log.warn("[DataGapFiller] {} source item: skip zero-price placeholder symbol={}, date={}",
                                 source.name, item.getSymbol(), itemDate);
                         continue;
@@ -521,6 +525,26 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         bar.setChangePercent(item.getChangePercent());
         bar.setAfterHours(item.getAfterHours());
         bar.setAfterHoursChangePercent(item.getAfterHoursChangePercent());
+        // === fallback: 数据源未提供 changePercent 时自动计算（隔日涨跌幅） ===
+        // yfinance/tiingo 的 K 线响应不含 changePercent 字段（反序列化后为 null），
+        // 若此处不补算，落库后 change_percent 为 NULL（历史 532/4100、68/500 空）。
+        // 恢复 29ef6c5 设计：null 时查前一个交易日 close 计算 (curr-prev)/prev*100。
+        if (bar.getChangePercent() == null && bar.getClosePrice() != null
+                && bar.getClosePrice().compareTo(java.math.BigDecimal.ZERO) != 0) {
+            final java.math.BigDecimal currClose = bar.getClosePrice();
+            stockDailyBarRepository
+                    .findTopBySymbolAndTradeDateBeforeOrderByTradeDateDesc(symbol, tradeDate)
+                    .ifPresent(prev -> {
+                        java.math.BigDecimal prevClose = prev.getClosePrice();
+                        if (prevClose != null && prevClose.compareTo(java.math.BigDecimal.ZERO) != 0) {
+                            java.math.BigDecimal pct = currClose.subtract(prevClose)
+                                    .divide(prevClose, 8, java.math.RoundingMode.HALF_UP)
+                                    .multiply(java.math.BigDecimal.valueOf(100))
+                                    .setScale(4, java.math.RoundingMode.HALF_UP);
+                            bar.setChangePercent(pct);
+                        }
+                    });
+        }
         bar.setSource(source);
         // P1-2：单次持久化独立事务，失败不回滚整批
         runInTx(() -> stockDailyBarRepository.save(bar));
@@ -570,7 +594,10 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
             return true;
         }
         String name = source.getSourceName();
-        return "tiger".equals(name) || "tigeropen".equals(name);
+        // yfinance 有独立盘后价来源（get_stock_info 的 postMarketPrice），放行合并；
+        // tiingo 无盘后价 API，保持拦截（2026-08-13 修复，此前 yfinance 被误拦截导致
+        // 已实现的 getAfterHoursKLineDataByDateRange 从未被调用）
+        return "tiger".equals(name) || "tigeropen".equals(name) || "yfinance".equals(name);
     }
 
     private void createRetryTask(String symbol, LocalDate tradeDate, String error) {

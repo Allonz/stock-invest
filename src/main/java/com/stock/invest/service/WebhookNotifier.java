@@ -22,6 +22,9 @@ import java.util.Map;
  * Webhook 通知器：编排步骤完成后回调 Hermes。
  * 签名：X-Webhook-Signature = HMAC-SHA256(body)，hex 小写（Hermes V1 body-only 模式）。
  * 失败重试 3 次（间隔 3s/9s/27s 退避），3 次仍失败记录错误日志。
+ *
+ * 支持按 run 动态指定回调端点（webhookUrl 参数），null 时回退全局配置
+ * orchestration.webhook-url（"谁触发就回调谁"）。
  */
 @Service
 public class WebhookNotifier {
@@ -38,6 +41,14 @@ public class WebhookNotifier {
     private String webhookSecret;
 
     /**
+     * 发送编排完成通知（使用全局配置的回调端点）。
+     */
+    public boolean notify(String step, String status, String runId, String tradeDate,
+                          String message, String nextStep) {
+        return notify(step, status, runId, tradeDate, message, nextStep, null);
+    }
+
+    /**
      * 发送编排完成通知。
      *
      * @param step      刚完成的步骤（history_backfill / day_backfill / screening）
@@ -46,10 +57,11 @@ public class WebhookNotifier {
      * @param tradeDate 交易日（ISO）
      * @param message   结果描述
      * @param nextStep  下一步（history_backfill / day_backfill / screening / report / none）
+     * @param runWebhookUrl 本 run 的回调端点（可空，null 回退全局配置）
      * @return 是否投递成功（3 次重试后）
      */
     public boolean notify(String step, String status, String runId, String tradeDate,
-                          String message, String nextStep) {
+                          String message, String nextStep, String runWebhookUrl) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("event_type", "step_done");
         payload.put("step", step);
@@ -58,10 +70,17 @@ public class WebhookNotifier {
         payload.put("trade_date", tradeDate);
         payload.put("message", message);
         payload.put("next_step", nextStep);
-        return notify(payload);
+        return notify(payload, runWebhookUrl);
     }
 
     public boolean notify(Map<String, Object> payload) {
+        return notify(payload, null);
+    }
+
+    public boolean notify(Map<String, Object> payload, String runWebhookUrl) {
+        String targetUrl = (runWebhookUrl != null && !runWebhookUrl.isBlank())
+                ? runWebhookUrl
+                : webhookUrl;
         try {
             String body = objectMapper.writeValueAsString(payload);
             long[] delays = {3_000L, 9_000L, 27_000L};
@@ -73,9 +92,9 @@ public class WebhookNotifier {
                         headers.set("X-Webhook-Signature", hmacSha256(body, webhookSecret));
                     }
                     HttpEntity<String> entity = new HttpEntity<>(body, headers);
-                    String resp = restTemplate.postForObject(webhookUrl, entity, String.class);
-                    log.info("[WebhookNotifier] notify ok (attempt={}), resp={}, payload={}",
-                            attempt + 1, resp, body);
+                    String resp = restTemplate.postForObject(targetUrl, entity, String.class);
+                    log.info("[WebhookNotifier] notify ok (attempt={}), url={}, resp={}, payload={}",
+                            attempt + 1, targetUrl, resp, body);
                     return true;
                 } catch (Exception e) {
                     log.warn("[WebhookNotifier] notify failed (attempt={}/{}): {}",
@@ -90,7 +109,8 @@ public class WebhookNotifier {
                     }
                 }
             }
-            log.error("[WebhookNotifier] notify FAILED after {} attempts, payload={}", delays.length + 1, body);
+            log.error("[WebhookNotifier] notify FAILED after {} attempts, url={}, payload={}",
+                    delays.length + 1, targetUrl, body);
             return false;
         } catch (Exception e) {
             log.error("[WebhookNotifier] serialize payload failed", e);

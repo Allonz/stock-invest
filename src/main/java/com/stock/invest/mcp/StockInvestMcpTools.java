@@ -14,12 +14,13 @@ import com.stock.invest.enums.dto.TigerWatchlistIngestRequestDto;
 import com.stock.invest.enums.dto.TigerWatchlistIngestResponseDto;
 import com.stock.invest.enums.dto.TigerWatchlistRowDto;
 import com.stock.invest.security.IngestApiGuard;
+import com.stock.invest.service.OrchestrationService;
 import com.stock.invest.service.ScreeningService;
 import com.stock.invest.service.TigerWatchlistIngestService;
 import com.stock.invest.service.TradingCalendarDbService;
 
 /**
- * 将老虎截图导入 / 开盘日历 / 股票筛选暴露为 MCP Tools，供 OpenClaw 调用。
+ * 将老虎截图导入 / 开盘日历 / 股票筛选 / 串行编排暴露为 MCP Tools，供 Hermes / OpenClaw 调用。
  *
  * <p>端点：http://127.0.0.1:8090/api/mcp (Streamable HTTP)</p>
  */
@@ -32,15 +33,18 @@ public class StockInvestMcpTools {
     private final TigerWatchlistIngestService ingestService;
     private final TradingCalendarDbService calendarDbService;
     private final ScreeningService screeningService;
+    private final OrchestrationService orchestrationService;
     private final IngestApiGuard ingestApiGuard;
 
     public StockInvestMcpTools(TigerWatchlistIngestService ingestService,
                                TradingCalendarDbService calendarDbService,
                                ScreeningService screeningService,
+                               OrchestrationService orchestrationService,
                                IngestApiGuard ingestApiGuard) {
         this.ingestService = ingestService;
         this.calendarDbService = calendarDbService;
         this.screeningService = screeningService;
+        this.orchestrationService = orchestrationService;
         this.ingestApiGuard = ingestApiGuard;
     }
 
@@ -131,6 +135,47 @@ public class StockInvestMcpTools {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("batchId", batchId);
         data.put("tradeDate", tradeDate.toString());
+        return data;
+    }
+
+    /* ---------- 4. 串行编排（对应 POST /api/orchestration/step） ---------- */
+
+    @McpTool(name = "orchestration_trigger",
+             description = "触发串行编排链中的任意一步：history_backfill（历史补缺）/ day_backfill（当日补缺）/ screening（筛选）。"
+                     + "chain=true（默认）按 nextStep 自动串后续步骤（history_backfill→day_backfill→screening→report）；"
+                     + "chain=false 单步执行，完成后不触发下一步。webhook_url 缺省为 Hermes 本机 8645 接力端点。"
+                     + "返回 run_id 与受理状态，后续每一步完成会经 webhook 回调自动接力。")
+    public Map<String, Object> orchestrationTrigger(
+            @McpToolParam(description = "要触发的步骤：history_backfill / day_backfill / screening", required = true) String step,
+            @McpToolParam(description = "链路标识 run_id；缺省自动生成 manual-<timestamp>", required = false) String runId,
+            @McpToolParam(description = "交易日 yyyy-MM-dd；缺省为纽约时间今天", required = false) String tradeDate,
+            @McpToolParam(description = "本 run 的回调 webhook 端点；缺省 http://localhost:8645/webhooks/tiger-orch", required = false) String webhookUrl,
+            @McpToolParam(description = "true=自动接力后续步骤（默认）；false=单步执行不接力", required = false) Boolean chain) {
+        if (step == null || step.isBlank()) {
+            throw new IllegalArgumentException("step is required: history_backfill / day_backfill / screening");
+        }
+        if (!"history_backfill".equals(step) && !"day_backfill".equals(step) && !"screening".equals(step)) {
+            throw new IllegalArgumentException("step must be one of: history_backfill, day_backfill, screening");
+        }
+        String effRunId = (runId == null || runId.isBlank())
+                ? "manual-" + System.currentTimeMillis() : runId;
+        String effTradeDate = (tradeDate == null || tradeDate.isBlank())
+                ? LocalDate.now(NY_ZONE).toString() : tradeDate;
+        String effWebhookUrl = (webhookUrl == null || webhookUrl.isBlank())
+                ? "http://localhost:8645/webhooks/tiger-orch" : webhookUrl;
+        boolean effChain = chain == null || chain;
+
+        orchestrationService.triggerStep(step, effRunId, effTradeDate, effWebhookUrl, effChain);
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("step", step);
+        data.put("run_id", effRunId);
+        data.put("trade_date", effTradeDate);
+        data.put("chain", effChain);
+        data.put("accepted", true);
+        data.put("message", effChain
+                ? "步骤已受理，异步执行中；后续步骤经 webhook 自动接力"
+                : "步骤已受理，异步执行中（单步模式，不接力后续步骤）");
         return data;
     }
 

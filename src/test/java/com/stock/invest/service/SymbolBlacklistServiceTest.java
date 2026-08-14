@@ -138,7 +138,7 @@ class SymbolBlacklistServiceTest {
     @Test
     @DisplayName("getBlacklistedSymbols: delegates to repository")
     void test_getBlacklistedSymbols() {
-        when(repository.findBlacklistedSymbolsWithCountGE3()).thenReturn(List.of("AAPL", "TSLA"));
+        when(repository.findBlacklistedSymbols()).thenReturn(List.of("AAPL", "TSLA"));
 
         List<String> result = service.getBlacklistedSymbols();
 

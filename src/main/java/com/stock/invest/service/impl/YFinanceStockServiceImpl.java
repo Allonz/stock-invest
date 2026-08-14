@@ -272,29 +272,34 @@ public class YFinanceStockServiceImpl implements StockScannerStrategy {
     }
 
     /**
-     * 重写 getAfterHoursKLineDataByDateRange，调用 Python 的 get_stock_info 获取盘后价。
-     * yfinance 的 afterHours 数据来自 stock.info 的 postMarketPrice / postMarketChangePercent，
-     * 而非独立的 K 线端点，因此需要单独调用 get_stock_info 获取。
+     * 按指定交易日获取盘后价。
+     * <p>调用 Python get_after_hours_price（1m 分钟数据 prepost=True，取 16:00-20:00 ET
+     * 最后一条 close），按交易日精确查询——修复 2026-08-13 前用 get_stock_info 实时
+     * postMarketPrice 的缺陷：盘中恒为 None、历史日期拿到的是当天实时值而非目标日期。</p>
+     * <p>可用性边界（Yahoo 分钟数据保留限制）：近 30 天内可查；30~60 天需降级到
+     * 15m/30m/60m 间隔；超过 60 天 Yahoo 不保留分钟数据，返回空 KLineData。</p>
      */
     @Override
     public KLineData getAfterHoursKLineDataByDateRange(String symbol, LocalDate tradeDate) {
         try {
-            // 调用 Python get_stock_info 获取盘后价
-            String result = pythonScriptExecutor.executeScript(getScriptName(), "get_stock_info", symbol);
+            String result = pythonScriptExecutor.executeScript(getScriptName(),
+                    "get_after_hours_price", symbol, tradeDate.toString());
+            // Python 侧失败输出 {"error": ...} → 返回空（盘后不可得，不影响日K主链路）
+            if (result != null && result.contains("\"error\"")) {
+                log.warn("[YFinanceStockServiceImpl] afterHours fetch failed for {}, date={}: {}",
+                        symbol, tradeDate, extractErrorFromJson(result));
+                return new KLineData();
+            }
             @SuppressWarnings("unchecked")
             Map<String, Object> infoMap = objectMapper.readValue(result, Map.class);
-
             Object ahPrice = infoMap.get("afterHours");
-            Object ahChangePct = infoMap.get("afterHoursChangePercent");
-
             if (ahPrice == null) {
-                log.debug("[YFinanceStockServiceImpl] afterHours: no after-hours data for symbol={}, date={}", symbol, tradeDate);
+                log.debug("[YFinanceStockServiceImpl] afterHours: no after-hours data for symbol={}, date={}",
+                        symbol, tradeDate);
                 return new KLineData();
             }
 
             java.math.BigDecimal ahClose = java.math.BigDecimal.valueOf(((Number) ahPrice).doubleValue());
-            java.math.BigDecimal ahChangePctVal = ahChangePct != null
-                    ? java.math.BigDecimal.valueOf(((Number) ahChangePct).doubleValue()) : java.math.BigDecimal.ZERO;
 
             KLineData ahData = new KLineData();
             ahData.setSymbol(symbol);
@@ -304,14 +309,15 @@ public class YFinanceStockServiceImpl implements StockScannerStrategy {
             item.setTime(tradeDate.atStartOfDay(java.time.ZoneId.of("America/New_York")).toInstant().toEpochMilli());
             item.setTimeString(tradeDate.toString());
             item.setClose(ahClose);
-            item.setChangePercent(ahChangePctVal);
+            // 盘后涨跌幅由 mergeAfterHoursIfAvailable 用 (ahClose - regClose)/regClose*100 计算
             ahData.setItems(List.of(item));
 
-            log.info("[YFinanceStockServiceImpl] afterHours: symbol={}, date={}, afterHours={}, afterHoursChangePct={}",
-                    symbol, tradeDate, ahClose, ahChangePctVal);
+            log.info("[YFinanceStockServiceImpl] afterHours: symbol={}, date={}, afterHours={}",
+                    symbol, tradeDate, ahClose);
             return ahData;
         } catch (Exception e) {
-            log.warn("[YFinanceStockServiceImpl] afterHours fetch failed for {}: {}", symbol, e.getMessage());
+            log.warn("[YFinanceStockServiceImpl] afterHours fetch failed for {}, date={}: {}",
+                    symbol, tradeDate, e.getMessage());
             return new KLineData();
         }
     }

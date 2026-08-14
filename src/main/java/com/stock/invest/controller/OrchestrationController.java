@@ -19,7 +19,11 @@ import java.util.Map;
  * POST /api/orchestration/step
  *   body: {"step": "history_backfill|day_backfill|screening",
  *          "run_id": "20260812-01",
- *          "trade_date": "2026-08-12"}
+ *          "trade_date": "2026-08-12",
+ *          "webhook_url": "http://localhost:8645/webhooks/tiger-orch"}   // 可选：本 run 的回调端点
+ *
+ * webhook_url 支持"谁触发就回调谁"：Windows Hermes 触发传 8644，WSL Hermes 触发传 8645，
+ * 不传则回退到全局配置 orchestration.webhook-url（向后兼容）。
  */
 @RestController
 @RequestMapping("/api/orchestration")
@@ -41,6 +45,9 @@ public class OrchestrationController {
         String step = body.get("step") == null ? "" : String.valueOf(body.get("step"));
         String runId = body.get("run_id") == null ? "" : String.valueOf(body.get("run_id"));
         String tradeDate = body.get("trade_date") == null ? null : String.valueOf(body.get("trade_date"));
+        String webhookUrl = body.get("webhook_url") == null ? null : String.valueOf(body.get("webhook_url"));
+        // chain: true（默认）=按 nextStep 接力；false=单步执行不接力
+        boolean chain = body.get("chain") == null || Boolean.parseBoolean(String.valueOf(body.get("chain")));
 
         if (step.isEmpty()) {
             return ResponseEntity.badRequest().body(ApiResponse.error("step is required"));
@@ -53,8 +60,9 @@ public class OrchestrationController {
             runId = "manual-" + System.currentTimeMillis();
         }
 
-        log.info("[Orchestration] trigger step={}, runId={}, tradeDate={}", step, runId, tradeDate);
-        orchestrationService.triggerStep(step, runId, tradeDate);
+        log.info("[Orchestration] trigger step={}, runId={}, tradeDate={}, webhookUrl={}, chain={}",
+                step, runId, tradeDate, webhookUrl, chain);
+        orchestrationService.triggerStep(step, runId, tradeDate, webhookUrl, chain);
 
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("step", step);

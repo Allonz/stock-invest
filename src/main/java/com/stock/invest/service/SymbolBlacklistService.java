@@ -27,10 +27,10 @@ public class SymbolBlacklistService {
 
     /**
      * 获取需要跳过的黑名单 symbol 列表。
-     * 条件：status = 'active' AND consecutive_404_count >= 3
+     * 条件：status = 'active'（一次 ≥2 源确认不存在即入黑名单，2026-08-13 修正）
      */
     public List<String> getBlacklistedSymbols() {
-        return repository.findBlacklistedSymbolsWithCountGE3();
+        return repository.findBlacklistedSymbols();
     }
 
     public boolean isBlacklisted(String symbol) {

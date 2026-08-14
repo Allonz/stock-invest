@@ -32,6 +32,43 @@ def _after_hours_trade_session():
     return getattr(TradingSession, "AfterHours", None) or getattr(TradingSession, "AFTER_HOURS", None)
 
 
+def _fetch_after_hours_close(client, symbol: str, limit: int):
+    """获取最近 limit 个交易日的盘后收盘价（按美东日期聚合）。
+
+    tigeropen 官方约束：trade_session=AfterHours 时 period 必须为分钟级
+    （BarPeriod.ONE_MINUTE ~ FOUR_HOURS），BarPeriod.DAY 会导致 bars 显示不正确
+    或返回空。因此这里用 ONE_MINUTE 拉盘后分钟 bar，按美东日期取当日最后一条
+    分钟的 close 作为该交易日盘后价（2026-08-13 修正）。
+
+    返回 { 'YYYY-MM-DD': close } 或空 dict。
+    """
+    from datetime import datetime
+
+    from tigeropen.common.consts import BarPeriod
+
+    try:
+        ah_df = client.get_bars(
+            symbol,
+            period=BarPeriod.ONE_MINUTE,
+            limit=int(limit),
+            trade_session=_after_hours_trade_session(),
+        )
+    except Exception:
+        return {}
+    if ah_df is None or ah_df.empty:
+        return {}
+    ah_by_date = {}
+    for _, row in ah_df.iterrows():
+        try:
+            t = int(row["time"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        d = datetime.fromtimestamp(t / 1000, tz=NY_TZ).strftime("%Y-%m-%d")
+        # 同一交易日多条分钟 bar，取最后一条（最新价）
+        ah_by_date[d] = float(row["close"])
+    return ah_by_date
+
+
 def _error_payload(exc):
     """将异常转为统一错误 JSON 结构；账户级错误（权限/配额）标为 ACCOUNT_LEVEL。"""
     code = getattr(exc, "code", None)
@@ -113,15 +150,10 @@ def _cmd_bars(client, symbol: str, lim: int):
             )
 
     # 获取盘后 K 线，按日期合并到日 K 线中（P2-16：统一用美东时区取日期 key）
-    ah_df = client.get_bars(
-        symbol, period=BarPeriod.DAY, limit=int(lim), trade_session=_after_hours_trade_session()
-    )
-    if ah_df is not None and not ah_df.empty:
-        ah_by_date = {}
-        for _, row in ah_df.iterrows():
-            t = int(row["time"])
-            d = datetime.fromtimestamp(t / 1000, tz=NY_TZ).strftime("%Y-%m-%d")
-            ah_by_date[d] = float(row["close"])
+    # 2026-08-13：tigeropen 官方要求 trade_session 必须配分钟级 period，
+    # 原 BarPeriod.DAY + trade_session 写法无效，改用 ONE_MINUTE 聚合盘后收盘价
+    ah_by_date = _fetch_after_hours_close(client, symbol, int(lim))
+    if ah_by_date:
         for item in items:
             t = item.get("time", 0)
             d = datetime.fromtimestamp(t / 1000, tz=NY_TZ).strftime("%Y-%m-%d")
@@ -134,35 +166,27 @@ def _cmd_bars(client, symbol: str, lim: int):
 
 def _cmd_afterhours_bars(client, symbol: str, lim: int):
     import math
+    from datetime import datetime
 
-    from tigeropen.common.consts import BarPeriod
-
-    df = client.get_bars(
-        symbol, period=BarPeriod.DAY, limit=int(lim), trade_session=_after_hours_trade_session()
-    )
+    # 2026-08-13：tigeropen 官方要求 trade_session 必须配分钟级 period，
+    # 原 BarPeriod.DAY + trade_session 写法无效，改用 ONE_MINUTE 聚合盘后收盘价
+    ah_by_date = _fetch_after_hours_close(client, symbol, int(lim))
     items = []
-    if df is not None and not df.empty:
-        for _, row in df.iterrows():
-            vol = row.get("volume")
-            if vol is None or (isinstance(vol, float) and math.isnan(vol)):
-                vol = 0
-            amt = row.get("amount")
-            if amt is None or (isinstance(amt, float) and math.isnan(amt)):
-                amt = 0.0
-            t = int(row["time"])
-            items.append(
-                {
-                    "symbol": str(row.get("symbol", symbol)),
-                    "time": t,
-                    "timeString": "",
-                    "open": float(row["open"]),
-                    "high": float(row["high"]),
-                    "low": float(row["low"]),
-                    "close": float(row["close"]),
-                    "volume": int(vol),
-                    "amount": float(amt),
-                }
-            )
+    for d, close in sorted(ah_by_date.items(), reverse=True):
+        t = int(datetime.strptime(d, "%Y-%m-%d").replace(tzinfo=NY_TZ).timestamp() * 1000)
+        items.append(
+            {
+                "symbol": symbol,
+                "time": t,
+                "timeString": d,
+                "open": close,
+                "high": close,
+                "low": close,
+                "close": close,
+                "volume": 0,
+                "amount": 0.0,
+            }
+        )
     items.sort(key=lambda x: x["time"], reverse=True)
     print(json.dumps({"symbol": symbol, "items": items}))
 

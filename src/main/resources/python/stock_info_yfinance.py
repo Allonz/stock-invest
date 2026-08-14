@@ -63,7 +63,10 @@ def get_stock_info(symbol: str) -> str:
         
         # 获取股票信息
         stock = yf.Ticker(symbol)
-        info = safe_yfinance_request(stock.info)
+        # yfinance >=0.2.x: Ticker.info 是 dict 属性，不是方法；旧代码 stock.info() 会抛
+        # "'dict' object is not callable"，导致 get_stock_info 永远失败（盘后价/涨跌幅全空）。
+        # 修正为直接取属性（2026-08-13）。
+        info = stock.info
         
         # 获取历史数据
         hist = safe_yfinance_request(stock.history, period="1d")
@@ -149,6 +152,48 @@ def get_daily_kline(symbol: str, days: int = 7) -> str:
             }
             kline_data["items"].append(item)
         return json.dumps(kline_data)
+    except Exception as e:
+        return json.dumps({"error": str(e)})
+
+
+def get_after_hours_price(symbol: str, trade_date: str) -> str:
+    """按交易日获取盘后收盘价。
+
+    yfinance 的 info.postMarketPrice 是实时字段（仅当前盘后时段有值，盘中为 None，
+    且无法查历史日期）。改用 history(interval='1m', prepost=True) 拉取该交易日
+    4:00-20:00 ET 的分钟数据，取 16:00-20:00 ET（盘后时段）最后一条 close 作为
+    该交易日盘后价（2026-08-13 新增，按交易日精确查询）。
+
+    可用性边界（Yahoo 分钟数据保留限制）：
+    - 近 30 天内：1m 数据可用，本函数按此查询
+    - 30~60 天：1m 不可用，需降级到 15m/30m/60m 间隔（同样可取 16:00-20:00 段）
+    - 超过 60 天：Yahoo 分钟数据不保留，返回 null（盘后价无法回溯）
+    注意：盘后价查询依赖当日盘后交易存在，无盘后交易的股票/日期返回 null 属正常。
+
+    返回 {"afterHours": <close>} 或 {"afterHours": null}（无盘后数据）。
+    """
+    try:
+        import pytz
+        from datetime import datetime, timedelta
+
+        stock = yf.Ticker(symbol)
+        start_dt = datetime.strptime(trade_date, "%Y-%m-%d")
+        end_dt = start_dt + timedelta(days=1)
+        hist = stock.history(start=start_dt.strftime("%Y-%m-%d"),
+                             end=end_dt.strftime("%Y-%m-%d"),
+                             interval="1m", prepost=True)
+        if hist is None or hist.empty:
+            return json.dumps({"afterHours": None})
+        # 统一转美东时区（Yahoo 分钟数据默认 UTC）
+        try:
+            hist.index = hist.index.tz_convert("America/New_York")
+        except Exception:
+            pass
+        # 盘后时段 16:00-20:00 ET，取最后一条 close
+        ah = hist.between_time("16:00", "20:00")
+        if ah.empty:
+            return json.dumps({"afterHours": None})
+        return json.dumps({"afterHours": float(ah["Close"].iloc[-1])})
     except Exception as e:
         return json.dumps({"error": str(e)})
 
@@ -295,6 +340,12 @@ def main():
             print(json.dumps({"error": "Missing parameters: symbol start_date end_date"}))
             sys.exit(1)
         print(get_daily_kline_range(sys.argv[2], sys.argv[3], sys.argv[4]))
+
+    elif command == "get_after_hours_price":
+        if len(sys.argv) < 4:
+            print(json.dumps({"error": "Missing parameters: symbol trade_date"}))
+            sys.exit(1)
+        print(get_after_hours_price(sys.argv[2], sys.argv[3]))
     
     elif command == "get_batch_kline":
         if len(sys.argv) < 5:

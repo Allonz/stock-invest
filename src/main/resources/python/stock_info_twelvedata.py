@@ -117,19 +117,31 @@ def get_daily_kline(symbol: str) -> str:
 
 
 def get_daily_kline_range(symbol: str, start_date: str, end_date: str) -> str:
-    """按日期范围获取K线数据 (TwelveData API)."""
+    """按日期范围获取K线数据 (TwelveData API).
+
+    注意：TwelveData API 对单日范围（start==end）返回 HTTP 400
+    "No data is available on the specified dates"（实测 2026-08-14，数据明明存在；
+    至少 2 天范围才正常）。因此请求时前后各扩 1 天，再本地过滤出目标日期范围。
+    """
     try:
+        s = datetime.strptime(start_date, "%Y-%m-%d")
+        e = datetime.strptime(end_date, "%Y-%m-%d")
+        req_start = (s - timedelta(days=1)).strftime("%Y-%m-%d")
+        req_end = (e + timedelta(days=1)).strftime("%Y-%m-%d")
         data = api_request("time_series", {
             "symbol": symbol,
             "interval": "1day",
-            "start_date": start_date,
-            "end_date": end_date,
+            "start_date": req_start,
+            "end_date": req_end,
             "dp": "2"
         })
         values = data.get("values", [])
         items = []
         for v in reversed(values):
-            dt = datetime.strptime(v["datetime"], "%Y-%m-%d")
+            vdate = v.get("datetime", "")
+            if vdate < start_date or vdate > end_date:
+                continue
+            dt = datetime.strptime(vdate, "%Y-%m-%d")
             dt_aware = pytz.timezone("America/New_York").localize(dt)
             items.append({
                 "time": int(dt_aware.timestamp() * 1000),

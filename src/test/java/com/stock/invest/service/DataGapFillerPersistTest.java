@@ -261,8 +261,10 @@ class DataGapFillerPersistTest {
     }
 
     // FILL-004: data_fill_task 重试任务在失败时创建
+    // 2026-08-13 修正：EMPTY（成功但无数据）计入黑名单判定 —— ≥2 源报空即 1 次确认不存在 → 进黑名单
+    // （原 P1-3 语义：EMPTY 不计黑名单，导致 4 源全空时 notFoundCount=0、永不进黑名单、任务无限重试）
     @Test
-    @DisplayName("FILL-004: 所有数据源空结果时不进黑名单，创建 retry 任务（P1-3 三态）")
+    @DisplayName("FILL-004: 所有数据源空结果时进黑名单（EMPTY 计入判定），retry 任务停止")
     void createsRetryTaskWhenAllSourcesFail() throws Exception {
         LocalDate today = nyToday();
         LocalDate stopDate = today.minusDays(5);
@@ -278,10 +280,8 @@ class DataGapFillerPersistTest {
         when(stockDailyBarRepository.findAllSymbols()).thenReturn(List.of("AAPL"));
         when(stockDailyBarRepository.findBySymbolOrderByTradeDateDesc(eq("AAPL"), any()))
                 .thenReturn(new ArrayList<>(List.of(existingBar)));
-        when(dataFillTaskRepository.findBySymbolAndTradeDate(eq("AAPL"), any()))
-                .thenReturn(Optional.empty());
 
-        // Both data sources return empty (成功但无数据 = EMPTY，不计黑名单)
+        // Both data sources return empty (成功但无数据 = EMPTY，计入黑名单判定)
         KLineData empty = new KLineData();
         empty.setSymbol("AAPL");
         empty.setItems(List.of());
@@ -293,14 +293,12 @@ class DataGapFillerPersistTest {
 
         service.fillGaps();
 
-        // P1-3：空结果不再触发黑名单；走 retry 任务路径
-        verify(symbolBlacklistService, never()).recordNotFound(eq("AAPL"), anyMap());
-        verify(dataFillTaskRepository, never()).updateStatusBySymbolAndStatusIn(
+        // 2026-08-13：EMPTY 计入 → 2 源报空 → recordNotFound + 停任务（一次进黑名单）
+        // fillGaps 对每个缺失日期都会触发一次 recordNotFound，故用 atLeastOnce
+        verify(symbolBlacklistService, atLeastOnce()).recordNotFound(eq("AAPL"), anyMap());
+        verify(dataFillTaskRepository, atLeastOnce()).updateStatusBySymbolAndStatusIn(
                 eq("AAPL"), anyList(), eq("stopped"), anyString());
-        verify(dataFillTaskRepository, atLeastOnce()).save(taskCaptor.capture());
-        DataFillTask created = taskCaptor.getValue();
-        assertEquals("AAPL", created.getSymbol());
-        assertEquals("retrying", created.getStatus());
+        verify(dataFillTaskRepository, never()).save(taskCaptor.capture());
     }
 
     // FILL-005: mergeAfterHours 仅对 tiger/tigeropen source 执行
