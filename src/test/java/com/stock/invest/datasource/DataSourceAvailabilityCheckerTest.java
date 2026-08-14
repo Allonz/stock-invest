@@ -1,17 +1,9 @@
 package com.stock.invest.datasource;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.when;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
+import com.stock.invest.datasource.rule.TigerOpenAvailabilityRule;
+import com.stock.invest.datasource.rule.TiingoAvailabilityRule;
+import com.stock.invest.datasource.rule.TwelveDataAvailabilityRule;
+import com.stock.invest.datasource.rule.YFinanceAvailabilityRule;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,20 +11,22 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.context.ActiveProfiles;
 
-import com.stock.invest.datasource.rule.TigerAvailabilityRule;
-import com.stock.invest.datasource.rule.TigerOpenAvailabilityRule;
-import com.stock.invest.datasource.rule.TiingoAvailabilityRule;
-import com.stock.invest.datasource.rule.TwelveDataAvailabilityRule;
-import com.stock.invest.datasource.rule.YFinanceAvailabilityRule;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.when;
 
 /**
- * TC-AVAIL-001~007: DataSourceAvailabilityChecker 单元测试
+ * DataSourceAvailabilityChecker 单元测试。
+ * 2026-08-14：Tiger Java 数据源已删除，TigerAvailabilityRule 移除。
  */
 @ActiveProfiles("test")
 @ExtendWith(MockitoExtension.class)
 class DataSourceAvailabilityCheckerTest {
 
-    @Mock private TigerAvailabilityRule tigerRule;
     @Mock private TigerOpenAvailabilityRule tigerOpenRule;
     @Mock private TiingoAvailabilityRule tiingoRule;
     @Mock private TwelveDataAvailabilityRule twelvedataRule;
@@ -49,35 +43,6 @@ class DataSourceAvailabilityCheckerTest {
 
     private DataSourceAvailabilityChecker createChecker(List<AvailabilityRule> rules) {
         return new DataSourceAvailabilityChecker(rules);
-    }
-
-    @Test
-    @DisplayName("TC-AVAIL-001: Tiger 配置存在时标记为可用")
-    void tigerConfigExists_shouldBeAvailable() {
-        mockRule(tigerRule, "tiger", SourceRequirement.REQUIRED, true, "已配置 tiger_id 与 private_key");
-        checker = createChecker(Arrays.asList(tigerRule));
-        checker.init();
-
-        assertTrue(checker.isAvailable("tiger"));
-        Optional<SourceStatus> status = checker.getStatus("tiger");
-        assertTrue(status.isPresent());
-        assertTrue(status.get().isAvailable());
-        assertNull(status.get().getReason());
-    }
-
-    @Test
-    @DisplayName("TC-AVAIL-002: Tiger 配置不存在时标记为不可用")
-    void tigerConfigMissing_shouldBeUnavailable() {
-        mockRule(tigerRule, "tiger", SourceRequirement.REQUIRED, false, "缺失 tiger_id");
-        checker = createChecker(Arrays.asList(tigerRule));
-        checker.init();
-
-        assertFalse(checker.isAvailable("tiger"));
-        Optional<SourceStatus> status = checker.getStatus("tiger");
-        assertTrue(status.isPresent());
-        assertFalse(status.get().isAvailable());
-        assertNotNull(status.get().getReason());
-        assertTrue(status.get().getReason().contains("缺失") || status.get().getReason().contains("tiger_id"));
     }
 
     @Test
@@ -140,45 +105,26 @@ class DataSourceAvailabilityCheckerTest {
     @Test
     @DisplayName("TC-AVAIL-007: 混合场景 - getAvailableDataSources 返回正确列表")
     void mixedScenarios_getAvailableDataSources() {
-        mockRule(tigerRule, "tiger", SourceRequirement.REQUIRED, true, "已配置 tiger_id 与 private_key");
         mockRule(tigerOpenRule, "tigeropen", SourceRequirement.REQUIRED, true, "已配置 tiger_id、private_key、account");
         mockRule(yfinanceRule, "yfinance", SourceRequirement.OPTIONAL, true, "无需 API Key，始终可用");
         mockRule(twelvedataRule, "twelvedata", SourceRequirement.OPTIONAL, true, "未配置 API Key，降级使用（速率受限）");
         mockRule(tiingoRule, "tiingo", SourceRequirement.REQUIRED, false, "缺失 Tiingo API Token");
 
-        checker = createChecker(Arrays.asList(tigerRule, tigerOpenRule, yfinanceRule, twelvedataRule, tiingoRule));
+        checker = createChecker(Arrays.asList(tigerOpenRule, yfinanceRule, twelvedataRule, tiingoRule));
         checker.init();
 
         List<String> available = checker.getAvailableSourceNames();
-        assertEquals(4, available.size());
-        assertTrue(available.contains("tiger"));
+        assertEquals(3, available.size());
         assertTrue(available.contains("tigeropen"));
         assertTrue(available.contains("yfinance"));
         assertTrue(available.contains("twelvedata"));
         assertFalse(available.contains("tiingo"));
 
         Map<String, SourceStatus> all = checker.getAllStatus();
-        assertTrue(all.get("tiger").isAvailable());
         assertTrue(all.get("tigeropen").isAvailable());
         assertTrue(all.get("yfinance").isAvailable());
         assertTrue(all.get("twelvedata").isAvailable());
         assertFalse(all.get("tiingo").isAvailable());
         assertNotNull(all.get("tiingo").getReason());
-    }
-
-    @Test
-    @DisplayName("TC-CONFIG-003: Tiger 配置存在/不存在的文件检测路径")
-    void tigerConfigExists_checkPathUsed() {
-        // Tiger 配置存在的情况
-        mockRule(tigerRule, "tiger", SourceRequirement.REQUIRED, true, "已配置 tiger_id 与 private_key");
-        checker = createChecker(Arrays.asList(tigerRule));
-        checker.init();
-        assertTrue(checker.isAvailable("tiger"));
-
-        // Tiger 配置不存在的情况
-        mockRule(tigerRule, "tiger", SourceRequirement.REQUIRED, false, "缺失 tiger_id");
-        checker = createChecker(Arrays.asList(tigerRule));
-        checker.init();
-        assertFalse(checker.isAvailable("tiger"));
     }
 }

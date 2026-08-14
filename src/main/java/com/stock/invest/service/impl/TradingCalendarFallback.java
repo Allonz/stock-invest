@@ -39,10 +39,9 @@ public class TradingCalendarFallback implements TradingCalendarService {
     private final Cache<String, TradingCalendarResult> cache;
 
     public TradingCalendarFallback(
-            TigerCalendarService tiger,
             TigerOpenCalendarService tigerOpen,
             AlpacaCalendarService alpaca) {
-        this.sources = List.of(tiger, tigerOpen, alpaca);
+        this.sources = List.of(tigerOpen, alpaca);
         this.cache = Caffeine.newBuilder()
                 .expireAfterWrite(24, TimeUnit.HOURS)
                 .maximumSize(10000)

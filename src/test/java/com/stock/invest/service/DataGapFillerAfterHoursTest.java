@@ -7,7 +7,7 @@ import com.stock.invest.model.KLineIterator;
 import com.stock.invest.repository.DataFillTaskRepository;
 import com.stock.invest.repository.StockDailyBarRepository;
 import com.stock.invest.service.impl.DataGapFillerServiceImpl;
-import com.stock.invest.service.impl.TigerStockServiceImpl;
+import com.stock.invest.service.impl.TigerOpenStockServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -30,8 +30,9 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * DataGapFiller 盘后价逻辑测试 —— mock TigerStockServiceImpl
+ * DataGapFiller 盘后价逻辑测试 —— mock TigerOpenStockServiceImpl（tigeropen 源）
  * 覆盖 AH-001 ~ AH-007（AH-006 标记 @Tag("integration") 跳过）
+ * 2026-08-14：Tiger Java 数据源已删除，原 TigerStockServiceImpl mock 改为 tigeropen
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("DataGapFiller — 盘后价逻辑 (mergeAfterHours)")
@@ -41,7 +42,7 @@ class DataGapFillerAfterHoursTest {
 
     @Mock private StockDailyBarRepository stockDailyBarRepository;
     @Mock private DataFillTaskRepository dataFillTaskRepository;
-    @Mock private TigerStockServiceImpl tigerSource;
+    @Mock private TigerOpenStockServiceImpl tigerOpenSource;
     @Mock private GapFillProperties gapFillProperties;
     @Mock private DataFillProgressService dataFillProgressService;
     @Mock private com.stock.invest.service.RetryProgressService retryProgressService;
@@ -56,23 +57,23 @@ class DataGapFillerAfterHoursTest {
 
     @BeforeEach
     void setUp() {
-        lenient().when(tigerSource.getSourceName()).thenReturn("tiger");
-        lenient().when(tigerSource.isAvailable()).thenReturn(true);
+        lenient().when(tigerOpenSource.getSourceName()).thenReturn("tigeropen");
+        lenient().when(tigerOpenSource.isAvailable()).thenReturn(true);
 
         lenient().when(gapFillProperties.getMinPriceThreshold()).thenReturn(java.math.BigDecimal.valueOf(1.0));
 
         // Allow trading on weekdays so findMissingTradeDates finds gaps
         lenient().when(tradingCalendarDbService.isTradingDay(anyString(), any(LocalDate.class))).thenReturn(true);
 
-        // TigerStockServiceImpl mock is the real TigerStockServiceImpl (instanceof check works)
-        List<DataSourceStrategy> dataSources = List.of(tigerSource);
+        // TigerOpenStockServiceImpl mock（getSourceName=tigeropen，supportsAfterHoursMerge 放行）
+        List<DataSourceStrategy> dataSources = List.of(tigerOpenSource);
         service = new DataGapFillerServiceImpl(
                 stockDailyBarRepository, dataFillTaskRepository, dataSources,
                 gapFillProperties, dataFillProgressService, retryProgressService, tradingCalendarDbService,
                 stockDataSourcePriorityService, symbolBlacklistService,
                 transactionManager);
         lenient().when(stockDataSourcePriorityService.getPriorityList(anyString()))
-                .thenReturn(java.util.List.of("tiger", "yfinance"));
+                .thenReturn(java.util.List.of("tigeropen", "yfinance"));
     }
 
     private LocalDate nyToday() {
@@ -96,12 +97,12 @@ class DataGapFillerAfterHoursTest {
                 .thenReturn(Optional.empty());
 
         // Primary daily KLine data — use Answer to match dynamic gap dates
-        when(tigerSource.getDailyKLineDataByDateRange(eq("AAPL"), any()))
+        when(tigerOpenSource.getDailyKLineDataByDateRange(eq("AAPL"), any()))
                 .thenAnswer(inv -> createKLineData("AAPL", inv.getArgument(1), 150.0, 155.0, 148.0, 152.5, 1_000_000L));
 
         // After-hours data — tiger returns a separate after-hours bar
         KLineData ahKd = createKLineData("AAPL", tradeDate, 152.5, 153.5, 152.0, 153.0, 100_000L);
-        when(tigerSource.getAfterHoursKLineDataByDateRange(eq("AAPL"), any()))
+        when(tigerOpenSource.getAfterHoursKLineDataByDateRange(eq("AAPL"), any()))
                 .thenReturn(ahKd);
 
         service.fillGaps();
@@ -178,11 +179,11 @@ class DataGapFillerAfterHoursTest {
         when(stockDailyBarRepository.findBySymbolAndTradeDate(eq("AAPL"), any()))
                 .thenReturn(Optional.empty());
 
-        when(tigerSource.getDailyKLineDataByDateRange(eq("AAPL"), any()))
+        when(tigerOpenSource.getDailyKLineDataByDateRange(eq("AAPL"), any()))
                 .thenAnswer(inv -> createKLineData("AAPL", inv.getArgument(1), 150.0, 155.0, 148.0, 152.5, 1_000_000L));
 
         // After-hours returns null
-        when(tigerSource.getAfterHoursKLineDataByDateRange(eq("AAPL"), any()))
+        when(tigerOpenSource.getAfterHoursKLineDataByDateRange(eq("AAPL"), any()))
                 .thenReturn(null);
 
         service.fillGaps();
@@ -209,11 +210,11 @@ class DataGapFillerAfterHoursTest {
         when(stockDailyBarRepository.findBySymbolAndTradeDate(eq("AAPL"), any()))
                 .thenReturn(Optional.empty());
 
-        when(tigerSource.getDailyKLineDataByDateRange(eq("AAPL"), any()))
+        when(tigerOpenSource.getDailyKLineDataByDateRange(eq("AAPL"), any()))
                 .thenAnswer(inv -> createKLineData("AAPL", inv.getArgument(1), 150.0, 155.0, 148.0, 152.5, 1_000_000L));
 
         // After-hours throws exception
-        when(tigerSource.getAfterHoursKLineDataByDateRange(eq("AAPL"), any()))
+        when(tigerOpenSource.getAfterHoursKLineDataByDateRange(eq("AAPL"), any()))
                 .thenThrow(new RuntimeException("API timeout"));
 
         // Should not throw — the exception is caught
@@ -244,12 +245,12 @@ class DataGapFillerAfterHoursTest {
                 .thenReturn(Optional.empty());
 
         // closePrice = 100.0
-        when(tigerSource.getDailyKLineDataByDateRange(eq("AAPL"), any()))
+        when(tigerOpenSource.getDailyKLineDataByDateRange(eq("AAPL"), any()))
                 .thenAnswer(inv -> createKLineData("AAPL", inv.getArgument(1), 99.0, 101.0, 98.0, 100.0, 1_000_000L));
 
         // after-hours close = 103.0
         KLineData ahKd = createKLineData("AAPL", tradeDate, 100.0, 104.0, 99.5, 103.0, 50_000L);
-        when(tigerSource.getAfterHoursKLineDataByDateRange(eq("AAPL"), any()))
+        when(tigerOpenSource.getAfterHoursKLineDataByDateRange(eq("AAPL"), any()))
                 .thenReturn(ahKd);
 
         service.fillGaps();
@@ -279,11 +280,11 @@ class DataGapFillerAfterHoursTest {
         assertTrue(true);
     }
 
-    // AH-007: Tiger source 数据源的优先级识别
+    // AH-007: tigeropen source 数据源的优先级识别
     @Test
-    @DisplayName("AH-007: findTigerSource 通过 instanceof 识别 TigerStockServiceImpl")
+    @DisplayName("AH-007: 通过 sourceName=tigeropen 识别并合并盘后价")
     void findTigerSourceIdentification() {
-        // The mock of TigerStockServiceImpl is instanceof, so mergeAfterHours should work
+        // supportsAfterHoursMerge 按 sourceName 判定，tigeropen 放行（2026-08-14 起）
         LocalDate today = nyToday();
         LocalDate tradeDate = today.minusDays(2);
         LocalDate stopDate = today.minusDays(5);
@@ -296,18 +297,18 @@ class DataGapFillerAfterHoursTest {
         when(stockDailyBarRepository.findBySymbolAndTradeDate(eq("AAPL"), any()))
                 .thenReturn(Optional.empty());
 
-        when(tigerSource.getDailyKLineDataByDateRange(eq("AAPL"), any()))
+        when(tigerOpenSource.getDailyKLineDataByDateRange(eq("AAPL"), any()))
                 .thenAnswer(inv -> createKLineData("AAPL", inv.getArgument(1), 150.0, 155.0, 148.0, 152.5, 1_000_000L));
 
         // After hours data available
         KLineData ahKd = createKLineData("AAPL", tradeDate, 152.5, 153.5, 152.0, 153.0, 100_000L);
-        when(tigerSource.getAfterHoursKLineDataByDateRange(eq("AAPL"), any()))
+        when(tigerOpenSource.getAfterHoursKLineDataByDateRange(eq("AAPL"), any()))
                 .thenReturn(ahKd);
 
         service.fillGaps();
 
         // Verify getAfterHoursKLineDataByDateRange was called (meaning findTigerSource succeeded)
-        verify(tigerSource, atLeastOnce()).getAfterHoursKLineDataByDateRange(eq("AAPL"), any());
+        verify(tigerOpenSource, atLeastOnce()).getAfterHoursKLineDataByDateRange(eq("AAPL"), any());
     }
 
     // ========== Helper Methods ==========

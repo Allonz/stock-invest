@@ -1,14 +1,16 @@
 package com.stock.invest.service.impl;
 
-import com.stock.invest.client.TiingoRestClient;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.stock.invest.config.TiingoProperties;
 import com.stock.invest.exception.StockDataException;
 import com.stock.invest.model.KLineData;
 import com.stock.invest.model.StockInfo;
 import com.stock.invest.service.StockScannerStrategy;
+import com.stock.invest.util.PythonScriptExecutor;
 import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
@@ -18,17 +20,34 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Tiingo 数据源 —— 完全基于 Python SDK（tiingo 包）实现，替代原 Java HTTP client。
+ * <p>
+ * 通过 {@link PythonScriptExecutor} 调用 {@code stock_info_tiingo.py}（classpath 下）：
+ * <ul>
+ *   <li>get_daily_kline_range(symbol, start, end) —— 按日期范围日K（补缺核心）</li>
+ *   <li>get_daily_kline(symbol, days) —— 最近 N 天日K</li>
+ *   <li>get_batch_kline(symbols, period, count) —— 批量日K</li>
+ * </ul>
+ * 低价股扫描（原 IEX /iex/ 端点）确认用不到，getStockList/scanStocks 空实现（2026-08-14）。
+ */
 @Component
 @Order(5)
 public class TiingoDataSourceStrategy implements StockScannerStrategy {
 
     private static final Logger log = LoggerFactory.getLogger(TiingoDataSourceStrategy.class);
 
-    private final TiingoRestClient tiingoRestClient;
+    private final PythonScriptExecutor pythonScriptExecutor;
+    private final TiingoProperties tiingoProperties;
+    private final ObjectMapper objectMapper;
 
-    public TiingoDataSourceStrategy(TiingoRestClient tiingoRestClient) {
-        this.tiingoRestClient = tiingoRestClient;
-        log.info("TiingoDataSourceStrategy: Service initialized");
+    public TiingoDataSourceStrategy(PythonScriptExecutor pythonScriptExecutor,
+                                    TiingoProperties tiingoProperties,
+                                    ObjectMapper objectMapper) {
+        this.pythonScriptExecutor = pythonScriptExecutor;
+        this.tiingoProperties = tiingoProperties;
+        this.objectMapper = objectMapper;
+        log.info("TiingoDataSourceStrategy: Service initialized (python SDK mode)");
     }
 
     @Override
@@ -41,31 +60,35 @@ public class TiingoDataSourceStrategy implements StockScannerStrategy {
         return true;
     }
 
+    private static String getScriptName() {
+        return "stock_info_tiingo.py";
+    }
+
+    private Map<String, String> apiKeyEnv() {
+        String token = tiingoProperties.getToken();
+        if (token == null || token.trim().isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return Map.of("TIINGO_API_KEY", token.trim());
+    }
+
     @Override
     public String getDailyKLineData(String symbol) {
-        try {
-            KLineData data = tiingoRestClient.fetchDailyBars(symbol, 30);
-            return data == null ? "{}" : data.toString();
-        } catch (Exception e) {
-            log.warn("tiingo getDailyKLineData failed for {}: {}", symbol, e.getMessage());
-            return "{}";
-        }
+        KLineData kLineData = getDailyKLineDataAsObject(symbol);
+        return kLineData == null ? "{}" : kLineData.toString();
     }
 
     @Override
     public KLineData getDailyKLineDataAsObject(String symbol) {
         try {
-            return tiingoRestClient.fetchDailyBars(symbol, 30);
-        } catch (HttpClientErrorException e) {
-            if (e.getStatusCode().value() == 404) {
-                KLineData empty = new KLineData();
-                empty.setSymbol(symbol);
-                empty.setItems(java.util.Collections.emptyList());
-                log.warn("[Tiingo] symbol not found (404): {}", symbol);
-                return empty;
+            String result = pythonScriptExecutor.executeScriptWithEnvironment(
+                    apiKeyEnv(), getScriptName(), "get_daily_kline", symbol, "30");
+            if (result != null && result.contains("\"error\"")) {
+                log.warn("[Tiingo] getDailyKLineDataAsObject error for {}: {}", symbol,
+                        result.substring(0, Math.min(result.length(), 500)));
+                return new KLineData();
             }
-            log.warn("tiingo getDailyKLineDataAsObject failed for {}: {}", symbol, e.getMessage());
-            return new KLineData();
+            return parseKLineData(symbol, result);
         } catch (Exception e) {
             log.warn("tiingo getDailyKLineDataAsObject failed for {}: {}", symbol, e.getMessage());
             return new KLineData();
@@ -76,29 +99,29 @@ public class TiingoDataSourceStrategy implements StockScannerStrategy {
     public KLineData getDailyKLineDataByDateRange(String symbol, LocalDate tradeDate) {
         try {
             log.info("[TiingoDataSourceStrategy] dateRange symbol={}, range=[{},{}]", symbol, tradeDate, tradeDate);
-            return tiingoRestClient.fetchDailyBars(symbol, tradeDate, tradeDate);
-        } catch (HttpClientErrorException e) {
-            if (e.getStatusCode().value() == 404) {
-                // P1-3：404 = 确认不存在，计入黑名单
-                log.warn("[Tiingo] symbol not found (404) for date range: {}", symbol);
-                throw new StockDataException(symbol, "tiingo", "股票不存在 (404)",
-                        StockDataException.ErrorCategory.CONFIRMED_NOT_FOUND);
+            String result = pythonScriptExecutor.executeScriptWithEnvironment(
+                    apiKeyEnv(), getScriptName(), "get_daily_kline_range",
+                    symbol, tradeDate.toString(), tradeDate.toString());
+            if (result != null && result.contains("\"error\"")) {
+                String errMsg = extractErrorFromJson(result);
+                log.warn("[Tiingo] getDailyKLineDataByDateRange error for {}: {}", symbol, errMsg);
+                // P1-3：Python 侧失败 —— 带分类抛出，not-found 才计入黑名单
+                throw StockDataException.classify(symbol, "tiingo", errMsg, null);
             }
-            // P1-3：其他 HTTP 错误（429/5xx 等）为瞬态失败，不计黑名单
-            log.warn("tiingo getDailyKLineDataByDateRange failed for {}: {}", symbol, e.getMessage());
-            throw new StockDataException(symbol, "tiingo", "HTTP错误: " + e.getMessage(),
-                    StockDataException.ErrorCategory.TRANSIENT_FAILURE);
+            return parseKLineData(symbol, result);
+        } catch (StockDataException e) {
+            throw e;
         } catch (Exception e) {
             log.warn("tiingo getDailyKLineDataByDateRange failed for {}: {}", symbol, e.getMessage());
             throw new StockDataException(symbol, "tiingo", "获取K线数据失败: " + e.getMessage(),
-                    StockDataException.ErrorCategory.TRANSIENT_FAILURE);
+                    e, StockDataException.ErrorCategory.TRANSIENT_FAILURE);
         }
     }
 
     @Override
     public StockInfo getStockInfo(String symbol) {
         try {
-            KLineData data = tiingoRestClient.fetchDailyBars(symbol, 5);
+            KLineData data = getDailyKLineDataAsObject(symbol);
             if (data == null || data.getItems() == null || data.getItems().isEmpty()) {
                 return null;
             }
@@ -134,13 +157,8 @@ public class TiingoDataSourceStrategy implements StockScannerStrategy {
 
     @Override
     public List<String> getStockList() {
-        try {
-            return tiingoRestClient.listUsSymbolsByPriceRange(
-                    100, java.math.BigDecimal.valueOf(0.01D), java.math.BigDecimal.valueOf(1000D));
-        } catch (Exception e) {
-            log.warn("tiingo getStockList failed: {}", e.getMessage());
-            return Collections.emptyList();
-        }
+        // 低价股扫描（原 IEX）已确认用不到 —— 空实现（2026-08-14）
+        return Collections.emptyList();
     }
 
     @Override
@@ -151,11 +169,21 @@ public class TiingoDataSourceStrategy implements StockScannerStrategy {
     @Override
     public List<KLineData> getBatchKline(List<String> symbols, String period, int count) {
         try {
+            String result = pythonScriptExecutor.executeScriptWithEnvironment(
+                    apiKeyEnv(), getScriptName(), "get_batch_kline",
+                    String.join(",", symbols), period, String.valueOf(count));
+            if (result != null && result.contains("\"error\"")) {
+                log.warn("[Tiingo] getBatchKline error: {}", result.substring(0, Math.min(result.length(), 500)));
+                return Collections.emptyList();
+            }
             List<KLineData> out = new ArrayList<>();
-            for (String symbol : symbols) {
-                KLineData data = tiingoRestClient.fetchDailyBars(symbol, count);
-                if (data != null && data.getItems() != null && !data.getItems().isEmpty()) {
-                    out.add(data);
+            JsonNode arr = objectMapper.readTree(result);
+            if (arr.isArray()) {
+                for (JsonNode node : arr) {
+                    KLineData data = objectMapper.treeToValue(node, KLineData.class);
+                    if (data != null && data.getItems() != null && !data.getItems().isEmpty()) {
+                        out.add(data);
+                    }
                 }
             }
             return out;
@@ -167,39 +195,54 @@ public class TiingoDataSourceStrategy implements StockScannerStrategy {
 
     @Override
     public List<String> scanStocks(Market market, int limit, Double minPrice, Double maxPrice) {
-        try {
-            if (market != Market.US) {
-                return Collections.emptyList();
-            }
-            java.math.BigDecimal min = minPrice == null ? java.math.BigDecimal.ZERO : java.math.BigDecimal.valueOf(minPrice);
-            java.math.BigDecimal max = maxPrice == null
-                    ? java.math.BigDecimal.valueOf(Double.MAX_VALUE) : java.math.BigDecimal.valueOf(maxPrice);
-            return tiingoRestClient.listUsSymbolsByPriceRange(limit, min, max);
-        } catch (Exception e) {
-            log.warn("tiingo scanStocks(Market) failed: {}", e.getMessage());
-            return Collections.emptyList();
-        }
+        // 低价股扫描（原 IEX）已确认用不到 —— 空实现（2026-08-14）
+        return Collections.emptyList();
     }
 
     @Override
     public List<String> scanStocks(String market, int limit, String minPrice, String maxPrice) {
-        try {
-            if (market == null || !"US".equalsIgnoreCase(market)) {
-                return Collections.emptyList();
-            }
-            java.math.BigDecimal min = (minPrice == null || minPrice.trim().isEmpty())
-                    ? java.math.BigDecimal.ZERO : new java.math.BigDecimal(minPrice.trim());
-            java.math.BigDecimal max = (maxPrice == null || maxPrice.trim().isEmpty())
-                    ? java.math.BigDecimal.valueOf(Double.MAX_VALUE) : new java.math.BigDecimal(maxPrice.trim());
-            return tiingoRestClient.listUsSymbolsByPriceRange(limit, min, max);
-        } catch (Exception e) {
-            log.warn("tiingo scanStocks(String) failed: {}", e.getMessage());
-            return Collections.emptyList();
-        }
+        // 低价股扫描（原 IEX）已确认用不到 —— 空实现（2026-08-14）
+        return Collections.emptyList();
     }
 
     @Override
     public Map<String, Object> scanLowPriceStocksWithVolumePattern(int limit) {
         return Collections.emptyMap();
+    }
+
+    /**
+     * 解析 Python 脚本输出的 KLineData JSON（{"symbol": ..., "items": [...]}）。
+     */
+    private KLineData parseKLineData(String symbol, String json) throws Exception {
+        KLineData klineData = objectMapper.readValue(json, KLineData.class);
+        // 填充每个 item 的 symbol 字段（脚本 JSON 中 item 不含 symbol）
+        if (klineData != null && klineData.getItems() != null) {
+            for (com.stock.invest.model.KLineIterator item : klineData.getItems()) {
+                item.setSymbol(symbol);
+            }
+        }
+        return klineData;
+    }
+
+    /**
+     * 从 Python 脚本输出的 error JSON 中提取可读错误消息。
+     */
+    private String extractErrorFromJson(String result) {
+        try {
+            JsonNode node = objectMapper.readTree(result);
+            JsonNode err = node.get("error");
+            if (err == null) {
+                return result;
+            }
+            if (err.isTextual()) {
+                return err.asText();
+            }
+            if (err.has("message")) {
+                return err.path("message").asText();
+            }
+            return err.toString();
+        } catch (Exception ignored) {
+            return result;
+        }
     }
 }

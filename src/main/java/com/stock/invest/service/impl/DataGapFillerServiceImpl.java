@@ -590,14 +590,12 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
     }
 
     private boolean supportsAfterHoursMerge(DataSourceStrategy source) {
-        if (source instanceof TigerStockServiceImpl) {
-            return true;
-        }
         String name = source.getSourceName();
         // yfinance 有独立盘后价来源（get_stock_info 的 postMarketPrice），放行合并；
         // tiingo 无盘后价 API，保持拦截（2026-08-13 修复，此前 yfinance 被误拦截导致
         // 已实现的 getAfterHoursKLineDataByDateRange 从未被调用）
-        return "tiger".equals(name) || "tigeropen".equals(name) || "yfinance".equals(name);
+        // 2026-08-14：Tiger Java 数据源已删除，仅 tigeropen（Python）保留
+        return "tigeropen".equals(name) || "yfinance".equals(name);
     }
 
     private void createRetryTask(String symbol, LocalDate tradeDate, String error) {

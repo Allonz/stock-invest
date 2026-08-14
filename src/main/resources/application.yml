@@ -72,6 +72,7 @@ server:
 # Tiger 证券 API 配置（行情、交易、日历）
 # 配置文件路径：classpath:tiger_openapi_config.properties
 # ============================================================
+# Tiger API 配置（tigeropen 凭据解析用，Tiger Java 数据源已删除 2026-08-14）
 tiger:
   api:
     configFilePath: classpath:tiger_openapi_config.properties

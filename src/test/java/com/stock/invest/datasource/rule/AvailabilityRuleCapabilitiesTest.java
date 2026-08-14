@@ -23,12 +23,7 @@ class AvailabilityRuleCapabilitiesTest {
     @Mock private TwelveDataProperties twelveDataProps;
     @Mock private TiingoProperties tiingoProps;
 
-    @Test @DisplayName("UT-10: Tiger supports STOCK_QUOTE + TRADING_CALENDAR")
-    void tigerCapabilities() {
-        AvailabilityRule rule = new TigerAvailabilityRule();
-        assertEquals(Set.of(DataSourceCapability.STOCK_QUOTE, DataSourceCapability.TRADING_CALENDAR),
-                     rule.capabilities());
-    }
+    // UT-10 已删除：Tiger Java 数据源移除（2026-08-14）
 
     @Test @DisplayName("UT-11: TigerOpen supports STOCK_QUOTE + TRADING_CALENDAR")
     void tigerOpenCapabilities() {

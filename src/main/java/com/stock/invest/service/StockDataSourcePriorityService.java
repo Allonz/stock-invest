@@ -22,7 +22,7 @@ public class StockDataSourcePriorityService {
     private static final Logger log = LoggerFactory.getLogger(StockDataSourcePriorityService.class);
 
     public static final List<String> DEFAULT_DATA_SOURCE_ORDER = List.of(
-            "yfinance", "twelvedata", "tiingo", "tigeropen", "tiger"
+            "yfinance", "twelvedata", "tiingo", "tigeropen"
     );
 
     private final StockDataSourcePriorityRepository repository;

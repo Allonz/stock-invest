@@ -1,14 +1,8 @@
 package com.stock.invest.config;
 
-import com.tigerbrokers.stock.openapi.client.config.ClientConfig;
-import com.tigerbrokers.stock.openapi.client.https.client.TigerHttpClient;
-import com.tigerbrokers.stock.openapi.client.struct.enums.Env;
-import com.tigerbrokers.stock.openapi.client.struct.enums.License;
-import com.tigerbrokers.stock.openapi.client.util.ApiLogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -23,6 +17,10 @@ import java.util.Properties;
  * 所有 API 凭证（tiger_id, private_key, account, license, env）统一从
  * {@code tiger_openapi_config.properties} 读取，经 {@link TigerCredentials} record 返回。
  * 配置文件路径由 application.yml 中 {@code tiger.api.configFilePath} 指定。
+ * </p>
+ * <p>
+ * 2026-08-14：移除 TigerHttpClient（Java SDK）bean —— Tiger 数据源已删除，
+ * 仅保留 TigerOpen（Python SDK）实现；本类只负责 TigerOpen 脚本所需的凭据解析。
  * </p>
  */
 @Configuration
@@ -39,48 +37,7 @@ public class TigerApiConfig {
         this.resourceLoader = resourceLoader;
     }
 
-    @Value("${tiger.api.log_path:logs/tiger}")
-    private String logPath;
-
     private volatile TigerCredentials cachedCredentials;
-
-    /**
-     * 创建并配置 TigerHttpClient 实例
-     */
-    @Bean
-    public TigerHttpClient tigerHttpClient() {
-        logger.info("Initializing TigerHttpClient");
-
-        ClientConfig clientConfig = new ClientConfig();
-        ApiLogger.setEnabled(true, logPath);
-
-        try {
-            clientConfig.isSslSocket = true;
-            clientConfig.isAutoGrabPermission = true;
-            clientConfig.failRetryCounts = 2;
-
-            TigerCredentials creds = resolveCredentials();
-            clientConfig.tigerId = creds.tigerId();
-            clientConfig.privateKey = creds.privateKey();
-            if (!creds.account().isEmpty()) {
-                clientConfig.defaultAccount = creds.account();
-            }
-            if (!creds.license().isEmpty()) {
-                clientConfig.license = License.valueOf(creds.license());
-            }
-            if (!creds.env().isEmpty()) {
-                clientConfig.setEnv(Env.valueOf(creds.env()));
-            }
-
-            TigerHttpClient client = TigerHttpClient.getInstance().clientConfig(clientConfig);
-            logger.info("TigerHttpClient initialized successfully");
-            return client;
-        } catch (Exception e) {
-            String msg = "[TigerApiConfig] TigerHttpClient 初始化失败: " + e.getMessage();
-            logger.error(msg);
-            throw new RuntimeException(msg, e);
-        }
-    }
 
     /**
      * 解析凭证：从 {@code tiger_openapi_config.properties} 读取所有 Tiger API 凭证字段。

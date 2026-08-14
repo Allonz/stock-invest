@@ -51,11 +51,10 @@ class StockDataSourcePriorityServiceTest {
         // twelvedata first (most recent), then yfinance, then remaining defaults
         assertEquals("twelvedata", result.get(0));
         assertEquals("yfinance", result.get(1));
-        // Remaining defaults should be appended
+        // Remaining defaults should be appended（tiger 已删除 2026-08-14）
         assertTrue(result.contains("tiingo"));
         assertTrue(result.contains("tigeropen"));
-        assertTrue(result.contains("tiger"));
-        assertEquals(5, result.size());
+        assertEquals(4, result.size());
     }
 
     @Test
