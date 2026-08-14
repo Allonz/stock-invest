@@ -138,17 +138,26 @@ def get_daily_kline(symbol: str, days: int = 7) -> str:
         if hist.empty:
             return json.dumps({"error": f"No historical data found for {symbol}"})
         kline_data = {"symbol": symbol, "items": []}
+        prev_close = None
         for index, row in hist.iterrows():
             idx_ts = index if index.tz is not None else index.tz_localize("America/New_York")
+            close = float(row['Close'])
+            # changePercent：相邻交易日计算 (close[i]-close[i-1])/close[i-1]*100（升序，首行无前值）
+            if prev_close is not None and prev_close != 0:
+                change_pct = (close - prev_close) / prev_close * 100.0
+            else:
+                change_pct = None
+            prev_close = close
             item = {
                 "time": int(idx_ts.timestamp() * 1000),
                 "timeString": index.strftime("%Y-%m-%d"),
                 "open": float(row['Open']),
                 "high": float(row['High']),
                 "low": float(row['Low']),
-                "close": float(row['Close']),
+                "close": close,
                 "volume": int(row['Volume']),
                 "amount": float(row['Close'] * row['Volume']),
+                "changePercent": change_pct,
             }
             kline_data["items"].append(item)
         return json.dumps(kline_data)
@@ -179,21 +188,39 @@ def get_after_hours_price(symbol: str, trade_date: str) -> str:
         stock = yf.Ticker(symbol)
         start_dt = datetime.strptime(trade_date, "%Y-%m-%d")
         end_dt = start_dt + timedelta(days=1)
-        hist = stock.history(start=start_dt.strftime("%Y-%m-%d"),
-                             end=end_dt.strftime("%Y-%m-%d"),
-                             interval="1m", prepost=True)
-        if hist is None or hist.empty:
-            return json.dumps({"afterHours": None})
-        # 统一转美东时区（Yahoo 分钟数据默认 UTC）
-        try:
-            hist.index = hist.index.tz_convert("America/New_York")
-        except Exception:
-            pass
-        # 盘后时段 16:00-20:00 ET，取最后一条 close
-        ah = hist.between_time("16:00", "20:00")
-        if ah.empty:
-            return json.dumps({"afterHours": None})
-        return json.dumps({"afterHours": float(ah["Close"].iloc[-1])})
+        start_str = start_dt.strftime("%Y-%m-%d")
+        end_str = end_dt.strftime("%Y-%m-%d")
+        # 分钟数据保留限制：1m 仅近 30 天 → 30 天外降级 15m/30m/60m（60m 保留期更长）
+        for interval in ("1m", "15m", "30m", "60m"):
+            try:
+                hist = stock.history(start=start_str, end=end_str, interval=interval, prepost=True)
+            except Exception:
+                continue
+            if hist is None or hist.empty:
+                continue
+            # 统一转美东时区（Yahoo 分钟数据默认 UTC）
+            try:
+                hist.index = hist.index.tz_convert("America/New_York")
+            except Exception:
+                pass
+            # 盘后时段 16:00-20:00 ET，取最后一条 close
+            ah = hist.between_time("16:00", "20:00")
+            if not ah.empty:
+                ah_close = float(ah["Close"].iloc[-1])
+                # 盘后涨跌幅直算：常规时段收盘 = 9:30-15:59 最后一根 close。
+                # 注意不能含 16:00 —— Yahoo 分钟数据 16:00 那根已属盘后时段（16:00-16:15 等），
+                # 取到它会把盘后第一根当收盘 → 涨跌幅≈0 失真
+                reg = hist.between_time("09:30", "15:59")
+                pct = None
+                if not reg.empty:
+                    reg_close = float(reg["Close"].iloc[-1])
+                    if reg_close != 0:
+                        pct = (ah_close - reg_close) / reg_close * 100.0
+                result = {"afterHours": ah_close}
+                if pct is not None:
+                    result["afterHoursChangePercent"] = pct
+                return json.dumps(result)
+        return json.dumps({"afterHours": None})
     except Exception as e:
         return json.dumps({"error": str(e)})
 
@@ -203,7 +230,10 @@ def get_daily_kline_range(symbol: str, start_date: str, end_date: str) -> str:
     try:
         time.sleep(random.uniform(2, 4))
         stock = yf.Ticker(symbol)
-        hist = safe_yfinance_request(stock.history, start=start_date, end=end_date)
+        # yfinance history(start, end) 的 end 为排他（不含当天）→ 内部 +1 天，保证含目标日
+        from datetime import datetime, timedelta
+        end_plus = (datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
+        hist = safe_yfinance_request(stock.history, start=start_date, end=end_plus)
         if hist.empty:
             return json.dumps({
                 "code": "NOT_FOUND",
@@ -212,17 +242,26 @@ def get_daily_kline_range(symbol: str, start_date: str, end_date: str) -> str:
                 "source": "yfinance"
             })
         kline_data = {"symbol": symbol, "items": []}
+        prev_close = None
         for index, row in hist.iterrows():
             idx_ts = index if index.tz is not None else index.tz_localize("America/New_York")
+            close = float(row['Close'])
+            # changePercent：相邻交易日计算 (close[i]-close[i-1])/close[i-1]*100（升序，首行无前值）
+            if prev_close is not None and prev_close != 0:
+                change_pct = (close - prev_close) / prev_close * 100.0
+            else:
+                change_pct = None
+            prev_close = close
             item = {
                 "time": int(idx_ts.timestamp() * 1000),
                 "timeString": index.strftime("%Y-%m-%d"),
                 "open": float(row['Open']),
                 "high": float(row['High']),
                 "low": float(row['Low']),
-                "close": float(row['Close']),
+                "close": close,
                 "volume": int(row['Volume']),
                 "amount": float(row['Close'] * row['Volume']),
+                "changePercent": change_pct,
             }
             kline_data["items"].append(item)
         return json.dumps(kline_data)

@@ -69,6 +69,39 @@ def _fetch_after_hours_close(client, symbol: str, limit: int):
     return ah_by_date
 
 
+def _fetch_after_hours_close_range(client, symbol: str, begin: str, end: str):
+    """按日期范围获取盘后收盘价（两日窗口，ONE_MINUTE 聚合，按美东日期取当日最后一分钟）。"""
+    from datetime import datetime
+
+    from tigeropen.common.consts import BarPeriod
+
+    try:
+        begin_ms = int(datetime.strptime(begin, "%Y-%m-%d").replace(tzinfo=NY_TZ).timestamp() * 1000)
+        end_ms = int(datetime.strptime(end, "%Y-%m-%d").replace(tzinfo=NY_TZ).timestamp() * 1000)
+        ah_df = client.get_bars(
+            symbol,
+            period=BarPeriod.ONE_MINUTE,
+            begin_time=begin_ms,
+            end_time=end_ms,
+            limit=5000,
+            trade_session=_after_hours_trade_session(),
+        )
+    except Exception:
+        return {}
+    if ah_df is None or ah_df.empty:
+        return {}
+    ah_by_date = {}
+    for _, row in ah_df.iterrows():
+        try:
+            t = int(row["time"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        d = datetime.fromtimestamp(t / 1000, tz=NY_TZ).strftime("%Y-%m-%d")
+        # 同一交易日多条分钟 bar，取最后一条（最新价）
+        ah_by_date[d] = float(row["close"])
+    return ah_by_date
+
+
 def _error_payload(exc):
     """将异常转为统一错误 JSON 结构；账户级错误（权限/配额）标为 ACCOUNT_LEVEL。"""
     code = getattr(exc, "code", None)
@@ -118,14 +151,27 @@ def _cmd_scan(client, limit: int, min_p: float, max_p: float):
     print(json.dumps(symbols))
 
 
-def _cmd_bars(client, symbol: str, lim: int):
+def _cmd_bars_range(client, symbol: str, begin: str, end: str):
+    """按日期范围拉日K线（两日窗口：前一交易日 + 目标交易日）。
+
+    用 get_bars 的 begin_time/end_time 精确限定范围，避免一次性拉 12 天。
+    """
     import math
     from datetime import datetime
 
     from tigeropen.common.consts import BarPeriod
 
-    df = client.get_bars(symbol, period=BarPeriod.DAY, limit=int(lim))
+    begin_ms = int(datetime.strptime(begin, "%Y-%m-%d").replace(tzinfo=NY_TZ).timestamp() * 1000)
+    end_ms = int(datetime.strptime(end, "%Y-%m-%d").replace(tzinfo=NY_TZ).timestamp() * 1000)
+    df = client.get_bars(
+        symbol,
+        period=BarPeriod.DAY,
+        begin_time=begin_ms,
+        end_time=end_ms,
+        limit=10,
+    )
     items = []
+    prev_close = None
     if df is not None and not df.empty:
         for _, row in df.iterrows():
             vol = row.get("volume")
@@ -135,6 +181,13 @@ def _cmd_bars(client, symbol: str, lim: int):
             if amt is None or (isinstance(amt, float) and math.isnan(amt)):
                 amt = 0.0
             t = int(row["time"])
+            close = float(row["close"])
+            # changePercent：相邻交易日计算（升序，首行无前值）
+            if prev_close is not None and prev_close != 0:
+                change_pct = (close - prev_close) / prev_close * 100.0
+            else:
+                change_pct = None
+            prev_close = close
             items.append(
                 {
                     "symbol": str(row.get("symbol", symbol)),
@@ -143,9 +196,67 @@ def _cmd_bars(client, symbol: str, lim: int):
                     "open": float(row["open"]),
                     "high": float(row["high"]),
                     "low": float(row["low"]),
-                    "close": float(row["close"]),
+                    "close": close,
                     "volume": int(vol),
                     "amount": float(amt),
+                    "changePercent": change_pct,
+                }
+            )
+
+    # 盘后 K 线：按日期范围合并（P2-16：统一用美东时区取日期 key）
+    ah_by_date = _fetch_after_hours_close_range(client, symbol, begin, end)
+    if ah_by_date:
+        for item in items:
+            t = item.get("time", 0)
+            d = datetime.fromtimestamp(t / 1000, tz=NY_TZ).strftime("%Y-%m-%d")
+            if d in ah_by_date:
+                ah_close = ah_by_date[d]
+                item["afterHours"] = ah_close
+                # 盘后涨跌幅源直取：与当日收盘 close 相邻计算
+                reg_close = item.get("close")
+                if reg_close:
+                    item["afterHoursChangePercent"] = (ah_close - reg_close) / reg_close * 100.0
+    print(json.dumps({"symbol": symbol, "items": items}))
+
+
+def _cmd_bars(client, symbol: str, lim: int):
+    """日K线：兼容两种模式 —— lim（最近 N 根）或日期范围（begin/end YYYY-MM-DD）。"""
+    import math
+    from datetime import datetime
+
+    from tigeropen.common.consts import BarPeriod
+
+    df = client.get_bars(symbol, period=BarPeriod.DAY, limit=int(lim))
+    items = []
+    prev_close = None
+    if df is not None and not df.empty:
+        for _, row in df.iterrows():
+            vol = row.get("volume")
+            if vol is None or (isinstance(vol, float) and math.isnan(vol)):
+                vol = 0
+            amt = row.get("amount")
+            if amt is None or (isinstance(amt, float) and math.isnan(amt)):
+                amt = 0.0
+            t = int(row["time"])
+            close = float(row["close"])
+            # changePercent：相邻交易日计算（升序，首行无前值）
+            if prev_close is not None and prev_close != 0:
+                change_pct = (close - prev_close) / prev_close * 100.0
+            else:
+                change_pct = None
+            prev_close = close
+            items.append(
+                {
+                    "symbol": str(row.get("symbol", symbol)),
+                    "time": t,
+                    "timeString": "",
+                    "open": float(row["open"]),
+                    "high": float(row["high"]),
+                    "low": float(row["low"]),
+                    "close": close,
+                    "volume": int(vol),
+                    "amount": float(amt),
+                    "changePercent": change_pct,
                 }
             )
 
@@ -158,7 +269,12 @@ def _cmd_bars(client, symbol: str, lim: int):
             t = item.get("time", 0)
             d = datetime.fromtimestamp(t / 1000, tz=NY_TZ).strftime("%Y-%m-%d")
             if d in ah_by_date:
-                item["afterHours"] = ah_by_date[d]
+                ah_close = ah_by_date[d]
+                item["afterHours"] = ah_close
+                # 盘后涨跌幅源直取：与当日收盘 close 相邻计算
+                reg_close = item.get("close")
+                if reg_close:
+                    item["afterHoursChangePercent"] = (ah_close - reg_close) / reg_close * 100.0
 
     items.sort(key=lambda x: x["time"], reverse=True)
     print(json.dumps({"symbol": symbol, "items": items}))
@@ -243,9 +359,13 @@ def main():
         _cmd_scan(client, int(sys.argv[2]), float(sys.argv[3]), float(sys.argv[4]))
     elif cmd == "bars":
         if len(sys.argv) < 4:
-            print(json.dumps({"error": "bars needs symbol limit"}))
+            print(json.dumps({"error": "bars needs symbol limit|begin end"}))
             sys.exit(2)
-        _cmd_bars(client, sys.argv[2], int(sys.argv[3]))
+        if len(sys.argv) >= 5:
+            # 日期范围模式：bars symbol begin end（两日窗口）
+            _cmd_bars_range(client, sys.argv[2], sys.argv[3], sys.argv[4])
+        else:
+            _cmd_bars(client, sys.argv[2], int(sys.argv[3]))
     elif cmd == "afterhours_bars":
         if len(sys.argv) < 4:
             print(json.dumps({"error": "afterhours_bars needs symbol limit"}))

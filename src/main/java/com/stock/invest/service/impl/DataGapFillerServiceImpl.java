@@ -794,8 +794,10 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         }
 
         String sourceName = bar.getSource();
-        DataSourceStrategy ds = findDataSource(sourceName);
-        if (ds == null) {
+        // 查询序列：yfinance 无条件第一 → source（若 != yfinance 且 != tiger_snap）。
+        // tiger_snap 特例：只查 yfinance。不再 fallback 到第三/第四源（用户设计 2026-08-14）。
+        List<DataSourceStrategy> querySequence = buildQuerySequence(sourceName);
+        if (querySequence.isEmpty()) {
             // 所有数据源都不可用 → 保留 PENDING（下次再试）
             log.warn("[DataGapFiller] fillMissingFields: no available source for sourceName={}, symbol={}",
                     sourceName, bar.getSymbol());
@@ -804,64 +806,116 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
 
         boolean transientFailure = false;
         boolean anyUpdated = false;
+        String updaterSource = null;
 
         // 1. 行情字段（DAILY_KLINE / CALC）：open/high/low/close/volume/change_percent
         List<String> klineFields = missing.stream()
                 .filter(f -> !F_AFTER_HOURS.equals(f) && !F_AFTER_HOURS_CHANGE_PERCENT.equals(f))
                 .toList();
         if (!klineFields.isEmpty()) {
-            try {
-                KLineData data = ds.getDailyKLineDataByDateRange(bar.getSymbol(), bar.getTradeDate());
-                KLineIterator item = findItemByDate(data, bar.getTradeDate());
-                if (item != null) {
-                    boolean updated = applyKlineItemToBar(bar, item, klineFields);
-                    anyUpdated |= updated;
-                } else {
-                    // 源返回成功但无当日数据 = 确认该日无值 → 清行情字段标记
-                    clearMissingFields(bar, klineFields.toArray(new String[0]));
-                }
-            } catch (StockDataException e) {
-                if (e.getCategory() == StockDataException.ErrorCategory.CONFIRMED_NOT_FOUND) {
-                    // 源确认不存在 → 清行情字段标记（不再补）
-                    clearMissingFields(bar, klineFields.toArray(new String[0]));
-                } else {
+            KLineIterator matchedItem = null;
+            DataSourceStrategy matchedDs = null;
+            for (DataSourceStrategy ds : querySequence) {
+                try {
+                    KLineData data = ds.getDailyKLineDataByDateRange(bar.getSymbol(), bar.getTradeDate());
+                    KLineIterator item = findItemByDate(data, bar.getTradeDate());
+                    if (item != null) {
+                        matchedItem = item;
+                        matchedDs = ds;
+                        break;
+                    }
+                    // 源返回成功但无当日数据 → 试下一个源
+                } catch (StockDataException e) {
+                    if (e.getCategory() == StockDataException.ErrorCategory.CONFIRMED_NOT_FOUND) {
+                        continue; // 源确认不存在 → 试下一个源
+                    }
+                    transientFailure = true; // 瞬态失败 → 保留 PENDING，继续试下一个源
+                } catch (Exception e) {
                     transientFailure = true;
                 }
-            } catch (Exception e) {
-                transientFailure = true;
+            }
+            if (matchedItem != null) {
+                boolean updated = applyKlineItemToBar(bar, matchedItem, klineFields);
+                anyUpdated |= updated;
+                if (updated) {
+                    updaterSource = matchedDs.getSourceName();
+                }
+            } else {
+                // 序列全试完均无当日数据：
+                //  - OHLCV（DAILY_KLINE）：确认该日无值 → 清标记（不再补）
+                //  - change_percent（CALC）：源无当日 K 线 ≠ 涨跌幅不存在（可用已有 close + DB 前交易日 close 计算）→
+                //    兜底算；算不出（close 缺失/无前日数据）→ 保留 PENDING 标记下次再补，绝不误清
+                List<String> nonCalcFields = klineFields.stream()
+                        .filter(f -> !F_CHANGE_PERCENT.equals(f)).toList();
+                if (!nonCalcFields.isEmpty()) {
+                    clearMissingFields(bar, nonCalcFields.toArray(new String[0]));
+                }
+                if (klineFields.contains(F_CHANGE_PERCENT)) {
+                    java.math.BigDecimal pct = calcChangePercentFromPrevClose(
+                            bar.getSymbol(), bar.getTradeDate(), bar.getClosePrice());
+                    if (pct != null) {
+                        bar.setChangePercent(pct);
+                        clearMissingFields(bar, F_CHANGE_PERCENT);
+                        anyUpdated = true;
+                    }
+                    // pct == null → 保留 PENDING 标记，下次再补
+                }
             }
         }
 
-        // 2. 盘后字段（AFTER_HOURS_API）：仅源支持盘后时处理
+        // 2. 盘后字段（AFTER_HOURS_API）：按查询序列尝试，源支持盘后才查
         boolean hasAhMissing = missing.contains(F_AFTER_HOURS) || missing.contains(F_AFTER_HOURS_CHANGE_PERCENT);
-        if (hasAhMissing && supportsAfterHoursMerge(ds)) {
-            try {
-                KLineData ahData = ds.getAfterHoursKLineDataByDateRange(bar.getSymbol(), bar.getTradeDate());
-                if (isKLineDataEmpty(ahData)) {
-                    // 源确认无盘后数据 → 清盘后标记（不再补，防死循环）
-                    clearMissingFields(bar, F_AFTER_HOURS, F_AFTER_HOURS_CHANGE_PERCENT);
-                } else {
+        if (hasAhMissing) {
+            boolean ahResolved = false;
+            for (DataSourceStrategy ds : querySequence) {
+                if (!supportsAfterHoursMerge(ds)) {
+                    continue; // 该源无盘后能力（tiingo/twelvedata）→ 试下一个源
+                }
+                try {
+                    KLineData ahData = ds.getAfterHoursKLineDataByDateRange(bar.getSymbol(), bar.getTradeDate());
+                    if (isKLineDataEmpty(ahData)) {
+                        continue; // 源无盘后数据 → 试下一个源
+                    }
                     KLineIterator ahItem = findItemByDate(ahData, bar.getTradeDate());
                     if (ahItem != null && ahItem.getClose() != null) {
                         bar.setAfterHours(ahItem.getClose());
-                        java.math.BigDecimal regClose = bar.getClosePrice();
-                        if (regClose != null && regClose.compareTo(java.math.BigDecimal.ZERO) != 0) {
-                            bar.setAfterHoursChangePercent(ahItem.getClose().subtract(regClose)
-                                    .divide(regClose, 8, java.math.RoundingMode.HALF_UP)
-                                    .multiply(java.math.BigDecimal.valueOf(100))
-                                    .setScale(4, java.math.RoundingMode.HALF_UP));
+                        // 源直取优先：脚本返回盘后涨跌幅则直接用；否则用 (ahClose-regClose)/regClose 兜底计算
+                        if (ahItem.getAfterHoursChangePercent() != null) {
+                            bar.setAfterHoursChangePercent(ahItem.getAfterHoursChangePercent());
+                        } else {
+                            java.math.BigDecimal regClose = bar.getClosePrice();
+                            if (regClose != null && regClose.compareTo(java.math.BigDecimal.ZERO) != 0) {
+                                bar.setAfterHoursChangePercent(ahItem.getClose().subtract(regClose)
+                                        .divide(regClose, 8, java.math.RoundingMode.HALF_UP)
+                                        .multiply(java.math.BigDecimal.valueOf(100))
+                                        .setScale(4, java.math.RoundingMode.HALF_UP));
+                            }
                         }
                         clearMissingFields(bar, F_AFTER_HOURS, F_AFTER_HOURS_CHANGE_PERCENT);
                         anyUpdated = true;
-                    } else {
-                        clearMissingFields(bar, F_AFTER_HOURS, F_AFTER_HOURS_CHANGE_PERCENT);
+                        updaterSource = ds.getSourceName();
+                        ahResolved = true;
+                        break;
                     }
+                    // 无匹配 → 试下一个源
+                } catch (Exception e) {
+                    log.warn("[DataGapFiller] fillMissingFields after-hours failed for {} {} via {}: {}",
+                            bar.getSymbol(), bar.getTradeDate(), ds.getSourceName(), e.getMessage());
+                    transientFailure = true;
                 }
-            } catch (Exception e) {
-                log.warn("[DataGapFiller] fillMissingFields after-hours failed for {} {}: {}",
-                        bar.getSymbol(), bar.getTradeDate(), e.getMessage());
-                transientFailure = true;
             }
+            if (!ahResolved && !transientFailure) {
+                // 序列全试完仍无盘后（且无瞬态失败）→ 确认无值，清盘后标记（不再补，防死循环）
+                clearMissingFields(bar, F_AFTER_HOURS, F_AFTER_HOURS_CHANGE_PERCENT);
+            }
+            // 有瞬态失败 → 保留盘后标记，终态逻辑（transientFailure && stillMissing）保留 PENDING 下次再试
+        }
+
+        // 3. source 更新：原 source 非 tiger_snap 且补成功 → source 更新为补成功的源（yfinance 优先）
+        if (updaterSource != null && !"tiger_snap".equals(sourceName)) {
+            log.info("[DataGapFiller] fillMissingFields: source update {} -> {} for {} {}",
+                    sourceName, updaterSource, bar.getSymbol(), bar.getTradeDate());
+            bar.setSource(updaterSource);
         }
 
         boolean stillMissing = !parseMissingFields(bar.getMissingFields()).isEmpty();
@@ -906,7 +960,11 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
             updated = true;
         }
         if (missing.contains(F_CHANGE_PERCENT)) {
-            if (recalcChangePercent(bar)) {
+            // 优先用脚本直算值（两日窗口相邻交易日），null 才 Java DB 兜底（用户原则：源直取优先）
+            if (item.getChangePercent() != null) {
+                bar.setChangePercent(item.getChangePercent());
+                updated = true;
+            } else if (recalcChangePercent(bar)) {
                 updated = true;
             }
         }
@@ -997,6 +1055,53 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
             return new ArrayList<>();
         }
         return new ArrayList<>(java.util.Arrays.asList(s.split(",")));
+    }
+
+    /**
+     * 构建补缺查询序列：yfinance 无条件第一 → source（若 != yfinance 且 != tiger_snap）。
+     * tiger_snap 特例：只查 yfinance。不再 fallback 到第三/第四源（用户设计 2026-08-14）。
+     */
+    private List<DataSourceStrategy> buildQuerySequence(String sourceName) {
+        List<DataSourceStrategy> seq = new ArrayList<>();
+        for (DataSourceStrategy d : dataSources) {
+            if ("yfinance".equals(d.getSourceName()) && d.isAvailable()) {
+                seq.add(d);
+                break;
+            }
+        }
+        if (!"yfinance".equals(sourceName) && !"tiger_snap".equals(sourceName)) {
+            for (DataSourceStrategy d : dataSources) {
+                if (sourceName.equals(d.getSourceName()) && d.isAvailable()) {
+                    seq.add(d);
+                    break;
+                }
+            }
+        }
+        return seq;
+    }
+
+    /**
+     * change_percent 兜底计算：用 DB 前一交易日 close（真实前交易日序列）。
+     * 源无当日 K 线时涨跌幅仍可计算（已有 close + 前交易日 close）；返回 null 表示算不出。
+     */
+    private java.math.BigDecimal calcChangePercentFromPrevClose(
+            String symbol, LocalDate tradeDate, java.math.BigDecimal currClose) {
+        if (currClose == null || currClose.compareTo(java.math.BigDecimal.ZERO) == 0) {
+            return null;
+        }
+        final java.math.BigDecimal[] result = { null };
+        stockDailyBarRepository
+                .findTopBySymbolAndTradeDateBeforeOrderByTradeDateDesc(symbol, tradeDate)
+                .ifPresent(prev -> {
+                    java.math.BigDecimal prevClose = prev.getClosePrice();
+                    if (prevClose != null && prevClose.compareTo(java.math.BigDecimal.ZERO) != 0) {
+                        result[0] = currClose.subtract(prevClose)
+                                .divide(prevClose, 8, java.math.RoundingMode.HALF_UP)
+                                .multiply(java.math.BigDecimal.valueOf(100))
+                                .setScale(4, java.math.RoundingMode.HALF_UP);
+                    }
+                });
+        return result[0];
     }
 
     /** 按源名找数据源；找不到时回退到第一个可用源（截图等无 bean 源的数据用其他源补，用户设计）。 */

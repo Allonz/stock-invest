@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stock.invest.client.TigerOpenPythonBridge;
 import com.stock.invest.exception.StockDataException;
 import com.stock.invest.model.KLineData;
+import com.stock.invest.model.KLineIterator;
 import com.stock.invest.model.StockInfo;
 import com.stock.invest.service.DataSourceStrategy;
 import com.stock.invest.service.StockScannerStrategy;
@@ -82,10 +83,38 @@ public class TigerOpenStockServiceImpl implements StockScannerStrategy {
     @Override
     public KLineData getDailyKLineDataByDateRange(String symbol, LocalDate tradeDate) {
         try {
-            KLineData data = bridge.fetchDailyBars(symbol, 12);
+            // 两日窗口：目标日 + 其前一日（d-3 覆盖周末），脚本层相邻 close 算 changePercent
+            KLineData data = bridge.fetchDailyBarsByRange(symbol,
+                    tradeDate.minusDays(3).toString(), tradeDate.toString());
             if (data == null) {
                 throw new StockDataException(symbol, "tigeropen", "无数据返回",
                         StockDataException.ErrorCategory.TRANSIENT_FAILURE);
+            }
+            // 目标日响应日志：只打印脚本返回中 tradeDate 那一条的完整参数（便于日志分析字段正确性/空值）
+            // tigeropen item.timeString 为空 → 用 epoch 毫秒按美东时区匹配目标日
+            KLineIterator target = null;
+            if (data != null && data.getItems() != null) {
+                for (KLineIterator it : data.getItems()) {
+                    LocalDate itemDate = it.getTimeString() != null && !it.getTimeString().isEmpty()
+                            ? LocalDate.parse(it.getTimeString())
+                            : java.time.Instant.ofEpochMilli(it.getTime())
+                                    .atZone(java.time.ZoneId.of("America/New_York")).toLocalDate();
+                    if (itemDate.equals(tradeDate)) {
+                        target = it;
+                        break;
+                    }
+                }
+            }
+            try {
+                if (target != null) {
+                    log.info("[TigerOpenStock] dateRange response target: symbol={}, date={}, json={}",
+                            symbol, tradeDate, objectMapper.writeValueAsString(target));
+                } else {
+                    log.info("[TigerOpenStock] dateRange response target: symbol={}, date={} NOT FOUND in {} items",
+                            symbol, tradeDate, data.getItems() == null ? 0 : data.getItems().size());
+                }
+            } catch (Exception logEx) {
+                log.warn("[TigerOpenStock] response target serialization failed: {}", logEx.getMessage());
             }
             return data;
         } catch (StockDataException e) {

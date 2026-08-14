@@ -144,7 +144,13 @@ public class PythonScriptExecutor {
                 String output = awaitDrain(outFuture, scriptName);
                 String stderr = awaitDrain(errFuture, scriptName);
                 if (!stderr.isEmpty()) {
-                    log.info("Python脚本 stderr (script={}): {}", scriptName, stderr);
+                    if (isNoiseStderr(stderr)) {
+                        // yfinance 库对退市/无效 symbol 的 stderr 警告（possibly delisted / no timezone / no price data）——
+                        // 脚本已 catch 返回 error/null，此警告仅噪声，降 DEBUG 防刷屏
+                        log.debug("Python脚本 stderr (script={}): {}", scriptName, stderr);
+                    } else {
+                        log.info("Python脚本 stderr (script={}): {}", scriptName, stderr);
+                    }
                 }
 
                 String result = output.trim();
@@ -273,6 +279,24 @@ public class PythonScriptExecutor {
             // 普通报错文本 —— 按通用消息处理
         }
         return null;
+    }
+
+    /**
+     * yfinance 库对退市/无效 symbol 的 stderr 噪声识别（脚本已 catch，警告仅刷屏）。
+     */
+    private static boolean isNoiseStderr(String stderr) {
+        String s = stderr.toLowerCase();
+        boolean delistNoise = s.contains("possibly delisted")
+                || s.contains("no timezone found")
+                || s.contains("no price data found")
+                // yfinance 对超出分钟数据保留期（30 天）的库警告——脚本已降级 15m/30m/60m
+                || s.contains("data not available for starttime")
+                || s.contains("requested range must be within");
+        // 真实错误（traceback / Exception / Error:）仍保留 INFO
+        boolean realError = s.contains("traceback")
+                || s.contains("exception")
+                || s.contains("error:");
+        return delistNoise && !realError;
     }
 
     private static final com.fasterxml.jackson.databind.ObjectMapper OBJECT_MAPPER =

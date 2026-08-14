@@ -49,6 +49,7 @@ def _client():
 def _to_items(rows):
     """把 SDK 返回的 list[dict] 转成与 yfinance 脚本一致的 items。"""
     items = []
+    prev_close = None
     for v in rows:
         date_text = str(v.get("date", ""))[:10]
         if not date_text:
@@ -59,6 +60,12 @@ def _to_items(rows):
             continue
         close = float(v.get("close") or 0)
         volume = int(v.get("volume") or 0)
+        # changePercent：相邻交易日计算（升序，首行无前值）
+        if prev_close is not None and prev_close != 0:
+            change_pct = (close - prev_close) / prev_close * 100.0
+        else:
+            change_pct = None
+        prev_close = close
         items.append({
             "time": int(dt_aware.timestamp() * 1000),
             "timeString": date_text,
@@ -68,6 +75,7 @@ def _to_items(rows):
             "close": close,
             "volume": volume,
             "amount": round(close * volume, 2),
+            "changePercent": change_pct,
         })
     return items
 

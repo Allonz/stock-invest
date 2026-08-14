@@ -80,16 +80,32 @@ public class TwelveDataStockServiceImpl implements StockScannerStrategy {
     @Override
     public KLineData getDailyKLineDataByDateRange(String symbol, LocalDate tradeDate) {
         try {
-            log.info("[TwelveDataStockServiceImpl] dateRange symbol={}, range=[{},{}]", symbol, tradeDate, tradeDate);
+            // 两日窗口：目标日 + 其前一日（d-3 覆盖周末），脚本层相邻 close 算 changePercent
+            LocalDate startDate = tradeDate.minusDays(3);
+            log.info("[TwelveDataStockServiceImpl] dateRange symbol={}, range=[{},{}]", symbol, startDate, tradeDate);
             String result = pythonScriptExecutor.executeScriptWithEnvironment(
-                    apiKeyEnv(), getScriptName(), "get_daily_kline_range", symbol, tradeDate.toString(), tradeDate.toString());
+                    apiKeyEnv(), getScriptName(), "get_daily_kline_range", symbol, startDate.toString(), tradeDate.toString());
             if (result != null && result.contains("\"error\"")) {
                 // P1-3：Python 侧失败输出 {"error": ...} —— 带分类抛出，not-found 才计入黑名单
                 log.warn("[TwelveData] getDailyKLineDataByDateRange error for {}: {}", symbol,
                         result.substring(0, Math.min(result.length(), 500)));
                 throw StockDataException.classify(symbol, "twelvedata", extractErrorFromJson(result), null);
             }
-            KLineData klineData = objectMapper.readValue(result, KLineData.class);
+            // 目标日响应日志：只打印脚本返回中 tradeDate 那一条的完整参数（便于日志分析字段正确性/空值）
+            KLineData parsed = objectMapper.readValue(result, KLineData.class);
+            if (parsed != null && parsed.getItems() != null && !parsed.getItems().isEmpty()) {
+                KLineIterator target = parsed.getItems().stream()
+                        .filter(it -> it.getTimeString() != null && it.getTimeString().equals(tradeDate.toString()))
+                        .findFirst().orElse(null);
+                if (target != null) {
+                    log.info("[TwelveDataStockServiceImpl] dateRange response target: symbol={}, date={}, json={}",
+                            symbol, tradeDate, extractTargetItemJson(result, target.getTimeString()));
+                } else {
+                    log.info("[TwelveDataStockServiceImpl] dateRange response target: symbol={}, date={} NOT FOUND in {} items",
+                            symbol, tradeDate, parsed.getItems().size());
+                }
+            }
+            KLineData klineData = parsed;
             // 填充每个 item 的 symbol 字段（Python 脚本返回的 JSON 中 item 不含 symbol）
             if (klineData != null && klineData.getItems() != null) {
                 for (KLineIterator item : klineData.getItems()) {
@@ -133,6 +149,23 @@ public class TwelveDataStockServiceImpl implements StockScannerStrategy {
             return result;
         }
     }
+
+    /**
+     * 从脚本原始 JSON 中提取目标日 item 的 JSON（保留脚本原始字段/精度）。
+     */
+    private String extractTargetItemJson(String result, String timeString) {
+        try {
+            com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(result);
+            for (com.fasterxml.jackson.databind.JsonNode it : root.path("items")) {
+                if (timeString.equals(it.path("timeString").asText())) {
+                    return it.toString();
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
     public StockInfo getStockInfo(String symbol) {
         try {
             String result = pythonScriptExecutor.executeScriptWithEnvironment(apiKeyEnv(), getScriptName(), "get_stock_info", symbol);

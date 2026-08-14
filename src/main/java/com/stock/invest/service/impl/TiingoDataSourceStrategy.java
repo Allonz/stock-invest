@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stock.invest.config.TiingoProperties;
 import com.stock.invest.exception.StockDataException;
 import com.stock.invest.model.KLineData;
+import com.stock.invest.model.KLineIterator;
 import com.stock.invest.model.StockInfo;
 import com.stock.invest.service.StockScannerStrategy;
 import com.stock.invest.util.PythonScriptExecutor;
@@ -98,17 +99,33 @@ public class TiingoDataSourceStrategy implements StockScannerStrategy {
     @Override
     public KLineData getDailyKLineDataByDateRange(String symbol, LocalDate tradeDate) {
         try {
-            log.info("[TiingoDataSourceStrategy] dateRange symbol={}, range=[{},{}]", symbol, tradeDate, tradeDate);
+            // 两日窗口：目标日 + 其前一日（d-3 覆盖周末），脚本层相邻 close 算 changePercent
+            LocalDate startDate = tradeDate.minusDays(3);
+            log.info("[TiingoDataSourceStrategy] dateRange symbol={}, range=[{},{}]", symbol, startDate, tradeDate);
             String result = pythonScriptExecutor.executeScriptWithEnvironment(
                     apiKeyEnv(), getScriptName(), "get_daily_kline_range",
-                    symbol, tradeDate.toString(), tradeDate.toString());
+                    symbol, startDate.toString(), tradeDate.toString());
             if (result != null && result.contains("\"error\"")) {
                 String errMsg = extractErrorFromJson(result);
                 log.warn("[Tiingo] getDailyKLineDataByDateRange error for {}: {}", symbol, errMsg);
                 // P1-3：Python 侧失败 —— 带分类抛出，not-found 才计入黑名单
                 throw StockDataException.classify(symbol, "tiingo", errMsg, null);
             }
-            return parseKLineData(symbol, result);
+            // 目标日响应日志：只打印脚本返回中 tradeDate 那一条的完整参数（便于日志分析字段正确性/空值）
+            KLineData parsed = parseKLineData(symbol, result);
+            if (parsed != null && parsed.getItems() != null && !parsed.getItems().isEmpty()) {
+                KLineIterator target = parsed.getItems().stream()
+                        .filter(it -> it.getTimeString() != null && it.getTimeString().equals(tradeDate.toString()))
+                        .findFirst().orElse(null);
+                if (target != null) {
+                    log.info("[TiingoDataSourceStrategy] dateRange response target: symbol={}, date={}, json={}",
+                            symbol, tradeDate, extractTargetItemJson(result, target.getTimeString()));
+                } else {
+                    log.info("[TiingoDataSourceStrategy] dateRange response target: symbol={}, date={} NOT FOUND in {} items",
+                            symbol, tradeDate, parsed.getItems().size());
+                }
+            }
+            return parsed;
         } catch (StockDataException e) {
             throw e;
         } catch (Exception e) {
@@ -222,6 +239,22 @@ public class TiingoDataSourceStrategy implements StockScannerStrategy {
             }
         }
         return klineData;
+    }
+
+    /**
+     * 从脚本原始 JSON 中提取目标日 item 的 JSON（保留脚本原始字段/精度）。
+     */
+    private String extractTargetItemJson(String result, String timeString) {
+        try {
+            com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(result);
+            for (com.fasterxml.jackson.databind.JsonNode it : root.path("items")) {
+                if (timeString.equals(it.path("timeString").asText())) {
+                    return it.toString();
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
     }
 
     /**

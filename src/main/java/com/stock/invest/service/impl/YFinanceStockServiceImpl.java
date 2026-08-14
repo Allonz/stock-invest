@@ -220,10 +220,12 @@ public class YFinanceStockServiceImpl implements StockScannerStrategy {
      */
     public KLineData getDailyKLineDataByDateRange(String symbol, LocalDate tradeDate) {
         try {
-            LocalDate yfEnd = tradeDate.plusDays(1);
-            log.info("[YFinanceStockServiceImpl] dateRange symbol={}, range=[{},{}]", symbol, tradeDate, yfEnd);
+            // 两日窗口：目标日 + 其前一日（d-3 覆盖周末，保证含前一交易日）
+            // 脚本层用相邻交易日 close 计算 changePercent（真实交易日序列，无隔日错位）
+            LocalDate yfStart = tradeDate.minusDays(3);
+            log.info("[YFinanceStockServiceImpl] dateRange symbol={}, range=[{},{}]", symbol, yfStart, tradeDate);
             String result = pythonScriptExecutor.executeScript(getScriptName(),
-                    "get_daily_kline_range", symbol, tradeDate.toString(), yfEnd.toString());
+                    "get_daily_kline_range", symbol, yfStart.toString(), tradeDate.toString());
             // P1-3：Python 侧失败输出 {"error": ...} —— 解析消息并带分类抛出，
             // 避免"确认不存在"（No data found）与瞬态失败混为一谈
             if (result != null && result.contains("\"error\"")) {
@@ -237,9 +239,18 @@ public class YFinanceStockServiceImpl implements StockScannerStrategy {
                 }
             }
             if (klineData != null && klineData.getItems() != null && !klineData.getItems().isEmpty()) {
-                KLineIterator first = klineData.getItems().get(0);
-                log.info("[YFinanceStockServiceImpl] dateRange response: symbol={}, date={}, open={}, high={}, low={}, close={}, changePercent={}, source=yfinance",
-                        symbol, first.getTimeString(), first.getOpen(), first.getHigh(), first.getLow(), first.getClose(), first.getChangePercent());
+                // 目标日响应日志：只打印脚本返回中 tradeDate 那一条的完整参数（便于日志分析字段正确性/空值）
+                KLineIterator target = klineData.getItems().stream()
+                        .filter(it -> it.getTimeString() != null && it.getTimeString().equals(tradeDate.toString()))
+                        .findFirst().orElse(null);
+                if (target != null) {
+                    log.info("[YFinanceStockServiceImpl] dateRange response target: symbol={}, date={}, json={}",
+                            symbol, tradeDate, result != null && result.contains(target.getTimeString())
+                                    ? extractTargetItemJson(result, target.getTimeString()) : objectMapper.writeValueAsString(target));
+                } else {
+                    log.info("[YFinanceStockServiceImpl] dateRange response target: symbol={}, date={} NOT FOUND in {} items",
+                            symbol, tradeDate, klineData.getItems().size());
+                }
             }
             return klineData;
         } catch (StockDataException e) {
@@ -311,11 +322,15 @@ public class YFinanceStockServiceImpl implements StockScannerStrategy {
             item.setTime(tradeDate.atStartOfDay(java.time.ZoneId.of("America/New_York")).toInstant().toEpochMilli());
             item.setTimeString(tradeDate.toString());
             item.setClose(ahClose);
-            // 盘后涨跌幅由 mergeAfterHoursIfAvailable 用 (ahClose - regClose)/regClose*100 计算
+            // 脚本直算的盘后涨跌幅（源直取优先）；脚本未返回时由调用方用 (ahClose-regClose)/regClose 兜底计算
+            Object ahPct = infoMap.get("afterHoursChangePercent");
+            if (ahPct != null) {
+                item.setAfterHoursChangePercent(java.math.BigDecimal.valueOf(((Number) ahPct).doubleValue()));
+            }
             ahData.setItems(List.of(item));
 
-            log.info("[YFinanceStockServiceImpl] afterHours: symbol={}, date={}, afterHours={}",
-                    symbol, tradeDate, ahClose);
+            log.info("[YFinanceStockServiceImpl] afterHours: symbol={}, date={}, afterHours={}, afterHoursChangePercent={}",
+                    symbol, tradeDate, ahClose, item.getAfterHoursChangePercent());
             return ahData;
         } catch (Exception e) {
             log.warn("[YFinanceStockServiceImpl] afterHours fetch failed for {}, date={}: {}",
@@ -350,6 +365,22 @@ public class YFinanceStockServiceImpl implements StockScannerStrategy {
             log.warn("Failed to scan stocks: {}", e.getMessage());
             return new ArrayList<>();
         }
+    }
+
+    /**
+     * 从脚本原始 JSON 中提取目标日 item 的 JSON（保留脚本原始字段/精度）。
+     */
+    private String extractTargetItemJson(String result, String timeString) {
+        try {
+            com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(result);
+            for (com.fasterxml.jackson.databind.JsonNode it : root.path("items")) {
+                if (timeString.equals(it.path("timeString").asText())) {
+                    return it.toString();
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
     }
     
 } 

@@ -109,6 +109,25 @@ public class TigerOpenPythonBridge {
     }
 
     /**
+     * 按日期范围获取日 K 线（两日窗口：前一交易日 + 目标交易日）。
+     * 脚本端 bars 命令的日期范围模式（bars symbol begin end），避免一次性拉 12 天。
+     */
+    public KLineData fetchDailyBarsByRange(String symbol, String startDate, String endDate) throws Exception {
+        if (!hasCredentials()) {
+            return null;
+        }
+        String json = executePythonScript("bars",
+                symbol,
+                startDate,
+                endDate);
+        KLineData data = objectMapper.readValue(json.trim(), KLineData.class);
+        if (data != null && data.getItems() != null) {
+            KLineDataUtils.sortItemsNewestFirst(data);
+        }
+        return data;
+    }
+
+    /**
      * 通过 Python tigeropen SDK 获取指定股票的盘后价 K 线数据。
      *
      * @param symbol   股票代码

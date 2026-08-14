@@ -88,11 +88,15 @@ class FillMissingFieldsTest {
     }
 
     private static KLineData ahData(String symbol, LocalDate date, double close) {
+        return ahData(symbol, date, close, null);
+    }
+
+    private static KLineData ahData(String symbol, LocalDate date, double close, java.math.BigDecimal ahChangePercent) {
         KLineData kd = new KLineData();
         kd.setSymbol(symbol);
         KLineIterator item = new KLineIterator(symbol, date.atStartOfDay(java.time.ZoneId.of("America/New_York")).toInstant().toEpochMilli(),
                 BigDecimal.valueOf(close), BigDecimal.valueOf(close), BigDecimal.valueOf(close), BigDecimal.valueOf(close),
-                0, 0, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+                0, 0, BigDecimal.ZERO, BigDecimal.ZERO, ahChangePercent);
         item.setTimeString(date.toString());
         kd.setItems(List.of(item));
         return kd;
@@ -103,7 +107,7 @@ class FillMissingFieldsTest {
         kd.setSymbol(symbol);
         KLineIterator item = new KLineIterator(symbol, date.atStartOfDay(java.time.ZoneId.of("America/New_York")).toInstant().toEpochMilli(),
                 BigDecimal.valueOf(0.8), BigDecimal.valueOf(0.9), BigDecimal.valueOf(0.7), BigDecimal.valueOf(close),
-                1000, 0, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+                1000, 0, null, null, null);
         item.setTimeString(date.toString());
         kd.setItems(List.of(item));
         return kd;
@@ -180,6 +184,26 @@ class FillMissingFieldsTest {
         assertEquals(0, new BigDecimal("0.87").compareTo(bar.getAfterHours()));
         // (0.87 - 0.86) / 0.86 * 100 = 1.1628
         assertEquals(0, new BigDecimal("1.1628").compareTo(bar.getAfterHoursChangePercent()));
+        assertNull(bar.getMissingFields());
+        assertEquals(DataGapFillerServiceImpl.STATUS_CONFIRMED, bar.getFieldFillStatus());
+    }
+
+    @Test
+    @DisplayName("FF-01b: 脚本直取盘后涨跌幅 → 直接使用源值（不兜底计算）")
+    void fillAfterHours_sourceDirectChangePercent() {
+        StockDailyBar bar = pendingBar("after_hours,after_hours_change_percent");
+        when(stockDailyBarRepository.findByFieldFillStatus(DataGapFillerServiceImpl.STATUS_PENDING))
+                .thenReturn(List.of(bar));
+        // 脚本返回 afterHoursChangePercent=5.5（源直取优先）
+        when(yfinanceSource.getAfterHoursKLineDataByDateRange(eq("JSPR"), eq(TRADE_DATE)))
+                .thenReturn(ahData("JSPR", TRADE_DATE, 0.87, new BigDecimal("5.5000")));
+
+        int completed = service.fillMissingFields();
+
+        assertEquals(1, completed);
+        assertEquals(0, new BigDecimal("0.87").compareTo(bar.getAfterHours()));
+        // 直接用源值 5.5，而非 (0.87-0.86)/0.86*100=1.1628
+        assertEquals(0, new BigDecimal("5.5000").compareTo(bar.getAfterHoursChangePercent()));
         assertNull(bar.getMissingFields());
         assertEquals(DataGapFillerServiceImpl.STATUS_CONFIRMED, bar.getFieldFillStatus());
     }

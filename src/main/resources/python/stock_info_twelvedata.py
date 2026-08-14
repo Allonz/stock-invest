@@ -137,21 +137,30 @@ def get_daily_kline_range(symbol: str, start_date: str, end_date: str) -> str:
         })
         values = data.get("values", [])
         items = []
+        prev_close = None
         for v in reversed(values):
             vdate = v.get("datetime", "")
             if vdate < start_date or vdate > end_date:
                 continue
             dt = datetime.strptime(vdate, "%Y-%m-%d")
             dt_aware = pytz.timezone("America/New_York").localize(dt)
+            close = float(v["close"])
+            # changePercent：相邻交易日计算（reversed 后升序，首行无前值）
+            if prev_close is not None and prev_close != 0:
+                change_pct = (close - prev_close) / prev_close * 100.0
+            else:
+                change_pct = None
+            prev_close = close
             items.append({
                 "time": int(dt_aware.timestamp() * 1000),
                 "timeString": v["datetime"],
                 "open": float(v["open"]),
                 "high": float(v["high"]),
                 "low": float(v["low"]),
-                "close": float(v["close"]),
+                "close": close,
                 "volume": int(v.get("volume", 0)),
                 "amount": float(v["close"]) * int(v.get("volume", 0)),
+                "changePercent": change_pct,
             })
         return json.dumps({"symbol": symbol, "items": items})
     except Exception as e:
