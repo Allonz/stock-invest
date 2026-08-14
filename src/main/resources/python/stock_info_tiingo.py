@@ -17,7 +17,9 @@ API key 从环境变量 TIINGO_API_KEY 读取（Java 侧经 PythonScriptExecutor
 """
 import json
 import os
+import random
 import sys
+import time
 from datetime import datetime
 
 import pytz
@@ -25,6 +27,16 @@ import pytz
 API_KEY = os.environ.get("TIINGO_API_KEY", "")
 
 NEW_YORK = pytz.timezone("America/New_York")
+
+# 全局速率限制（2026-08-14）：对齐 yfinance 脚本的限速设计。
+# 背景：补缺字段增补时连续快速调用 tiingo API 打爆小时配额（429 hourly request allocation）。
+# 每个请求前随机延迟 1~2s，控制调用频率。
+MIN_REQUEST_INTERVAL = 1.0
+
+
+def _rate_limit():
+    """每个 API 请求前的随机延迟，防触发 tiingo 小时级限流（429）。"""
+    time.sleep(random.uniform(MIN_REQUEST_INTERVAL, MIN_REQUEST_INTERVAL + 1.0))
 
 
 def _client():
@@ -65,6 +77,7 @@ def get_daily_kline_range(symbol: str, start_date: str, end_date: str) -> str:
 
     输出最新在前（与 Java KLineDataUtils.sortItemsNewestFirst 一致）。
     """
+    _rate_limit()
     try:
         rows = _client().get_ticker_price(symbol, startDate=start_date, endDate=end_date)
         items = _to_items(rows)
@@ -80,6 +93,7 @@ def get_daily_kline(symbol: str, days: str = "30") -> str:
     注意：SDK get_ticker_price 不传日期默认只返回最近 1 条（实测），
     因此显式传宽松日期窗口（start = today - N*2 - 10 天），本地再截取最后 N 条。
     """
+    _rate_limit()
     try:
         try:
             n = int(days)
@@ -113,6 +127,7 @@ def get_batch_kline(symbols: str, period: str = "daily", count: str = "30") -> s
             if not sym:
                 continue
             try:
+                _rate_limit()
                 rows = _client().get_ticker_price(
                     sym, startDate=start.isoformat(), endDate=end.isoformat())
                 items = _to_items(rows)[-n:]
