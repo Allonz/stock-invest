@@ -20,8 +20,15 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.ConnectException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -112,6 +119,85 @@ class ResilientHttpExecutorBackoffTest {
         lenient().when(props.getUserAgents()).thenReturn(Collections.singletonList("test-agent"));
         // Just verify the method exists and handles basic cases
         assertNotNull(executor);
+    }
+
+    @Test
+    @DisplayName("P2: 退避 sleep 期间线程被中断 → 停止重试并抛 ResourceAccessException，保留中断标记")
+    void interruptedDuringBackoff_stopsRetryingAndPreservesFlag() throws Exception {
+        lenient().when(props.getMaxRetries()).thenReturn(3);
+        lenient().when(props.getBackoffBaseMs()).thenReturn(5000);
+        lenient().when(props.getJitterMaxMs()).thenReturn(0);
+        ResilientHttpExecutor interruptibleExecutor = new ResilientHttpExecutor(props);
+
+        RestTemplate rt = mock(RestTemplate.class);
+        when(rt.exchange(anyString(), any(HttpMethod.class), any(HttpEntity.class), eq(String.class)))
+                .thenThrow(new ResourceAccessException("connect refused"));
+        injectRestTemplate(interruptibleExecutor, rt);
+
+        AtomicReference<Thread> workerRef = new AtomicReference<>();
+        java.util.concurrent.atomic.AtomicBoolean interruptedFlag =
+                new java.util.concurrent.atomic.AtomicBoolean(false);
+        ExecutorService pool = Executors.newSingleThreadExecutor();
+        try {
+            Future<?> future = pool.submit(() -> {
+                workerRef.set(Thread.currentThread());
+                try {
+                    return interruptibleExecutor.get("http://127.0.0.1:1/quote");
+                } finally {
+                    interruptedFlag.set(Thread.currentThread().isInterrupted());
+                }
+            });
+
+            // 等待 worker 进入退避 sleep（TIMED_WAITING）
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(3);
+            while (workerRef.get() == null || workerRef.get().getState() != Thread.State.TIMED_WAITING) {
+                if (System.nanoTime() > deadline) {
+                    break;
+                }
+                Thread.sleep(20);
+            }
+            assertNotNull(workerRef.get(), "worker thread should have started");
+            workerRef.get().interrupt();
+
+            ExecutionException ex = assertThrows(ExecutionException.class,
+                    () -> future.get(2, TimeUnit.SECONDS));
+            assertInstanceOf(ResourceAccessException.class, ex.getCause(),
+                    "interrupted backoff should surface as ResourceAccessException");
+            assertTrue(interruptedFlag.get(),
+                    "worker thread must preserve interrupt flag after sleepQuietly returns false");
+            verify(rt, times(1)).exchange(anyString(), any(HttpMethod.class), any(HttpEntity.class), eq(String.class));
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
+    @DisplayName("P2: 多线程节流并发调用全部成功，无死锁（slot 抢占在锁外 sleep）")
+    void throttleConcurrentCalls_allSucceedWithoutDeadlock() throws Exception {
+        lenient().when(props.getMaxRetries()).thenReturn(1);
+        lenient().when(props.getMinIntervalMs()).thenReturn(150);
+        lenient().when(props.getUserAgents()).thenReturn(List.of("agent-a", "agent-b"));
+        ResilientHttpExecutor concurrentExecutor = new ResilientHttpExecutor(props);
+
+        RestTemplate rt = mock(RestTemplate.class);
+        when(rt.exchange(anyString(), any(HttpMethod.class), any(HttpEntity.class), eq(String.class)))
+                .thenReturn(ResponseEntity.ok("{\"ok\":true}"));
+        injectRestTemplate(concurrentExecutor, rt);
+
+        ExecutorService pool = Executors.newFixedThreadPool(4);
+        try {
+            List<Future<String>> futures = new ArrayList<>();
+            for (int i = 0; i < 4; i++) {
+                futures.add(pool.submit(() -> concurrentExecutor.get("http://127.0.0.1:1/quote")));
+            }
+            for (Future<String> future : futures) {
+                assertEquals("{\"ok\":true}", future.get(5, TimeUnit.SECONDS),
+                        "all throttled calls must complete successfully");
+            }
+            verify(rt, times(4)).exchange(anyString(), any(HttpMethod.class), any(HttpEntity.class), eq(String.class));
+        } finally {
+            pool.shutdownNow();
+        }
     }
 
     // ========== P1-9: 网络层故障重试（ResourceAccessException 指数退避） ==========

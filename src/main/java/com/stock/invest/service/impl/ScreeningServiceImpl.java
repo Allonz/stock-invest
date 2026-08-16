@@ -261,18 +261,62 @@ public class ScreeningServiceImpl implements ScreeningService {
 
     @Override
     public Map<String, Object> getLatestNotificationGrouped(String windows) {
-        java.util.Optional<ScreeningMatch> latest = screeningMatchRepository.findTopByOrderByTradeDateDescIdDesc();
-        if (!latest.isPresent()) {
+        Optional<ScreeningMatch> latest = screeningMatchRepository.findTopByOrderByTradeDateDescIdDesc();
+        if (latest.isEmpty()) {
             Map<String, Object> empty = new HashMap<>();
             empty.put("message", "暂无筛选数据");
             return empty;
         }
+        return groupNotificationByBatch(latest.get().getBatchId(), latest.get().getTradeDate(), windows);
+    }
 
-        String batchId = latest.get().getBatchId();
-        java.time.LocalDate screenDate = latest.get().getTradeDate();
+    /**
+     * 按指定交易日查询最新批次并分组统计（通知用）。
+     */
+    @Override
+    public Map<String, Object> getNotificationGroupedByDate(String tradeDate, String windows) {
+        LocalDate date = LocalDate.parse(tradeDate);
+        Optional<ScreeningMatch> top = screeningMatchRepository.findTopByTradeDateOrderByIdDesc(date);
+        if (top.isEmpty()) {
+            Map<String, Object> empty = new HashMap<>();
+            empty.put("batchId", null);
+            empty.put("screenDate", tradeDate);
+            empty.put("results", new LinkedHashMap<>());
+            return empty;
+        }
+        return groupNotificationByBatch(top.get().getBatchId(), top.get().getTradeDate(), windows);
+    }
 
-        java.util.List<ScreeningMatch> allMatches = screeningMatchRepository
-                .findByBatchIdOrderByIdAsc(batchId);
+    /**
+     * 按指定交易日查询最新一次筛选结果（含 stock name）。
+     */
+    @Override
+    public Map<String, Object> getScreeningByDate(String tradeDate) {
+        LocalDate date = LocalDate.parse(tradeDate);
+        Optional<ScreeningMatch> top = screeningMatchRepository.findTopByTradeDateOrderByIdDesc(date);
+        if (top.isEmpty()) {
+            Map<String, Object> emptyResult = new HashMap<>();
+            emptyResult.put("batchId", null);
+            emptyResult.put("tradeDate", tradeDate);
+            emptyResult.put("totalMatches", 0);
+            emptyResult.put("matches", List.of());
+            return emptyResult;
+        }
+        String batchId = top.get().getBatchId();
+        List<ScreeningMatch> matches = screeningMatchRepository.findByBatchIdOrderByIdAsc(batchId);
+        Map<String, Object> result = new HashMap<>();
+        result.put("batchId", batchId);
+        result.put("tradeDate", top.get().getTradeDate().toString());
+        result.put("totalMatches", matches.size());
+        result.put("matches", buildMatchesWithName(matches));
+        return result;
+    }
+
+    /**
+     * 按批次分组统计 algorithm + windowDays（通知 payload 结构）。
+     */
+    private Map<String, Object> groupNotificationByBatch(String batchId, LocalDate screenDate, String windows) {
+        List<ScreeningMatch> allMatches = screeningMatchRepository.findByBatchIdOrderByIdAsc(batchId);
         Set<String> allowedWindows = null;
         if (windows != null && !windows.isBlank()) {
             allowedWindows = Arrays.stream(windows.split(","))
@@ -295,12 +339,12 @@ public class ScreeningServiceImpl implements ScreeningService {
                     .computeIfAbsent(windowKey, k -> {
                         Map<String, Object> g = new LinkedHashMap<>();
                         g.put("count", 0L);
-                        g.put("stocks", new java.util.ArrayList<Map<String, Object>>());
+                        g.put("stocks", new ArrayList<Map<String, Object>>());
                         return g;
                     });
 
             @SuppressWarnings("unchecked")
-            java.util.List<Map<String, Object>> stocks = (java.util.List<Map<String, Object>>) windowGroup.get("stocks");
+            List<Map<String, Object>> stocks = (List<Map<String, Object>>) windowGroup.get("stocks");
             windowGroup.put("count", ((Long) windowGroup.get("count")) + 1L);
 
             Map<String, Object> stockInfo = new LinkedHashMap<>();

@@ -196,15 +196,24 @@ function formatVolume(val: number): string {
 }
 
 // ============ 排序处理 ============
+// 列 key 与后端 sortBy 字段名一致，直接透传；取消排序时回退默认（交易日倒序）
 function handleSorterChange(sorter: any) {
-  if (sorter?.columnKey === 'tradeDate' && sorter?.order) {
-    sortBy.value = 'tradeDate'
+  const field = sorter?.columnKey
+  if (!field) return
+  if (sorter?.order) {
+    sortBy.value = field
     sortDir.value = sorter.order === 'ascend' ? 'asc' : 'desc'
-    currentPage.value = 0
-    pagination.page = 1
-    loadAllBars()
+  } else {
+    sortBy.value = 'tradeDate'
+    sortDir.value = 'desc'
   }
+  currentPage.value = 0
+  pagination.page = 1
+  loadAllBars()
 }
+
+// 暴露给外部/测试调用
+defineExpose({ handleSorterChange })
 
 // ============ 数据加载 ============
 /** 加载分页数据 */

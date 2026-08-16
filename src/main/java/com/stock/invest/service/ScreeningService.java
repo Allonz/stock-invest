@@ -36,6 +36,15 @@ public interface ScreeningService {
     Map<String, Object> getLatestScreening();
 
     /**
+     * 获取指定交易日的最新一次筛选结果（含 stock name）。
+     *
+     * @param tradeDate 交易日，yyyy-MM-dd
+     * @return 结果 Map，包含 batchId / tradeDate / totalMatches / matches；
+     *         该日期无筛选数据时 batchId 为 null、matches 为空列表
+     */
+    Map<String, Object> getScreeningByDate(String tradeDate);
+
+    /**
      * 获取历史筛选批次列表。
      *
      * @return 每个批次的摘要 Map 列表
@@ -72,4 +81,13 @@ public interface ScreeningService {
      * @return 包含 batchId / screenDate / results 的 Map
      */
     Map<String, Object> getLatestNotificationGrouped(String windows);
+
+    /**
+     * 获取指定交易日的最新一次筛选结果，按 algorithm + windowDays 分组统计（通知用）。
+     *
+     * @param tradeDate 交易日，yyyy-MM-dd
+     * @param windows   逗号分隔的窗口列表；null 或空表示返回全部窗口
+     * @return 包含 batchId / screenDate / results 的 Map；该日期无数据时 results 为空
+     */
+    Map<String, Object> getNotificationGroupedByDate(String tradeDate, String windows);
 }

@@ -317,4 +317,47 @@ class AdminControllerTest {
         verify(scanExecutor, never()).execute(any());
         verify(screeningService, never()).runScreening(any(LocalDate.class), any(), any());
     }
+
+    @Test
+    @DisplayName("run-screening-async limit=0 返回 400")
+    void runScreeningAsync_zeroLimitReturns400() throws Exception {
+        mockMvc.perform(post("/api/admin/run-screening-async")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"limit\":0,\"windowDays\":2}")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
+
+        verify(scanExecutor, never()).execute(any());
+    }
+
+    @Test
+    @DisplayName("run-screening-async 负数 windowDays 返回 400")
+    void runScreeningAsync_negativeWindowDaysReturns400() throws Exception {
+        mockMvc.perform(post("/api/admin/run-screening-async")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"limit\":3,\"windowDays\":-2}")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
+
+        verify(scanExecutor, never()).execute(any());
+    }
+
+    @Test
+    @DisplayName("run-screening 服务异常时返回 500 但不泄露内部异常消息")
+    void runScreening_serviceException_returnsGeneric500() throws Exception {
+        when(screeningService.runScreening(any(LocalDate.class), any(), any()))
+                .thenThrow(new RuntimeException("secret db connection detail"));
+
+        mockMvc.perform(post("/api/admin/run-screening")
+                        .param("date", "2026-08-16")
+                        .param("limit", "50")
+                        .param("windowDays", "2")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isInternalServerError())
+                .andExpect(result -> {
+                    String body = result.getResponse().getContentAsString();
+                    assertFalse(body.contains("secret db connection detail"),
+                            "response must not leak internal exception message");
+                });
+    }
 }

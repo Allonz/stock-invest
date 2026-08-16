@@ -3,10 +3,13 @@ package com.stock.invest.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -30,15 +33,34 @@ import java.util.Map;
 public class WebhookNotifier {
 
     private static final Logger log = LoggerFactory.getLogger(WebhookNotifier.class);
+    private static final long[] DEFAULT_RETRY_DELAYS_MS = {3_000L, 9_000L, 27_000L};
 
-    private final RestTemplate restTemplate = new RestTemplate();
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final RestTemplate restTemplate;
+    private final ObjectMapper objectMapper;
+    private final String webhookUrl;
+    private final String webhookSecret;
+    private final long[] retryDelaysMs;
 
-    @Value("${orchestration.webhook-url:http://localhost:8644/webhooks/tiger-orch}")
-    private String webhookUrl;
+    @Autowired
+    public WebhookNotifier(ObjectMapper objectMapper,
+                           @Qualifier("webhookRestTemplate") RestTemplate restTemplate,
+                           @Value("${orchestration.webhook-url:http://localhost:8644/webhooks/tiger-orch}") String webhookUrl,
+                           @Value("${orchestration.webhook-secret:}") String webhookSecret) {
+        this(objectMapper, restTemplate, webhookUrl, webhookSecret, DEFAULT_RETRY_DELAYS_MS);
+    }
 
-    @Value("${orchestration.webhook-secret:}")
-    private String webhookSecret;
+    /** 包级测试构造器：可注入短重试延迟，避免单测等待 3/9/27 秒。 */
+    WebhookNotifier(ObjectMapper objectMapper,
+                    RestTemplate restTemplate,
+                    String webhookUrl,
+                    String webhookSecret,
+                    long[] retryDelaysMs) {
+        this.objectMapper = objectMapper;
+        this.restTemplate = restTemplate;
+        this.webhookUrl = webhookUrl;
+        this.webhookSecret = webhookSecret;
+        this.retryDelaysMs = retryDelaysMs == null ? DEFAULT_RETRY_DELAYS_MS : retryDelaysMs;
+    }
 
     /**
      * 发送编排完成通知（使用全局配置的回调端点）。
@@ -83,8 +105,7 @@ public class WebhookNotifier {
                 : webhookUrl;
         try {
             String body = objectMapper.writeValueAsString(payload);
-            long[] delays = {3_000L, 9_000L, 27_000L};
-            for (int attempt = 0; attempt <= delays.length; attempt++) {
+            for (int attempt = 0; attempt <= retryDelaysMs.length; attempt++) {
                 try {
                     HttpHeaders headers = new HttpHeaders();
                     headers.setContentType(MediaType.APPLICATION_JSON);
@@ -92,16 +113,22 @@ public class WebhookNotifier {
                         headers.set("X-Webhook-Signature", hmacSha256(body, webhookSecret));
                     }
                     HttpEntity<String> entity = new HttpEntity<>(body, headers);
-                    String resp = restTemplate.postForObject(targetUrl, entity, String.class);
-                    log.info("[WebhookNotifier] notify ok (attempt={}), url={}, resp={}, payload={}",
-                            attempt + 1, targetUrl, resp, body);
+                    ResponseEntity<String> response = restTemplate.postForEntity(targetUrl, entity, String.class);
+                    // 已禁用自动重定向，但 3xx 仍会被 RestTemplate 视为可读取响应：
+                    // 显式按失败处理，避免把重定向当作成功。
+                    if (response.getStatusCode().is3xxRedirection()) {
+                        throw new java.io.IOException("Webhook returned redirect status: "
+                                + response.getStatusCode().value());
+                    }
+                    log.info("[WebhookNotifier] notify ok (attempt={}), url={}, status={}, resp={}, payload={}",
+                            attempt + 1, targetUrl, response.getStatusCode().value(), response.getBody(), body);
                     return true;
                 } catch (Exception e) {
                     log.warn("[WebhookNotifier] notify failed (attempt={}/{}): {}",
-                            attempt + 1, delays.length + 1, e.getMessage());
-                    if (attempt < delays.length) {
+                            attempt + 1, retryDelaysMs.length + 1, e.getMessage());
+                    if (attempt < retryDelaysMs.length) {
                         try {
-                            Thread.sleep(delays[attempt]);
+                            Thread.sleep(retryDelaysMs[attempt]);
                         } catch (InterruptedException ie) {
                             Thread.currentThread().interrupt();
                             return false;
@@ -110,7 +137,7 @@ public class WebhookNotifier {
                 }
             }
             log.error("[WebhookNotifier] notify FAILED after {} attempts, url={}, payload={}",
-                    delays.length + 1, targetUrl, body);
+                    retryDelaysMs.length + 1, targetUrl, body);
             return false;
         } catch (Exception e) {
             log.error("[WebhookNotifier] serialize payload failed", e);

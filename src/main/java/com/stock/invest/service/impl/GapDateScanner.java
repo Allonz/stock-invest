@@ -68,14 +68,12 @@ final class GapDateScanner {
                 .collect(Collectors.toSet());
 
         List<LocalDate> missing = new ArrayList<>();
-        int unknownSkipped = 0;
         LocalDate cursor = rangeStart;
         while (!cursor.isAfter(rangeEnd)) {
             if (cursor.getDayOfWeek().getValue() <= 5) {
                 if (calendarDbService != null) {
                     Boolean isOpen = calendarDbService.isTradingDay("US", cursor);
                     if (isOpen == null) {
-                        unknownSkipped++;
                         cursor = cursor.plusDays(1);
                         continue;
                     }

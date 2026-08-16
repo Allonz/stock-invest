@@ -49,6 +49,23 @@ public class NotificationController {
     }
 
     /**
+     * GET /api/notification/by-date?tradeDate=2026-08-13 — 指定交易日的最新筛选结果通知
+     */
+    @GetMapping("/by-date")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getNotificationByDate(
+            @RequestParam(defaultValue = "") String tradeDate,
+            @RequestParam(value = "windows", required = false) String windows) {
+        try {
+            Map<String, Object> result = screeningService.getNotificationGroupedByDate(tradeDate, windows);
+            return ResponseEntity.ok(ApiResponse.ok(result));
+        } catch (Exception e) {
+            log.error("getNotificationByDate failed tradeDate={}", tradeDate, e);
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Failed to retrieve notification data for " + tradeDate));
+        }
+    }
+
+    /**
      * GET /api/notification/history — 历史通知批次列表
      */
     @GetMapping("/history")

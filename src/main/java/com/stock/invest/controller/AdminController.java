@@ -476,7 +476,7 @@ public class AdminController {
         } catch (Exception e) {
             log.error("[Admin] runScreening failed", e);
             return ResponseEntity.internalServerError()
-                    .body(ApiResponse.error("Screening failed: " + e.getMessage()));
+                    .body(ApiResponse.error("Screening failed, please check server logs", "ScreeningFailed"));
         }
     }
 
@@ -485,20 +485,24 @@ public class AdminController {
      */
     private static int parsePositiveInt(Map<String, Object> params, String key, int defaultValue) {
         Object value = params.get(key);
+        int parsed;
         if (value == null) {
-            return defaultValue;
-        }
-        if (value instanceof Number number) {
-            return number.intValue();
-        }
-        if (value instanceof String str) {
+            parsed = defaultValue;
+        } else if (value instanceof Number number) {
+            parsed = number.intValue();
+        } else if (value instanceof String str) {
             try {
-                return Integer.parseInt(str.trim());
+                parsed = Integer.parseInt(str.trim());
             } catch (NumberFormatException e) {
                 throw new IllegalArgumentException(key + " must be a valid integer");
             }
+        } else {
+            throw new IllegalArgumentException(key + " must be a valid integer");
         }
-        throw new IllegalArgumentException(key + " must be a valid integer");
+        if (parsed <= 0) {
+            throw new IllegalArgumentException(key + " must be a positive integer");
+        }
+        return parsed;
     }
 
 }

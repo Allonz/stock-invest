@@ -23,6 +23,9 @@ public interface ScreeningMatchRepository extends JpaRepository<ScreeningMatch, 
 
     Optional<ScreeningMatch> findTopByOrderByTradeDateDescIdDesc();
 
+    /** 按交易日查询最新一次筛选批次的首条记录（id 最大 = 最近一次筛选） */
+    Optional<ScreeningMatch> findTopByTradeDateOrderByIdDesc(LocalDate tradeDate);
+
     @Query("SELECT DISTINCT sm.batchId FROM ScreeningMatch sm ORDER BY sm.batchId DESC")
     List<String> findDistinctBatchIds();
 

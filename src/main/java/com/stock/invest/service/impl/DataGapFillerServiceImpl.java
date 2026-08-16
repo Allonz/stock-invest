@@ -3,23 +3,12 @@ package com.stock.invest.service.impl;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,11 +21,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import com.stock.invest.config.GapFillProperties;
 import com.stock.invest.entity.DataFillTask;
-import com.stock.invest.entity.FieldCapability;
 import com.stock.invest.entity.StockDailyBar;
-import com.stock.invest.exception.StockDataException;
-import com.stock.invest.model.KLineData;
-import com.stock.invest.model.KLineIterator;
 import com.stock.invest.repository.DataFillTaskRepository;
 import com.stock.invest.repository.StockDailyBarRepository;
 import com.stock.invest.service.DataFillProgressService;
@@ -65,15 +50,8 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
 
     private static final Logger log = LoggerFactory.getLogger(DataGapFillerServiceImpl.class);
 
-    private static final ZoneId AMERICA_NY = ZoneId.of("America/New_York");
-
-
     private static final int MAX_SYMBOLS_PER_RUN = 200;
     private static final int MAX_LOOKBACK_DAYS = 7;
-    private static final int MAX_MISSING_DATES_PER_SYMBOL = 5;
-
-    /** P1-5：账户级错误（权限/配额）触发源级熔断的冷却时长 */
-    private static final long SOURCE_COOLDOWN_MILLIS = 30 * 60 * 1000L;
 
     /** 字段增补单次上限：防止存量 PENDING 过多时一次性打爆外部 API（2026-08-14） */
     static final int MAX_FILL_FIELDS_PER_RUN = 100;
@@ -98,14 +76,10 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
 
     private final StockDailyBarRepository stockDailyBarRepository;
     private final DataFillTaskRepository dataFillTaskRepository;
-    private final List<DataSourceStrategy> dataSources;
     private final GapFillProperties gapFillProperties;
     private final DataFillProgressService dataFillProgressService;
-    private final RetryProgressService retryProgressService;
     private final TradingCalendarDbService tradingCalendarDbService;
-    private final StockDataSourcePriorityService stockDataSourcePriorityService;
     private final SymbolBlacklistService symbolBlacklistService;
-    private final FieldCapabilityService fieldCapabilityService;
 
     private final FallbackChainBuilder fallbackChainBuilder;
     private final MissingFieldFiller missingFieldFiller;
@@ -135,14 +109,10 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
             FieldCapabilityService fieldCapabilityService) {
         this.stockDailyBarRepository = stockDailyBarRepository;
         this.dataFillTaskRepository = dataFillTaskRepository;
-        this.dataSources = dataSources;
         this.gapFillProperties = gapFillProperties;
         this.dataFillProgressService = dataFillProgressService;
-        this.retryProgressService = retryProgressService;
         this.tradingCalendarDbService = tradingCalendarDbService;
-        this.stockDataSourcePriorityService = stockDataSourcePriorityService;
         this.symbolBlacklistService = symbolBlacklistService;
-        this.fieldCapabilityService = fieldCapabilityService;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.fallbackChainBuilder = new FallbackChainBuilder(
                 dataSources, stockDataSourcePriorityService, sourceCooldownUntil);
@@ -342,58 +312,6 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         return GapDateScanner.findMissingTradeDates(existingBars, calendarDbService);
     }
 
-    private GapFetcher.FetchResult fetchAndPersist(String symbol, LocalDate tradeDate) {
-        return gapFetcher.fetchAndPersist(symbol, tradeDate);
-    }
-
-    private StockDailyBar persist(String symbol, LocalDate tradeDate, KLineIterator item, String source) {
-        Optional<StockDailyBar> existing = stockDailyBarRepository.findBySymbolAndTradeDate(symbol, tradeDate);
-        StockDailyBar bar;
-        if (existing.isPresent()) {
-            bar = existing.get();
-        } else {
-            bar = new StockDailyBar();
-            bar.setSymbol(symbol);
-            bar.setTradeDate(tradeDate);
-        }
-        bar.setOpenPrice(item.getOpen());
-        bar.setHighPrice(item.getHigh());
-        bar.setLowPrice(item.getLow());
-        bar.setClosePrice(item.getClose());
-        bar.setVolume(item.getVolume());
-        // R2 P3-4：透传路径 —— 数据源侧原始值原样透传，落库时由 DECIMAL(12,4) 隐式四舍五入归一；
-        // 计算型 changePercent（Tiger/Tiingo/盘后）已在计算点 setScale(4, HALF_UP)
-        bar.setChangePercent(item.getChangePercent());
-        bar.setAfterHours(item.getAfterHours());
-        bar.setAfterHoursChangePercent(item.getAfterHoursChangePercent());
-        // === fallback: 数据源未提供 changePercent 时自动计算（隔日涨跌幅） ===
-        // yfinance/tiingo 的 K 线响应不含 changePercent 字段（反序列化后为 null），
-        // 若此处不补算，落库后 change_percent 为 NULL（历史 532/4100、68/500 空）。
-        // 恢复 29ef6c5 设计：null 时查前一个交易日 close 计算 (curr-prev)/prev*100。
-        if (bar.getChangePercent() == null && bar.getClosePrice() != null
-                && bar.getClosePrice().compareTo(java.math.BigDecimal.ZERO) != 0) {
-            final java.math.BigDecimal currClose = bar.getClosePrice();
-            stockDailyBarRepository
-                    .findTopBySymbolAndTradeDateBeforeOrderByTradeDateDesc(symbol, tradeDate)
-                    .ifPresent(prev -> {
-                        java.math.BigDecimal prevClose = prev.getClosePrice();
-                        if (prevClose != null && prevClose.compareTo(java.math.BigDecimal.ZERO) != 0) {
-                            java.math.BigDecimal pct = currClose.subtract(prevClose)
-                                    .divide(prevClose, 8, java.math.RoundingMode.HALF_UP)
-                                    .multiply(java.math.BigDecimal.valueOf(100))
-                                    .setScale(4, java.math.RoundingMode.HALF_UP);
-                            bar.setChangePercent(pct);
-                        }
-                    });
-        }
-        bar.setSource(source);
-        // 字段缺失标记（2026-08-14）：按能力表计算缺失字段集 + 增补状态
-        applyMissingFieldsMark(bar);
-        // P1-2：单次持久化独立事务，失败不回滚整批
-        runInTx(() -> stockDailyBarRepository.save(bar));
-        return bar;
-    }
-
     /**
      * 计算并设置记录的字段缺失标记（missingFields + fieldFillStatus）。
      * <p>
@@ -403,62 +321,6 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
      */
     void applyMissingFieldsMark(StockDailyBar bar) {
         missingFieldFiller.applyMissingFieldsMark(bar);
-    }
-
-    /** 价格字段缺失判定：NULL 或 0（美股价格恒 > 0） */
-    private static boolean isMissingPrice(java.math.BigDecimal v) {
-        return v == null || v.compareTo(java.math.BigDecimal.ZERO) == 0;
-    }
-
-    /** 成交量缺失判定：NULL 或 0（无成交异常） */
-    private static boolean isMissingVolume(Long v) {
-        return v == null || v <= 0L;
-    }
-
-    /**
-     * 对 Tiger 截图数据源，尝试拉取盘后价并合并到已保存的日 K 线。
-     */
-    private void mergeAfterHoursIfAvailable(String symbol, LocalDate tradeDate, StockDailyBar bar,
-                                            DataSourceStrategy source) {
-        if (!supportsAfterHoursMerge(source)) {
-            return;
-        }
-        try {
-            KLineData ahData = source.getAfterHoursKLineDataByDateRange(symbol, tradeDate);
-            if (isKLineDataEmpty(ahData)) {
-                return;
-            }
-            for (KLineIterator item : ahData.getItems()) {
-                LocalDate itemDate = item.getTimeString() != null && !item.getTimeString().isEmpty()
-                        ? LocalDate.parse(item.getTimeString())
-                        : epochMillisToLocalDate(item.getTime());
-                if (!itemDate.equals(tradeDate)) {
-                    continue;
-                }
-                java.math.BigDecimal ahClose = item.getClose();
-                bar.setAfterHours(ahClose);
-                java.math.BigDecimal regClose = bar.getClosePrice();
-                if (regClose != null && regClose.compareTo(java.math.BigDecimal.ZERO) != 0) {
-                    bar.setAfterHoursChangePercent(ahClose.subtract(regClose)
-                            .divide(regClose, 8, java.math.RoundingMode.HALF_UP)
-                            .multiply(java.math.BigDecimal.valueOf(100))
-                            .setScale(4, java.math.RoundingMode.HALF_UP));
-                }
-                // 盘后合并成功后清除盘后相关缺失标记（2026-08-14）
-                clearMissingFields(bar, F_AFTER_HOURS, F_AFTER_HOURS_CHANGE_PERCENT);
-                runInTx(() -> stockDailyBarRepository.save(bar));
-                return;
-            }
-        } catch (Exception e) {
-            log.warn("[DataGapFiller] mergeAfterHours: failed symbol={}, date={}, error={}",
-                    symbol, tradeDate, e.getMessage());
-        }
-    }
-
-    private boolean supportsAfterHoursMerge(DataSourceStrategy source) {
-        // 数据驱动：查能力表该源是否支持盘后字段（yfinance/tigeropen/tiger_snap 支持；
-        // tiingo/twelvedata 不支持）。2026-08-14 由硬编码改为查表。
-        return fieldCapabilityService.isMarkable(source.getSourceName(), F_AFTER_HOURS);
     }
 
     // ==================== 字段增补：发现 + 增补（2026-08-14） ====================
@@ -472,11 +334,6 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
      */
     int discoverMissingFields() {
         return missingFieldFiller.discoverMissingFields();
-    }
-
-    /** 字段增补窗口起点（美东今天 - FILL_WINDOW_CALENDAR_DAYS） */
-    private LocalDate fillWindowStart() {
-        return ZonedDateTime.now(AMERICA_NY).toLocalDate().minusDays(FILL_WINDOW_CALENDAR_DAYS);
     }
 
     /**
@@ -500,219 +357,6 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         return missingFieldFiller.fillMissingFieldsForBar(bar);
     }
 
-    /**
-     * 用日 K item 更新 bar 的缺失行情字段（只更新缺失项，不覆盖已有值）。
-     * 返回是否发生了更新。
-     */
-    private boolean applyKlineItemToBar(StockDailyBar bar, KLineIterator item, List<String> missing) {
-        boolean updated = false;
-        if (missing.contains(F_OPEN) && item.getOpen() != null) {
-            bar.setOpenPrice(item.getOpen());
-            updated = true;
-        }
-        if (missing.contains(F_HIGH) && item.getHigh() != null) {
-            bar.setHighPrice(item.getHigh());
-            updated = true;
-        }
-        if (missing.contains(F_LOW) && item.getLow() != null) {
-            bar.setLowPrice(item.getLow());
-            updated = true;
-        }
-        if (missing.contains(F_CLOSE) && item.getClose() != null) {
-            bar.setClosePrice(item.getClose());
-            updated = true;
-        }
-        if (missing.contains(F_VOLUME) && item.getVolume() > 0) {
-            bar.setVolume(item.getVolume());
-            updated = true;
-        }
-        if (missing.contains(F_CHANGE_PERCENT)) {
-            // 优先用脚本直算值（两日窗口相邻交易日），null 才 Java DB 兜底（用户原则：源直取优先）
-            if (item.getChangePercent() != null) {
-                bar.setChangePercent(item.getChangePercent());
-                updated = true;
-            } else if (recalcChangePercent(bar)) {
-                updated = true;
-            }
-        }
-        // 已补上的字段从缺失集移除
-        List<String> remaining = parseMissingFields(bar.getMissingFields());
-        if (remaining.isEmpty()) {
-            return updated;
-        }
-        remaining.removeAll(missing.stream()
-                .filter(f -> {
-                    switch (f) {
-                        case F_OPEN: return bar.getOpenPrice() != null;
-                        case F_HIGH: return bar.getHighPrice() != null;
-                        case F_LOW: return bar.getLowPrice() != null;
-                        case F_CLOSE: return bar.getClosePrice() != null;
-                        case F_VOLUME: return bar.getVolume() != null && bar.getVolume() > 0;
-                        case F_CHANGE_PERCENT: return bar.getChangePercent() != null;
-                        default: return false;
-                    }
-                }).toList());
-        if (remaining.size() != parseMissingFields(bar.getMissingFields()).size()) {
-            bar.setMissingFields(remaining.isEmpty() ? null : String.join(",", remaining));
-        }
-        return updated;
-    }
-
-    /**
-     * 重算 change_percent：(今日收盘 - 前一日收盘) / 前一日收盘 * 100。
-     * 前一日数据缺失时返回 false（保留缺失标记，等前一日补上后再算）。
-     */
-    private boolean recalcChangePercent(StockDailyBar bar) {
-        if (bar.getClosePrice() == null
-                || bar.getClosePrice().compareTo(java.math.BigDecimal.ZERO) == 0) {
-            return false;
-        }
-        Optional<StockDailyBar> prev = stockDailyBarRepository
-                .findTopBySymbolAndTradeDateBeforeOrderByTradeDateDesc(bar.getSymbol(), bar.getTradeDate());
-        if (prev.isEmpty() || prev.get().getClosePrice() == null
-                || prev.get().getClosePrice().compareTo(java.math.BigDecimal.ZERO) == 0) {
-            return false;
-        }
-        java.math.BigDecimal currClose = bar.getClosePrice();
-        java.math.BigDecimal prevClose = prev.get().getClosePrice();
-        java.math.BigDecimal pct = currClose.subtract(prevClose)
-                .divide(prevClose, 8, java.math.RoundingMode.HALF_UP)
-                .multiply(java.math.BigDecimal.valueOf(100))
-                .setScale(4, java.math.RoundingMode.HALF_UP);
-        bar.setChangePercent(pct);
-        return true;
-    }
-
-    /** 从 KLineData 中找指定交易日的 item（优先 timeString，回退毫秒转美东日期） */
-    private KLineIterator findItemByDate(KLineData data, LocalDate tradeDate) {
-        if (data == null || data.getItems() == null) {
-            return null;
-        }
-        for (KLineIterator item : data.getItems()) {
-            LocalDate itemDate = item.getTimeString() != null && !item.getTimeString().isEmpty()
-                    ? LocalDate.parse(item.getTimeString())
-                    : epochMillisToLocalDate(item.getTime());
-            if (itemDate.equals(tradeDate)) {
-                return item;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * 从缺失标记中移除指定字段；清空后置 CONFIRMED。
-     */
-    void clearMissingFields(StockDailyBar bar, String... fields) {
-        List<String> missing = parseMissingFields(bar.getMissingFields());
-        if (missing.isEmpty()) {
-            return;
-        }
-        Set<String> toClear = new HashSet<>(java.util.Arrays.asList(fields));
-        missing.removeIf(toClear::contains);
-        if (missing.isEmpty()) {
-            bar.setMissingFields(null);
-            bar.setFieldFillStatus(STATUS_CONFIRMED);
-        } else {
-            bar.setMissingFields(String.join(",", missing));
-        }
-    }
-
-    private static List<String> parseMissingFields(String s) {
-        if (s == null || s.trim().isEmpty()) {
-            return new ArrayList<>();
-        }
-        return new ArrayList<>(java.util.Arrays.asList(s.split(",")));
-    }
-
-    /**
-     * 构建补缺查询序列：yfinance 无条件第一 → source（若 != yfinance 且 != tiger_snap）。
-     * tiger_snap 特例：只查 yfinance。不再 fallback 到第三/第四源（用户设计 2026-08-14）。
-     */
-    private List<DataSourceStrategy> buildQuerySequence(String sourceName) {
-        List<DataSourceStrategy> seq = new ArrayList<>();
-        for (DataSourceStrategy d : dataSources) {
-            if ("yfinance".equals(d.getSourceName()) && d.isAvailable()) {
-                seq.add(d);
-                break;
-            }
-        }
-        if (!"yfinance".equals(sourceName) && !"tiger_snap".equals(sourceName)) {
-            for (DataSourceStrategy d : dataSources) {
-                if (sourceName.equals(d.getSourceName()) && d.isAvailable()) {
-                    seq.add(d);
-                    break;
-                }
-            }
-        }
-        return seq;
-    }
-
-    /**
-     * change_percent 兜底计算：用 DB 前一交易日 close（真实前交易日序列）。
-     * 源无当日 K 线时涨跌幅仍可计算（已有 close + 前交易日 close）；返回 null 表示算不出。
-     */
-    private java.math.BigDecimal calcChangePercentFromPrevClose(
-            String symbol, LocalDate tradeDate, java.math.BigDecimal currClose) {
-        if (currClose == null || currClose.compareTo(java.math.BigDecimal.ZERO) == 0) {
-            return null;
-        }
-        final java.math.BigDecimal[] result = { null };
-        stockDailyBarRepository
-                .findTopBySymbolAndTradeDateBeforeOrderByTradeDateDesc(symbol, tradeDate)
-                .ifPresent(prev -> {
-                    java.math.BigDecimal prevClose = prev.getClosePrice();
-                    if (prevClose != null && prevClose.compareTo(java.math.BigDecimal.ZERO) != 0) {
-                        result[0] = currClose.subtract(prevClose)
-                                .divide(prevClose, 8, java.math.RoundingMode.HALF_UP)
-                                .multiply(java.math.BigDecimal.valueOf(100))
-                                .setScale(4, java.math.RoundingMode.HALF_UP);
-                    }
-                });
-        return result[0];
-    }
-
-    /** 按源名找数据源；找不到时回退到第一个可用源（截图等无 bean 源的数据用其他源补，用户设计）。 */
-    private DataSourceStrategy findDataSource(String name) {
-        if (name != null) {
-            for (DataSourceStrategy ds : dataSources) {
-                if (name.equals(ds.getSourceName()) && ds.isAvailable()) {
-                    return ds;
-                }
-            }
-        }
-        return dataSources.stream()
-                .filter(DataSourceStrategy::isAvailable)
-                .findFirst()
-                .orElse(null);
-    }
-
-    private void createRetryTask(String symbol, LocalDate tradeDate, String error) {
-        LocalDate today = ZonedDateTime.now(AMERICA_NY).toLocalDate();
-        Optional<DataFillTask> existing = dataFillTaskRepository.findBySymbolAndTradeDate(symbol, tradeDate);
-        if (existing.isPresent()) {
-            DataFillTask task = existing.get();
-            // R2 P2-1：retryCount 递增走 JPQL 原子自增（不校验版本，杜绝乐观锁冲突丢更新）
-            runInTx(() -> dataFillTaskRepository.incrementRetryCounters(task.getId(), "retrying", error));
-            task.setRetryCount(task.getRetryCount() + 1);
-            task.setStatus("retrying");
-            task.setLastError(error);
-            log.info("[DataGapFiller] createRetryTask: updated symbol={}, date={}, retryCount={}, error={}",
-                    symbol, tradeDate, task.getRetryCount(), error);
-            return;
-        }
-        DataFillTask task = new DataFillTask();
-        task.setSymbol(symbol);
-        task.setTradeDate(tradeDate);
-        task.setStatus("retrying");
-        task.setRetryCount(1);
-        task.setRetryDate(today);
-        task.setDayCount(1);
-        task.setLastError(error);
-        saveTaskWithOptimisticLock(task);
-        log.info("[DataGapFiller] createRetryTask: created symbol={}, date={}, error={}",
-                symbol, tradeDate, error);
-    }
-
     @Override
     public void processRetryingTasks() {
         // P1-2：运行互斥 —— 与 fillGaps 共用同一把锁，补缺/重试不得并发
@@ -725,10 +369,6 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         } finally {
             running.set(false);
         }
-    }
-
-    private void processRetryingTasksInternal() {
-        retryTaskProcessor.processRetryingTasksInternal();
     }
 
     @Override
@@ -744,90 +384,6 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
     @Override
     public long countFillTasksByStatus(String status) {
         return dataFillTaskRepository.countByStatus(status);
-    }
-
-    private static LocalDate epochMillisToLocalDate(long epochMillis) {
-        return Instant.ofEpochMilli(epochMillis)
-                .atZone(AMERICA_NY)
-                .toLocalDate();
-    }
-
-    // ---- Fallback chain ----
-
-    @FunctionalInterface
-    private interface KLineFetcher {
-        KLineData fetch(String symbol, LocalDate tradeDate) throws Exception;
-    }
-
-    private record FallbackSource(String name, KLineFetcher fetcher, DataSourceStrategy ds) {}
-
-    /**
-     * 构建某支股票专属的 fallback 链。
-     * <ul>
-     *   <li>有历史成功记录 → 按 last_success_time DESC 优先</li>
-     *   <li>无历史记录 → 使用默认顺序 yfinance → twelvedata → tiingo → tigeropen → tiger</li>
-     *   <li>Tiger 截图数据源不参与优先级排序</li>
-     * </ul>
-     */
-        private List<FallbackSource> buildFallbackChainForSymbol(String symbol) {
-        List<String> priorityOrder;
-        if (symbol != null) {
-            priorityOrder = stockDataSourcePriorityService.getPriorityList(symbol);
-        } else {
-            priorityOrder = StockDataSourcePriorityService.DEFAULT_DATA_SOURCE_ORDER;
-        }
-
-        // 按优先顺序构建可用的数据源链
-        Map<String, Integer> priorityMap = new java.util.HashMap<>();
-        for (int i = 0; i < priorityOrder.size(); i++) {
-            priorityMap.put(priorityOrder.get(i), i);
-        }
-
-        return dataSources.stream()
-                .filter(Objects::nonNull)
-                .filter(DataSourceStrategy::isAvailable)
-                // P1-5：熔断冷却期内的源直接跳过（账户级错误后 30 分钟内不再打该源）
-                .filter(ds -> !isSourceCooledDown(ds.getSourceName()))
-                .sorted(Comparator.comparingInt(s -> priorityMap.getOrDefault(s.getSourceName(), 99)))
-                .map(ds -> new FallbackSource(ds.getSourceName(),
-                        (sym, date) -> ds.getDailyKLineDataByDateRange(sym, date), ds))
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * 数据源是否处于熔断冷却期（P1-5）。
-     */
-    private boolean isSourceCooledDown(String sourceName) {
-        Long until = sourceCooldownUntil.get(sourceName);
-        if (until == null) {
-            return false;
-        }
-        if (System.currentTimeMillis() >= until) {
-            sourceCooldownUntil.remove(sourceName, until);
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * 判断异常消息是否明确匹配 not-found 关键词（P1-3 路径 B 白名单）。
-     * <p>仅在数据源未抛带分类的 {@link StockDataException} 时兜底使用；成功但空结果一律不计黑名单。</p>
-     * <p>R2 P3-2：原 klineData 参数（路径 A 空结果判定移除后遗留）已删除，仅保留 errorMessage。</p>
-     */
-    private boolean isNotFoundError(String errorMessage) {
-        if (errorMessage != null && !errorMessage.isEmpty()) {
-            return StockDataException.isNotFoundMessage(errorMessage.toLowerCase());
-        }
-        return false;
-    }
-
-    /**
-     * 检查 KLineData 是否返回了空结果（空列表）。
-     */
-    private boolean isKLineDataEmpty(KLineData klineData) {
-        return klineData == null
-                || klineData.getItems() == null
-                || klineData.getItems().isEmpty();
     }
 
     // ---- Internal result holder ----
@@ -849,46 +405,6 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
      */
     private void runInTx(Runnable action) {
         transactionTemplate.executeWithoutResult(status -> action.run());
-    }
-
-    /**
-     * R2 P2-1：乐观锁兜底保存 —— 终态类保存（status/lastError/retryDate）冲突时
-     * 重读 + 重放一次：终态字段以本次意图为准直接覆盖；若本次携带日计数重置
-     * （retryDate 变更 → dayCount 置 0）则一并重放。再次冲突 → error + 原子计数，可观测。
-     * <p>计数递增（retryCount/dayCount）已改走 JPQL 原子自增（incrementRetryCounters），
-     * 不再经过本方法，从根上消除计数丢失。</p>
-     */
-    private final java.util.concurrent.atomic.AtomicInteger optimisticLockConflicts =
-            new java.util.concurrent.atomic.AtomicInteger(0);
-
-    private void saveTaskWithOptimisticLock(DataFillTask task) {
-        try {
-            runInTx(() -> dataFillTaskRepository.save(task));
-        } catch (org.springframework.orm.ObjectOptimisticLockingFailureException e) {
-            DataFillTask latest = dataFillTaskRepository.findById(task.getId()).orElse(null);
-            if (latest == null) {
-                log.error("[DataGapFiller] optimistic lock conflict on taskId={} but row not found, update dropped: {}",
-                        task.getId(), e.getMessage());
-                return;
-            }
-            log.warn("[DataGapFiller] optimistic lock conflict on taskId={}, re-read and replay once: {}",
-                    task.getId(), e.getMessage());
-            // 终态字段以本次意图为准直接覆盖（status/lastError/retryDate）
-            latest.setStatus(task.getStatus());
-            latest.setLastError(task.getLastError());
-            latest.setRetryDate(task.getRetryDate());
-            // 日计数重置意图（retryDate 变更 → dayCount 置 0）一并重放
-            if (!java.util.Objects.equals(task.getRetryDate(), latest.getRetryDate())) {
-                latest.setDayCount(task.getDayCount());
-            }
-            try {
-                runInTx(() -> dataFillTaskRepository.save(latest));
-            } catch (org.springframework.orm.ObjectOptimisticLockingFailureException e2) {
-                optimisticLockConflicts.incrementAndGet();
-                log.error("[DataGapFiller] optimistic lock conflict on taskId={} after replay, update dropped (conflictTotal={}): {}",
-                        task.getId(), optimisticLockConflicts.get(), e2.getMessage());
-            }
-        }
     }
 
     @Override

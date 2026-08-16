@@ -38,6 +38,13 @@ const pagination = {
   pageSizes: [10, 20, 50, 100]
 }
 
+/** 日期字符串 → 时间戳；空值/非法值按 0 处理（排最后） */
+function dateTs(s?: string): number {
+  if (!s) return 0
+  const t = new Date(s).getTime()
+  return Number.isNaN(t) ? 0 : t
+}
+
 const columns = [
   {
     title: '代码',
@@ -60,8 +67,9 @@ const columns = [
     title: '最近入黑日期',
     key: 'last404Date',
     width: 140,
+    defaultSortOrder: 'descend' as const,
     sorter: (a: BlacklistRow, b: BlacklistRow) =>
-      new Date(a.last404Date).getTime() - new Date(b.last404Date).getTime()
+      dateTs(a.last404Date) - dateTs(b.last404Date)
   },
   {
     title: '错误来源',
@@ -97,7 +105,10 @@ async function loadData() {
   loading.value = true
   try {
     const res = await request.get('/api/blacklist/list').then(res => res.data)
-    blacklistData.value = res as BlacklistRow[]
+    // 默认按「最近入黑日期」降序：最上面展示最近的日期（空值排最后）
+    blacklistData.value = (res as BlacklistRow[])
+      .slice()
+      .sort((a, b) => dateTs(b.last404Date) - dateTs(a.last404Date))
   } catch (e) {
     message.error('加载黑名单列表失败')
   } finally {

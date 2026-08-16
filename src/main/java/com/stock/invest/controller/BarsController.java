@@ -43,6 +43,9 @@ public class BarsController {
      */
     @GetMapping("/single/query")
     public ResponseEntity<Map<String, Object>> getBars(@RequestParam String symbol) {
+        if (symbol == null || symbol.isBlank()) {
+            throw new IllegalArgumentException("symbol is required");
+        }
         String code = symbol.trim().toUpperCase();
         List<StockDailyBarDto> bars = stockDailyBarService.getBarsBySymbol(code);
 
@@ -69,7 +72,9 @@ public class BarsController {
 
         // P2-9：sortBy 白名单，非法字段回退 tradeDate，避免 Sort.by 反射异常 500
         String sortField = switch (sortBy == null ? "" : sortBy) {
-            case "symbol", "tradeDate", "source", "closePrice", "volume", "id" -> sortBy;
+            case "symbol", "tradeDate", "source", "closePrice", "volume", "id",
+                 "openPrice", "highPrice", "lowPrice", "changePercent", "afterHours",
+                 "afterHoursChangePercent" -> sortBy;
             default -> "tradeDate";
         };
         Sort sort = sortDir.equalsIgnoreCase("desc")

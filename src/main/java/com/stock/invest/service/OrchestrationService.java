@@ -1,8 +1,5 @@
 package com.stock.invest.service;
 
-import com.stock.invest.service.DataGapFillerService;
-import com.stock.invest.service.ScreeningService;
-import com.stock.invest.service.WebhookNotifier;
 import com.stock.invest.util.WebhookUrlValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

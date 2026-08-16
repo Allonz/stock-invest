@@ -141,6 +141,42 @@ public class TradingCalendarDbService {
         return existing.size() >= expectedDays;
     }
 
+    /**
+     * 查找指定日期之前最近的交易日（美东）。
+     *
+     * @param market  市场代码，如 "US"
+     * @param date    基准日期（美东）
+     * @param maxDays 向前最多搜索的天数
+     * @return 最近的交易日；范围内无开盘日返回 empty
+     */
+    public Optional<LocalDate> findPreviousTradingDay(String market, LocalDate date, int maxDays) {
+        if (date == null) return Optional.empty();
+        LocalDate start = date.minusDays(maxDays);
+        List<TradingCalendarEntity> range = getRange(market, start, date.minusDays(1));
+        return range.stream()
+                .filter(e -> Boolean.TRUE.equals(e.getIsOpen()))
+                .map(TradingCalendarEntity::getTradeDate)
+                .max(LocalDate::compareTo);
+    }
+
+    /**
+     * 查找指定日期之后最近的交易日（美东）。
+     *
+     * @param market  市场代码，如 "US"
+     * @param date    基准日期（美东）
+     * @param maxDays 向后最多搜索的天数
+     * @return 最近的交易日；范围内无开盘日返回 empty
+     */
+    public Optional<LocalDate> findNextTradingDay(String market, LocalDate date, int maxDays) {
+        if (date == null) return Optional.empty();
+        LocalDate end = date.plusDays(maxDays);
+        List<TradingCalendarEntity> range = getRange(market, date.plusDays(1), end);
+        return range.stream()
+                .filter(e -> Boolean.TRUE.equals(e.getIsOpen()))
+                .map(TradingCalendarEntity::getTradeDate)
+                .min(LocalDate::compareTo);
+    }
+
     // ---- 内部方法 ----
 
     private int upsert(String market, LocalDate date, boolean isOpen,

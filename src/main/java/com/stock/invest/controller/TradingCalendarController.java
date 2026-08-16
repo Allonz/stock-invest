@@ -93,6 +93,66 @@ public class TradingCalendarController {
     }
 
     /**
+     * 查询指定日期之前最近的交易日（美东，跳过周末/节假日）。
+     * GET /api/v1/trading-calendar/prev-open?date=2026-08-16&market=US → { date: "2026-08-14" }
+     */
+    @GetMapping("/prev-open")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> prevOpen(
+            @RequestParam(value = "date", required = false) String dateParam,
+            @RequestParam(value = "market", required = false, defaultValue = DEFAULT_MARKET) String market) {
+        try {
+            LocalDate queryDate = (dateParam != null && !dateParam.trim().isEmpty())
+                    ? LocalDate.parse(dateParam.trim(), DATE_FMT)
+                    : LocalDate.now(NY_ZONE);
+            Optional<LocalDate> prev = dbService.findPreviousTradingDay(market, queryDate, 14);
+
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("date", queryDate.format(DATE_FMT));
+            data.put("prevOpenDate", prev.map(d -> d.format(DATE_FMT)).orElse(null));
+            data.put("market", market);
+            data.put("timezone", "America/New_York");
+            return ResponseEntity.ok(ApiResponse.ok(data));
+        } catch (DateTimeParseException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Invalid date format, expected yyyy-MM-dd", "INVALID_DATE"));
+        } catch (Exception e) {
+            log.error("[TradingCalendarController] prev-open failed", e);
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Internal error: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 查询指定日期之后最近的交易日（美东，跳过周末/节假日）。
+     * GET /api/v1/trading-calendar/next-open?date=2026-08-16&market=US → { date: "2026-08-17" }
+     */
+    @GetMapping("/next-open")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> nextOpen(
+            @RequestParam(value = "date", required = false) String dateParam,
+            @RequestParam(value = "market", required = false, defaultValue = DEFAULT_MARKET) String market) {
+        try {
+            LocalDate queryDate = (dateParam != null && !dateParam.trim().isEmpty())
+                    ? LocalDate.parse(dateParam.trim(), DATE_FMT)
+                    : LocalDate.now(NY_ZONE);
+            Optional<LocalDate> next = dbService.findNextTradingDay(market, queryDate, 14);
+
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("date", queryDate.format(DATE_FMT));
+            data.put("nextOpenDate", next.map(d -> d.format(DATE_FMT)).orElse(null));
+            data.put("market", market);
+            data.put("timezone", "America/New_York");
+            return ResponseEntity.ok(ApiResponse.ok(data));
+        } catch (DateTimeParseException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Invalid date format, expected yyyy-MM-dd", "INVALID_DATE"));
+        } catch (Exception e) {
+            log.error("[TradingCalendarController] next-open failed", e);
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Internal error: " + e.getMessage()));
+        }
+    }
+
+    /**
      * 手动触发全年日历查询入库。
      * <p>P2-10：year 缺省当年、范围限制 [当前年-1, 当前年+1]；同一市场同一年份
      * 在冷却窗口（30 分钟）内重复触发返回 429，防止高频调用打空外部数据源配额。</p>

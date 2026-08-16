@@ -17,6 +17,7 @@ import java.net.Proxy;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 带简单节流、429 退避与 User-Agent 轮换的 HTTP GET 执行器。
@@ -30,7 +31,8 @@ public class ResilientHttpExecutor {
     private final HttpClientProperties props;
     private final RestTemplate restTemplate;
     private final AtomicInteger userAgentIndex = new AtomicInteger(0);
-    private volatile long lastRequestAtMs = 0L;
+    /** 下一个可发起请求的时间槽（epoch ms），用于节流间隔控制 */
+    private final AtomicLong nextRequestSlotMs = new AtomicLong(0L);
 
     public ResilientHttpExecutor(HttpClientProperties props) {
         this.props = props;
@@ -75,15 +77,20 @@ public class ResilientHttpExecutor {
                 if (ex.getStatusCode().value() == 429 && attempts < max) {
                     long backoffMs = parseRetryAfterMs(ex) + jitter(attempts);
                     log.warn("[ResilientHttp] get: HTTP 429, backing off {} ms (attempt {}/{})", backoffMs, attempts, max);
-                    rotateUserAgentFor429();
-                    sleepQuietly(backoffMs);
+                    if (!sleepQuietly(backoffMs)) {
+                        throw new org.springframework.web.client.ResourceAccessException(
+                                "Interrupted while backing off for HTTP 429");
+                    }
                     continue;
                 }
                 if ((ex.getStatusCode().value() >= 500 || ex.getStatusCode().value() == 408) && attempts < max) {
                     long backoffMs = backoffForAttempt(attempts);
                     log.warn("[ResilientHttp] get: HTTP {} retry in {} ms (attempt {}/{})",
                             ex.getStatusCode().value(), backoffMs, attempts, max);
-                    sleepQuietly(backoffMs);
+                    if (!sleepQuietly(backoffMs)) {
+                        throw new org.springframework.web.client.ResourceAccessException(
+                                "Interrupted while backing off for HTTP " + ex.getStatusCode().value());
+                    }
                     continue;
                 }
                 log.error("[ResilientHttp] get: HTTP {} non-retryable — url={}", ex.getStatusCode().value(), url);
@@ -94,7 +101,10 @@ public class ResilientHttpExecutor {
                     long backoffMs = backoffForAttempt(attempts);
                     log.warn("[ResilientHttp] get: network error, retry in {} ms (attempt {}/{}) — url={}, error={}",
                             backoffMs, attempts, max, url, ex.getMessage());
-                    sleepQuietly(backoffMs);
+                    if (!sleepQuietly(backoffMs)) {
+                        throw new org.springframework.web.client.ResourceAccessException(
+                                "Interrupted while backing off for network error");
+                    }
                     continue;
                 }
                 log.error("[ResilientHttp] get: network error, retries exhausted — url={}", url, ex);
@@ -108,14 +118,16 @@ public class ResilientHttpExecutor {
         if (min <= 0) {
             return;
         }
-        synchronized (this) {
-            long now = System.currentTimeMillis();
-            long wait = min - (now - lastRequestAtMs);
-            if (wait > 0) {
-                log.debug("[ResilientHttp] throttle: waiting {} ms", wait);
-                sleepQuietly(wait);
+        long now = System.currentTimeMillis();
+        // 原子抢占下一个时间槽，等待在锁外进行，避免持锁 sleep 阻塞其他调用方
+        long slot = nextRequestSlotMs.getAndUpdate(last -> Math.max(now, last + min));
+        long wait = slot - now;
+        if (wait > 0) {
+            log.debug("[ResilientHttp] throttle: waiting {} ms", wait);
+            if (!sleepQuietly(wait)) {
+                throw new org.springframework.web.client.ResourceAccessException(
+                        "Interrupted while throttling HTTP request");
             }
-            lastRequestAtMs = System.currentTimeMillis();
         }
     }
 
@@ -128,9 +140,6 @@ public class ResilientHttpExecutor {
         return agents.get(idx);
     }
 
-    private void rotateUserAgentFor429() {
-        userAgentIndex.incrementAndGet();
-    }
 
     private static long parseRetryAfterMs(HttpStatusCodeException ex) {
         HttpHeaders respHeaders = ex.getResponseHeaders();
@@ -162,11 +171,18 @@ public class ResilientHttpExecutor {
         return (long) (Math.random() * (max + 1)) + (attempt * 50L);
     }
 
-    private static void sleepQuietly(long ms) {
+    /**
+     * 中断安全的 sleep。
+     *
+     * @return true=正常睡完；false=线程被中断（已恢复中断标记，调用方应停止重试）
+     */
+    private static boolean sleepQuietly(long ms) {
         try {
             Thread.sleep(ms);
+            return true;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            return false;
         }
     }
 }

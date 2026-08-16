@@ -39,6 +39,12 @@
 
       <!-- 筛选条件栏 -->
       <div class="filter-bar">
+        <!-- 数据日期切换（步长一天） -->
+        <div class="date-switcher">
+          <NButton size="small" quaternary :disabled="!currentDate" title="前一天" @click="shiftDate(-1)">◀</NButton>
+          <span class="date-label">{{ currentDate || '—' }}</span>
+          <NButton size="small" quaternary :disabled="!currentDate" title="后一天" @click="shiftDate(1)">▶</NButton>
+        </div>
         <span style="font-size:13px;color:#666;font-weight:500;">窗口：</span>
         <span
           v-for="d in windowOptions"
@@ -94,7 +100,7 @@
           </table>
         </div>
         <div class="compact-footer">
-          <span class="info">共 {{ filteredMatches.length }} 条·点击查看K线</span>
+          <span class="info">{{ noDataForDate ? '该日期暂无筛选数据，可点击箭头切换其他日期' : `共 ${filteredMatches.length} 条·点击查看K线` }}</span>
         </div>
       </div>
 
@@ -125,7 +131,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { NSpin, NButton, useNotification } from 'naive-ui'
 import StatCard from '../components/StatCard.vue'
-import { fetchLatestNotification, fetchLatestScreening } from '../api/screening'
+import { fetchLatestNotification, fetchLatestScreening, fetchScreeningByDate, fetchNotificationByDate } from '../api/screening'
+import { fetchPrevOpenDay, fetchNextOpenDay } from '../api/tradingCalendar'
 import type { ScreeningMatch, NotificationResult, LatestScreening } from '../api/screening'
 import VChart from 'vue-echarts'
 import { useCandleChart } from '../composables/useCandleChart'
@@ -138,6 +145,9 @@ const notificationData = ref<NotificationResult | null>(null)
 const screeningData = ref<LatestScreening | null>(null)
 const selectedWindow = ref(2)
 const selectedAlgo = ref('volume_spike')
+
+/** 当前展示的数据日期（yyyy-MM-dd），初始为 null，加载最新数据后设置 */
+const currentDate = ref<string | null>(null)
 
 /** 窗口选项 */
 const windowOptions = [2, 3, 4, 5, 6, 7]
@@ -194,6 +204,9 @@ const filteredMatches = computed(() => {
   })
 })
 
+/** 是否有活跃的筛选条件（当前日期对应的批次是否为空） */
+const noDataForDate = computed(() => !!screeningData.value && !screeningData.value.batchId)
+
 // ===================== K线图表（共享 composable） =====================
 const {
   showCandleChart,
@@ -207,8 +220,59 @@ const {
 } = useCandleChart()
 
 // ============ 数据加载 ============
-/** 加载所有数据 */
-async function loadData() {
+/** 数据日期左右切换：按美东交易日历跳过周末/节假日，步长一个交易日 */
+async function shiftDate(delta: number) {
+  if (!currentDate.value) return
+  const api = delta < 0 ? fetchPrevOpenDay : fetchNextOpenDay
+  try {
+    const res = await api(currentDate.value)
+    const next = delta < 0 ? res.data?.data?.prevOpenDate : res.data?.data?.nextOpenDate
+    if (next && next !== currentDate.value) {
+      currentDate.value = next
+      await loadData()
+    } else {
+      notification.info({
+        title: '没有更多开盘日',
+        content: delta < 0 ? '之前已无交易日数据' : '之后已无交易日数据',
+        duration: 2000
+      })
+    }
+  } catch (e: any) {
+    notification.error({ title: '切换日期失败', content: e.message || '网络异常', duration: 3000 })
+  }
+}
+
+/** 加载指定日期的数据（通知统计 + 筛选结果） */
+async function loadByDate(date: string) {
+  loading.value = true
+  try {
+    const [notifRes, screenRes] = await Promise.allSettled([
+      fetchNotificationByDate(date),
+      fetchScreeningByDate(date)
+    ])
+
+    if (notifRes.status === 'fulfilled' && notifRes.value.data.success) {
+      notificationData.value = notifRes.value.data.data
+    } else {
+      notificationData.value = null
+      notification.warning({ title: '通知数据加载失败', content: '使用默认统计数据', duration: 3000 })
+    }
+
+    if (screenRes.status === 'fulfilled' && screenRes.value.data.success) {
+      screeningData.value = screenRes.value.data.data
+    } else {
+      screeningData.value = null
+      notification.error({ title: '筛选数据加载失败', content: '请稍后重试', duration: 3000 })
+    }
+  } catch (err: any) {
+    notification.error({ title: '请求失败', content: err.message || '网络异常', duration: 3000 })
+  } finally {
+    loading.value = false
+  }
+}
+
+/** 加载最新数据（首次进入） */
+async function loadLatest() {
   loading.value = true
   try {
     const [notifRes, screenRes] = await Promise.allSettled([
@@ -224,6 +288,8 @@ async function loadData() {
 
     if (screenRes.status === 'fulfilled' && screenRes.value.data.success) {
       screeningData.value = screenRes.value.data.data
+      const date = screenRes.value.data.data?.tradeDate
+      if (date) currentDate.value = date
     } else {
       notification.error({ title: '筛选数据加载失败', content: '请稍后重试', duration: 3000 })
     }
@@ -231,6 +297,15 @@ async function loadData() {
     notification.error({ title: '请求失败', content: err.message || '网络异常', duration: 3000 })
   } finally {
     loading.value = false
+  }
+}
+
+/** 加载数据：已有当前日期则按日期刷新，否则加载最新 */
+async function loadData() {
+  if (currentDate.value) {
+    await loadByDate(currentDate.value)
+  } else {
+    await loadLatest()
   }
 }
 
@@ -303,6 +378,32 @@ onMounted(loadData)
 .spacer {
   flex: 1;
   min-width: 8px;
+}
+
+/* 数据日期切换 */
+.date-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 2px 4px;
+  margin-right: 6px;
+  background: var(--bg-card);
+}
+
+.date-switcher .n-button {
+  font-size: 12px;
+}
+
+.date-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 92px;
+  text-align: center;
+  font-family: 'Menlo', 'Consolas', monospace;
+  user-select: none;
 }
 
 /* 紧凑股票列表（横向滚动） */

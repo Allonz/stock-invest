@@ -198,7 +198,7 @@ class MissingFieldFiller {
             if (matchedItem != null) {
                 boolean updated = applyKlineItemToBar(bar, matchedItem, klineFields);
                 anyUpdated |= updated;
-                if (updated) {
+                if (updated && matchedDs != null) {
                     updaterSource = matchedDs.getSourceName();
                 }
             } else {

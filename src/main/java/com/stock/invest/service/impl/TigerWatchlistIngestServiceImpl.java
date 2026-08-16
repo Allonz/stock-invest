@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -46,7 +47,12 @@ public class TigerWatchlistIngestServiceImpl implements TigerWatchlistIngestServ
         if (request.rows() == null || request.rows().isEmpty()) {
             throw new IllegalArgumentException("rows must not be empty");
         }
-        LocalDate tradeDate = LocalDate.parse(request.tradeDate().trim());
+        LocalDate tradeDate;
+        try {
+            tradeDate = LocalDate.parse(request.tradeDate().trim());
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException("tradeDate must be yyyy-MM-dd", e);
+        }
         log.info("[TigerIngest] importScreenCapture: begin — tradeDate={}, totalRows={}", tradeDate, request.rows().size());
         String batchId = UUID.randomUUID().toString();
         int imported = 0;

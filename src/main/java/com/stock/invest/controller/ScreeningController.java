@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -37,6 +38,22 @@ public class ScreeningController {
             log.error("screening latest failed", e);
             return ResponseEntity.internalServerError()
                     .body(ApiResponse.error("Failed to retrieve latest screening result"));
+        }
+    }
+
+    /**
+     * GET /api/screening/by-date?tradeDate=2026-08-13 — 指定交易日的最新一次筛选结果
+     */
+    @GetMapping("/by-date")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> byDate(
+            @RequestParam(defaultValue = "") String tradeDate) {
+        try {
+            Map<String, Object> result = screeningService.getScreeningByDate(tradeDate);
+            return ResponseEntity.ok(ApiResponse.ok(result));
+        } catch (Exception e) {
+            log.error("screening by-date failed tradeDate={}", tradeDate, e);
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Failed to retrieve screening result for " + tradeDate));
         }
     }
 

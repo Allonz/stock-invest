@@ -40,8 +40,8 @@ public class AlpacaRestClient {
             @Value("${alpaca.api.key-id:}") String keyId,
             @Value("${alpaca.api.secret-key:}") String secretKey,
             ObjectMapper objectMapper) {
-        this.keyId = keyId;
-        this.secretKey = secretKey;
+        this.keyId = keyId == null ? null : keyId.trim();
+        this.secretKey = secretKey == null ? null : secretKey.trim();
         this.objectMapper = objectMapper;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(java.time.Duration.ofSeconds(10))
@@ -52,8 +52,8 @@ public class AlpacaRestClient {
      * 是否配置了有效凭证。
      */
     public boolean hasCredentials() {
-        return keyId != null && !keyId.trim().isEmpty()
-                && secretKey != null && !secretKey.trim().isEmpty();
+        return keyId != null && !keyId.isEmpty()
+                && secretKey != null && !secretKey.isEmpty();
     }
 
     /**
@@ -111,10 +111,10 @@ public class AlpacaRestClient {
         }
     }
 
-    /** 构建 Basic Auth 头 */
+    /** 构建 Basic Auth 头（key/secret 已在构造器 trim，按 RFC 7617 原样 Base64，不做 URL 编码） */
     private String basicAuthHeader() {
         String credentials = keyId + ":" + secretKey;
-        String encoded = Base64.getEncoder().encodeToString(credentials.getBytes());
+        String encoded = Base64.getEncoder().encodeToString(credentials.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         return "Basic " + encoded;
     }
 }

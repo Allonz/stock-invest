@@ -5,7 +5,6 @@ import com.stock.invest.entity.StockDailyBar;
 import com.stock.invest.repository.DataFillTaskRepository;
 import com.stock.invest.repository.StockDailyBarRepository;
 import com.stock.invest.service.DataFillProgressService;
-import com.stock.invest.service.DataSourceStrategy;
 import com.stock.invest.service.FieldCapabilityService;
 import com.stock.invest.service.RetryProgressService;
 import com.stock.invest.service.StockDataSourcePriorityService;
@@ -21,12 +20,10 @@ import org.springframework.transaction.PlatformTransactionManager;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.when;
 
 /**
  * 字段缺失标记规则测试（2026-08-14）。

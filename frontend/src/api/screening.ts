@@ -51,6 +51,16 @@ export function fetchLatestScreening() {
   return request.get<ApiResponse<LatestScreening>>('/api/screening/latest')
 }
 
+/** 获取指定交易日的最新一次筛选结果列表 */
+export function fetchScreeningByDate(tradeDate: string) {
+  return request.get<ApiResponse<LatestScreening>>('/api/screening/by-date', { params: { tradeDate } })
+}
+
+/** 获取指定交易日的最新筛选通知（顶部统计卡片用） */
+export function fetchNotificationByDate(tradeDate: string) {
+  return request.get<ApiResponse<NotificationResult>>('/api/notification/by-date', { params: { tradeDate } })
+}
+
 /** 获取筛选历史批次列表 */
 export function fetchScreeningHistory() {
   return request.get<ApiResponse<ScreeningBatch[]>>('/api/screening/history')

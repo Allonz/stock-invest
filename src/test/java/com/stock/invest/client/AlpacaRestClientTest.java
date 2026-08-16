@@ -15,6 +15,9 @@ import static org.mockito.Mockito.*;
 
 import org.mockito.ArgumentCaptor;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+
 /**
  * UT-16 ~ UT-25: AlpacaRestClient 单元测试（Mock HTTP）
  */
@@ -196,6 +199,31 @@ class AlpacaRestClientTest {
         HttpRequest request = requestCaptor.getValue();
         assertTrue(request.timeout().isPresent(), "request must carry a total timeout");
         assertEquals(java.time.Duration.ofSeconds(15), request.timeout().get());
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test @DisplayName("UT-26: basicAuthHeader trims key/secret and uses standard Base64")
+    void basicAuthHeader_trimsCredentials() throws Exception {
+        HttpResponse<String> mockResp = mock(HttpResponse.class);
+        when(mockResp.statusCode()).thenReturn(200);
+        when(mockResp.body()).thenReturn("[]");
+
+        HttpClient mockClient = mock(HttpClient.class);
+        when(mockClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenReturn(mockResp);
+
+        AlpacaRestClient client = new AlpacaRestClient(" key ", " secret ", objectMapper);
+        injectHttpClient(client, mockClient);
+
+        client.isTradingDay(LocalDate.of(2026, 6, 1));
+
+        ArgumentCaptor<HttpRequest> requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(mockClient).send(requestCaptor.capture(), any(HttpResponse.BodyHandler.class));
+        HttpRequest request = requestCaptor.getValue();
+        String auth = request.headers().firstValue("Authorization").orElseThrow();
+        assertTrue(auth.startsWith("Basic "));
+        String decoded = new String(Base64.getDecoder().decode(auth.substring(6)), StandardCharsets.UTF_8);
+        assertEquals("key:secret", decoded, "key/secret must be trimmed before Base64 encoding");
     }
 
     /** Reflection helper to inject mock HttpClient */

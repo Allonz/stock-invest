@@ -45,3 +45,28 @@ export function checkIsOpen(date?: string, exchange = 'XNYS') {
     params: { date, exchange }
   })
 }
+
+/** 上一/下一个交易日响应 */
+export interface AdjacentOpenDay {
+  date: string
+  prevOpenDate?: string | null
+  nextOpenDate?: string | null
+}
+
+/**
+ * 查询指定日期之前最近的交易日（美东，跳过周末/节假日）。
+ */
+export function fetchPrevOpenDay(date: string, market = 'US') {
+  return request.get<ApiResponse<AdjacentOpenDay>>('/api/v1/trading-calendar/prev-open', {
+    params: { date, market }
+  })
+}
+
+/**
+ * 查询指定日期之后最近的交易日（美东，跳过周末/节假日）。
+ */
+export function fetchNextOpenDay(date: string, market = 'US') {
+  return request.get<ApiResponse<AdjacentOpenDay>>('/api/v1/trading-calendar/next-open', {
+    params: { date, market }
+  })
+}
