@@ -111,19 +111,19 @@ class StockDailyBarFieldTest {
         assertEquals("yfinance", bar.getSource());
     }
 
-    // ENT-007: @Column 注解检查（nullable = false 的强制字段）
+    // ENT-007: @Column 注解检查（与 V1 Schema 对齐：highPrice/lowPrice 可空）
     @Test
-    @DisplayName("ENT-007: @Column 注解 — highPrice/lowPrice 不可空")
+    @DisplayName("ENT-007: @Column 注解 — highPrice/lowPrice 可空")
     void columnAnnotationsForRequiredFields() throws Exception {
         Field highField = StockDailyBar.class.getDeclaredField("highPrice");
         Column highCol = highField.getAnnotation(Column.class);
         assertNotNull(highCol, "highPrice should have @Column");
-        assertFalse(highCol.nullable(), "highPrice.nullable should be false");
+        assertTrue(highCol.nullable(), "highPrice.nullable should be true");
 
         Field lowField = StockDailyBar.class.getDeclaredField("lowPrice");
         Column lowCol = lowField.getAnnotation(Column.class);
         assertNotNull(lowCol, "lowPrice should have @Column");
-        assertFalse(lowCol.nullable(), "lowPrice.nullable should be false");
+        assertTrue(lowCol.nullable(), "lowPrice.nullable should be true");
     }
 
     // ENT-008: @Column 注解 — 可选字段 nullable = true

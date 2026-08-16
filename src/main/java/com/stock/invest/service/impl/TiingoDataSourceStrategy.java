@@ -58,7 +58,7 @@ public class TiingoDataSourceStrategy implements StockScannerStrategy {
 
     @Override
     public boolean isAvailable() {
-        return true;
+        return tiingoProperties.hasToken();
     }
 
     private static String getScriptName() {
@@ -135,7 +135,6 @@ public class TiingoDataSourceStrategy implements StockScannerStrategy {
         }
     }
 
-    @Override
     public StockInfo getStockInfo(String symbol) {
         try {
             KLineData data = getDailyKLineDataAsObject(symbol);
@@ -183,7 +182,6 @@ public class TiingoDataSourceStrategy implements StockScannerStrategy {
         return getDailyKLineDataAsObject(symbol);
     }
 
-    @Override
     public List<KLineData> getBatchKline(List<String> symbols, String period, int count) {
         try {
             String result = pythonScriptExecutor.executeScriptWithEnvironment(

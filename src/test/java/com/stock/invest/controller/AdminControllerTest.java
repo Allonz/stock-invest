@@ -276,4 +276,45 @@ class AdminControllerTest {
         assertEquals("COMPLETED", progress.getStage());
         assertFalse(progress.isRunning(), "running flag must clear after task body");
     }
+
+    // ---- run-screening-async 参数透传与解析 ----
+
+    @Test
+    @DisplayName("run-screening-async 透传 windowDays/limit 给 runScreening")
+    void runScreeningAsync_passesWindowAndLimit() throws Exception {
+        when(screeningProgressService.startScreening(anyList(), anyInt())).thenReturn("adv-param");
+        ScreeningProgressService.ScreeningProgress progress = new ScreeningProgressService.ScreeningProgress();
+        ScreeningProgressService.WindowProgress window = new ScreeningProgressService.WindowProgress();
+        window.setDays(2);
+        window.setStatus("RUNNING");
+        progress.setWindows(java.util.List.of(window));
+        when(screeningProgressService.getProgress("adv-param"))
+                .thenReturn(progress);
+
+        mockMvc.perform(post("/api/admin/run-screening-async")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"limit\":3,\"windowDays\":2}")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+
+        org.mockito.ArgumentCaptor<Runnable> captor = org.mockito.ArgumentCaptor.forClass(Runnable.class);
+        verify(scanExecutor).execute(captor.capture());
+        captor.getValue().run();
+
+        verify(screeningService).runScreening(any(LocalDate.class), eq(2), eq(3));
+        verify(screeningService, never()).runScreening(any(LocalDate.class));
+    }
+
+    @Test
+    @DisplayName("run-screening-async 非法 limit 返回 400")
+    void runScreeningAsync_invalidLimitReturns400() throws Exception {
+        mockMvc.perform(post("/api/admin/run-screening-async")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"limit\":\"abc\",\"windowDays\":2}")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
+
+        verify(scanExecutor, never()).execute(any());
+        verify(screeningService, never()).runScreening(any(LocalDate.class), any(), any());
+    }
 }

@@ -365,9 +365,9 @@ class DataGapFillerServiceImplTest {
         okKd.setItems(List.of(okItem));
         when(tigerDataSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(okKd);
 
-        // 捕获 error 日志断言"重放后仍冲突"被观测
+        // 捕获 error 日志断言"重放后仍冲突"被观测（重试逻辑已拆到 RetryTaskProcessor）
         ch.qos.logback.classic.Logger logger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory
-                .getLogger(com.stock.invest.service.impl.DataGapFillerServiceImpl.class);
+                .getLogger(com.stock.invest.service.impl.RetryTaskProcessor.class);
         ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent> listAppender =
                 new ch.qos.logback.core.read.ListAppender<>();
         listAppender.start();

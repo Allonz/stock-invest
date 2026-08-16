@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
+import org.springframework.web.server.ResponseStatusException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -26,5 +27,16 @@ class GlobalExceptionHandlerTest {
 
         assertEquals(HttpStatus.SERVICE_UNAVAILABLE, resp.getStatusCode());
         assertNull(resp.getBody());
+    }
+
+    @Test
+    @DisplayName("ResponseStatusException -> 保留原始状态码，不落入 500")
+    void handleResponseStatus_preservesStatus() {
+        ResponseEntity<com.stock.invest.enums.dto.ApiResponse<?>> resp =
+                handler.handleResponseStatus(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid key"));
+
+        assertEquals(HttpStatus.UNAUTHORIZED, resp.getStatusCode());
+        assertEquals(false, resp.getBody().success());
+        assertEquals("Invalid key", resp.getBody().message());
     }
 }

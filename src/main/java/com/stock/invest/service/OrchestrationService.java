@@ -3,6 +3,7 @@ package com.stock.invest.service;
 import com.stock.invest.service.DataGapFillerService;
 import com.stock.invest.service.ScreeningService;
 import com.stock.invest.service.WebhookNotifier;
+import com.stock.invest.util.WebhookUrlValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -31,6 +32,7 @@ public class OrchestrationService {
     private final DataGapFillerService dataGapFillerService;
     private final ScreeningService screeningService;
     private final WebhookNotifier webhookNotifier;
+    private final WebhookUrlValidator webhookUrlValidator;
     private final Executor scanExecutor;
     private final Map<String, Boolean> runningRuns = new ConcurrentHashMap<>();
     /** run_id → 回调端点（首次触发记录，接力沿用；链路结束清理） */
@@ -39,10 +41,12 @@ public class OrchestrationService {
     public OrchestrationService(DataGapFillerService dataGapFillerService,
                                 ScreeningService screeningService,
                                 WebhookNotifier webhookNotifier,
+                                WebhookUrlValidator webhookUrlValidator,
                                 @Qualifier("scanExecutor") Executor scanExecutor) {
         this.dataGapFillerService = dataGapFillerService;
         this.screeningService = screeningService;
         this.webhookNotifier = webhookNotifier;
+        this.webhookUrlValidator = webhookUrlValidator;
         this.scanExecutor = scanExecutor;
     }
 
@@ -56,6 +60,9 @@ public class OrchestrationService {
      * @param chain      true=按 nextStep 自动接力后续步骤；false=单步执行，完成后不触发下一步
      */
     public void triggerStep(String step, String runId, String tradeDate, String webhookUrl, boolean chain) {
+        // SSRF 防护：先校验动态 webhook_url，非法直接拒绝
+        webhookUrlValidator.validate(webhookUrl);
+
         // 记录本 run 的回调端点（首次触发记录，后续接力沿用）
         if (webhookUrl != null && !webhookUrl.isBlank()) {
             runWebhookUrls.put(runId, webhookUrl);

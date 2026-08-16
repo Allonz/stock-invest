@@ -139,12 +139,6 @@ public class ScreeningServiceImpl implements ScreeningService {
 
             processed++;
 
-            // P1-7：limit 生效 —— 最多评估 limit 个候选 symbol
-            if (limit != null && limit > 0 && processed >= limit) {
-                log.info("[Screening] limit={} reached, stop evaluating more symbols (processed={})", limit, processed);
-                break;
-            }
-
             // 多窗口并行评估：数据够哪个窗口就评估哪个
             for (int w : windows) {
                 if (bars.size() < w) {
@@ -173,6 +167,12 @@ public class ScreeningServiceImpl implements ScreeningService {
                     allRows.add(row);
                     totalMatchedRows++;
                 }
+            }
+
+            // P1-7：limit 生效 —— 当前 symbol 已完整评估后，再判断是否达到上限
+            if (limit != null && limit > 0 && processed >= limit) {
+                log.info("[Screening] limit={} reached, stop evaluating more symbols (processed={})", limit, processed);
+                break;
             }
         }
 

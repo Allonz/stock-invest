@@ -1,7 +1,6 @@
 package com.stock.invest.service;
 
 import com.stock.invest.model.KLineData;
-import com.stock.invest.model.StockInfo;
 import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
 
 import java.util.List;
@@ -18,17 +17,11 @@ public interface StockScannerStrategy extends DataSourceStrategy {
     /** 获取股票的每日K线数据（字符串格式） */
     String getDailyKLineData(String symbol);
 
-    /** 获取股票信息 */
-    StockInfo getStockInfo(String symbol);
-
     /** 获取股票列表 */
     List<String> getStockList();
 
     /** 获取股票每日K线数据 */
     KLineData getDailyKLine(String symbol);
-
-    /** 批量获取K线数据 */
-    List<KLineData> getBatchKline(List<String> symbols, String period, int count);
 
     /** 筛选股票（Market 枚举版本） */
     List<String> scanStocks(Market market, int limit, Double minPrice, Double maxPrice);

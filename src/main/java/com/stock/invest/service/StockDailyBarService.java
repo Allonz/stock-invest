@@ -83,6 +83,7 @@ public class StockDailyBarService {
 
     private StockDailyBarDto toDto(StockDailyBar bar) {
         return new StockDailyBarDto(
+                bar.getId(),
                 bar.getSymbol(),
                 bar.getName(),
                 bar.getTradeDate(),

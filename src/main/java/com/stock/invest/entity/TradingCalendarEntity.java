@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "trading_calendar", uniqueConstraints = {
-    @UniqueConstraint(name = "uk_market_trade_date", columnNames = {"market", "trade_date"})
+    @UniqueConstraint(name = "uk_trading_calendar_market_trade_date", columnNames = {"market", "trade_date"})
 })
 public class TradingCalendarEntity {
 
@@ -20,7 +20,7 @@ public class TradingCalendarEntity {
     private Long id;
 
     /** 市场代码，如 "US" */
-    @Column(nullable = false, length = 10)
+    @Column(nullable = false, length = 16)
     private String market;
 
     /** 交易日期（美东日期） */
@@ -32,15 +32,15 @@ public class TradingCalendarEntity {
     private Boolean isOpen;
 
     /** 数据来源：tiger / tigeropen / alpaca */
-    @Column(length = 50)
+    @Column(length = 32)
     private String source;
 
     /** 类型：TRADING / HOLIDAY / WEEKEND */
-    @Column(length = 30)
+    @Column(length = 16)
     private String type;
 
     /** 详细说明 */
-    @Column(columnDefinition = "TEXT")
+    @Column(length = 256)
     private String detail;
 
     @Column(name = "created_at")

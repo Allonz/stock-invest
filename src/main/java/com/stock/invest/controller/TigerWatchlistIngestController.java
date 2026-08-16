@@ -8,6 +8,7 @@ import com.stock.invest.service.TigerWatchlistIngestService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -43,6 +44,9 @@ public class TigerWatchlistIngestController {
             log.warn("Invalid watchlist ingest request: {}", e.getMessage());
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error(e.getMessage(), "VALIDATION_ERROR"));
+        } catch (ResponseStatusException e) {
+            // 保持原始 401/403 状态，避免被通用 Exception 分支包装成 500
+            throw e;
         } catch (Exception e) {
             log.error("Watchlist ingest failed", e);
             throw new com.stock.invest.exception.StockDataException(

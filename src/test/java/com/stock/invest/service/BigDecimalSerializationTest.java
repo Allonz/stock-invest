@@ -107,13 +107,14 @@ class BigDecimalSerializationTest {
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
         StockDailyBarDto dto = new StockDailyBarDto(
-                "AAPL", "Apple", LocalDate.of(2025, 6, 25),
+                1L, "AAPL", "Apple", LocalDate.of(2025, 6, 25),
                 new BigDecimal("150.5000"), new BigDecimal("155.0000"),
                 new BigDecimal("148.0000"), new BigDecimal("152.5000"),
                 new BigDecimal("1.6700"), null, null,
                 1_000_000L, "yfinance");
 
         String json = mapper.writeValueAsString(dto);
+        assertTrue(json.contains("\"id\":1"), "wire must carry id, got: " + json);
         // BigDecimal 直接序列化为 JSON number 并保留 scale（150.5000）——
         // 这正是映射点 stripTrailingZeros 需要消除的形态；此处验证 wire 格式为数字且保留尾零。
         assertTrue(json.contains("\"openPrice\":150.5000"), "wire must carry scale-4 number, got: " + json);

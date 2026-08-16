@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.format.DateTimeParseException;
@@ -133,6 +134,17 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Void> handleAsyncTimeout(AsyncRequestTimeoutException e) {
         log.warn("[503] 异步请求超时（长连接/SSE 中断）: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+    }
+
+    /**
+     * 处理 ResponseStatusException —— 保留原始状态码，避免被通用 500 处理吞掉。
+     */
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ApiResponse<?>> handleResponseStatus(ResponseStatusException e) {
+        log.warn("[{}] 请求被拒绝: {}", e.getStatusCode().value(), e.getReason());
+        String message = e.getReason() != null ? e.getReason() : "请求被拒绝";
+        return ResponseEntity.status(e.getStatusCode())
+                .body(ApiResponse.error(message, e.getStatusCode().toString()));
     }
 
     /**

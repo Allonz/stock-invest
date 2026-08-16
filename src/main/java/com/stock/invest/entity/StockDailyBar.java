@@ -57,10 +57,10 @@ public class StockDailyBar {
     @Column(nullable = false)
     private BigDecimal openPrice;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private BigDecimal highPrice;   // 新增（最高价）
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private BigDecimal lowPrice;    // 新增（最低价）
 
     @Column(nullable = false)

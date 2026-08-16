@@ -1,12 +1,10 @@
 package com.stock.invest.service.impl;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stock.invest.client.TigerOpenPythonBridge;
 import com.stock.invest.exception.StockDataException;
 import com.stock.invest.model.KLineData;
 import com.stock.invest.model.KLineIterator;
-import com.stock.invest.model.StockInfo;
 import com.stock.invest.service.DataSourceStrategy;
 import com.stock.invest.service.StockScannerStrategy;
 import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
@@ -126,19 +124,6 @@ public class TigerOpenStockServiceImpl implements StockScannerStrategy {
     }
 
     @Override
-    public StockInfo getStockInfo(String symbol) {
-        try {
-            String result = bridge.executePythonScript("get_stock_info", symbol);
-            return objectMapper.readValue(result, StockInfo.class);
-        } catch (Exception e) {
-            log.warn("[TigerOpenStock] getStockInfo failed for {}: {}", symbol, e.getMessage());
-            StockInfo emptyInfo = new StockInfo();
-            emptyInfo.setSymbol(symbol);
-            return emptyInfo;
-        }
-    }
-
-    @Override
     public List<String> getStockList() {
         try {
             return bridge.listCandidates(100, 0.0, 1000.0);
@@ -151,19 +136,6 @@ public class TigerOpenStockServiceImpl implements StockScannerStrategy {
     @Override
     public KLineData getDailyKLine(String symbol) {
         return getDailyKLineDataAsObject(symbol);
-    }
-
-    @Override
-    public List<KLineData> getBatchKline(List<String> symbols, String period, int count) {
-        try {
-            String symbolsStr = String.join(",", symbols);
-            String result = bridge.executePythonScript("get_batch_kline",
-                    symbolsStr, period, String.valueOf(count));
-            return objectMapper.readValue(result, new TypeReference<List<KLineData>>() {});
-        } catch (Exception e) {
-            log.warn("[TigerOpenStock] getBatchKline failed: {}", e.getMessage());
-            return new ArrayList<>();
-        }
     }
 
     @Override

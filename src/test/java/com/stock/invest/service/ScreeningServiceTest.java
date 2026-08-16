@@ -247,7 +247,7 @@ class ScreeningServiceTest {
         }
 
         @Test
-        @DisplayName("P1-7: limit 限制评估 symbol 数（10 个候选 + limit=5 → ≤5 个被评估）")
+        @DisplayName("P1-7: limit 限制评估 symbol 数（10 个候选 + limit=5 → 恰好 5 个被评估）")
         void limit_capsSymbols() {
             LocalDate tradeDate = LocalDate.of(2026, 5, 18);
             List<StockDailyBar> allBars = new ArrayList<>();
@@ -267,10 +267,33 @@ class ScreeningServiceTest {
             for (List<StockDailyBar> slice : sliceCaptor.getAllValues()) {
                 evaluatedSymbols.add(slice.get(0).getSymbol());
             }
-            assertTrue(evaluatedSymbols.size() <= 5,
-                    "at most 5 symbols evaluated, actual: " + evaluatedSymbols);
-            assertTrue(evaluatedSymbols.size() < 10,
-                    "limit must cap below the 10 candidates, actual: " + evaluatedSymbols);
+            assertEquals(5, evaluatedSymbols.size(),
+                    "exactly 5 symbols should be evaluated, actual: " + evaluatedSymbols);
+        }
+
+        @Test
+        @DisplayName("P1-7: limit=1 时恰好评估 1 个 symbol")
+        void limit_oneEvaluatesOneSymbol() {
+            LocalDate tradeDate = LocalDate.of(2026, 5, 18);
+            List<StockDailyBar> allBars = new ArrayList<>();
+            for (int s = 0; s < 3; s++) {
+                allBars.addAll(barsFor("SYM" + s, tradeDate));
+            }
+            when(stockDailyBarRepository.findByTradeDateBetweenOrderByTradeDateDesc(any(LocalDate.class), eq(tradeDate)))
+                    .thenReturn(allBars);
+
+            screeningService.runScreening(tradeDate, null, 1);
+
+            @SuppressWarnings("unchecked")
+            ArgumentCaptor<List<StockDailyBar>> sliceCaptor = ArgumentCaptor.forClass(List.class);
+            verify(patternEvaluateService, atLeastOnce())
+                    .matchesIncreasingVolumePattern(sliceCaptor.capture(), anyInt());
+            Set<String> evaluatedSymbols = new HashSet<>();
+            for (List<StockDailyBar> slice : sliceCaptor.getAllValues()) {
+                evaluatedSymbols.add(slice.get(0).getSymbol());
+            }
+            assertEquals(1, evaluatedSymbols.size(),
+                    "exactly 1 symbol should be evaluated, actual: " + evaluatedSymbols);
         }
 
         @Test

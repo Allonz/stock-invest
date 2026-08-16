@@ -15,6 +15,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -30,6 +31,12 @@ import java.time.LocalDate;
 @EntityListeners(AuditingEntityListener.class)
 @Table(
         name = "screening_match",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_screening_match_trade_symbol_window_algorithm",
+                        columnNames = {"tradeDate", "symbol", "windowDays", "algorithm"}
+                )
+        },
         indexes = {
                 @Index(name = "idx_screening_match_trade_date_price", columnList = "tradeDate,price"),
                 @Index(name = "idx_screening_match_batch_id", columnList = "batchId"),

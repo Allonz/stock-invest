@@ -157,8 +157,8 @@ public class AdminController {
      */
     @PostMapping("/run-screening-async")
     public ResponseEntity<ApiResponse<?>> runScreeningAsync(@RequestBody Map<String, Object> params) {
-        int limit = params.containsKey("limit") ? ((Number) params.get("limit")).intValue() : 60;
-        int windowDays = params.containsKey("windowDays") ? ((Number) params.get("windowDays")).intValue() : 7;
+        int limit = parsePositiveInt(params, "limit", 60);
+        int windowDays = parsePositiveInt(params, "windowDays", 7);
         log.info("[Admin] runScreeningAsync: window={}, limit={}", windowDays, limit);
 
         List<Integer> windows = Arrays.asList(windowDays);
@@ -172,7 +172,7 @@ public class AdminController {
                 if (!windowList.isEmpty()) {
                     ScreeningProgressService.WindowProgress wp = windowList.get(0);
                     log.info("[Admin] async screening: starting window {} day(s)", wp.getDays());
-                    String batchId = screeningService.runScreening(tradeDate);
+                    String batchId = screeningService.runScreening(tradeDate, windowDays, limit);
                     // Query real matched count for this window
                     long realMatched = screeningService.countByBatchIdGroupByWindowDays(batchId).stream()
                         .filter(r -> r[0].equals(wp.getDays()))
@@ -401,9 +401,10 @@ public class AdminController {
         }
 
         Sort.Direction direction = "asc".equalsIgnoreCase(sortOrder) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        int safeSize = Math.min(Math.max(1, size), 500);
         PageRequest pageRequest = PageRequest.of(
                 Math.max(0, page - 1),
-                size,
+                safeSize,
                 Sort.by(direction, sortField)
         );
 
@@ -429,7 +430,7 @@ public class AdminController {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("total", taskPage.getTotalElements());
         result.put("page", page);
-        result.put("size", size);
+        result.put("size", safeSize);
         result.put("data", data);
         return ResponseEntity.ok(ApiResponse.ok(result));
     }
@@ -477,6 +478,27 @@ public class AdminController {
             return ResponseEntity.internalServerError()
                     .body(ApiResponse.error("Screening failed: " + e.getMessage()));
         }
+    }
+
+    /**
+     * 从 JSON body 中安全解析正整数参数，兼容 Number 与数字字符串。
+     */
+    private static int parsePositiveInt(Map<String, Object> params, String key, int defaultValue) {
+        Object value = params.get(key);
+        if (value == null) {
+            return defaultValue;
+        }
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value instanceof String str) {
+            try {
+                return Integer.parseInt(str.trim());
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException(key + " must be a valid integer");
+            }
+        }
+        throw new IllegalArgumentException(key + " must be a valid integer");
     }
 
 }
