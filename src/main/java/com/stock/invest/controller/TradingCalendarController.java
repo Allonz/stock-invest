@@ -229,7 +229,7 @@ public class TradingCalendarController {
         String normalizedMarket = normalizeMarket(market);
         try {
             int targetYear = (year != null) ? year : Year.now(NY_ZONE).getValue();
-            List<TradingCalendarEntity> entities = dbService.getYearCalendar(market, targetYear);
+            List<TradingCalendarEntity> entities = dbService.getYearCalendar(normalizedMarket, targetYear);
 
             List<Map<String, Object>> result = new ArrayList<>();
             for (TradingCalendarEntity entity : entities) {

@@ -6,16 +6,11 @@ import com.stock.invest.exception.StockDataException;
 import com.stock.invest.model.KLineData;
 import com.stock.invest.model.KLineIterator;
 import com.stock.invest.service.DataSourceStrategy;
-import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import org.springframework.core.annotation.Order;
 
 /**

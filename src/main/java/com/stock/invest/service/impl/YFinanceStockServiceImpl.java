@@ -1,6 +1,5 @@
 package com.stock.invest.service.impl;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.time.LocalDate;
 import java.util.Map;
@@ -9,15 +8,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stock.invest.exception.StockDataException;
 import com.stock.invest.model.KLineData;
 import com.stock.invest.model.KLineIterator;
-import com.stock.invest.model.StockInfo;
 import com.stock.invest.service.DataSourceStrategy;
 import com.stock.invest.util.PythonScriptExecutor;
-import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
 import org.springframework.core.annotation.Order;
 
 
