@@ -14,9 +14,11 @@ import java.util.Properties;
 /**
  * Tiger API 配置类
  * <p>
- * 所有 API 凭证（tiger_id, private_key, account, license, env）统一从
- * {@code tiger_openapi_config.properties} 读取，经 {@link TigerCredentials} record 返回。
- * 配置文件路径由 application.yml 中 {@code tiger.api.configFilePath} 指定。
+ * 凭证读取顺序（方案 A）：优先从环境变量读取
+ * {@code TIGER_OPENAPI_TIGER_ID / TIGER_OPENAPI_ACCOUNT / TIGER_OPENAPI_LICENSE /
+ * TIGER_OPENAPI_PRIVATE_KEY / TIGER_OPENAPI_ENV}；
+ * 环境变量不完整时回退到 classpath {@code tiger_openapi_config.properties}
+ * （仅用于本地开发，不入 Git）。
  * </p>
  * <p>
  * 2026-08-14：移除 TigerHttpClient（Java SDK）bean —— Tiger 数据源已删除，
@@ -40,9 +42,19 @@ public class TigerApiConfig {
     private volatile TigerCredentials cachedCredentials;
 
     /**
-     * 解析凭证：从 {@code tiger_openapi_config.properties} 读取所有 Tiger API 凭证字段。
+     * 解析凭证：优先环境变量（方案 A），不完整时回退 classpath 配置文件。
      */
     private TigerCredentials resolveCredentials() throws IOException {
+        String envTigerId = System.getenv("TIGER_OPENAPI_TIGER_ID");
+        String envPrivateKey = System.getenv("TIGER_OPENAPI_PRIVATE_KEY");
+        if (isNotBlank(envTigerId) && isNotBlank(envPrivateKey)) {
+            String account = firstNonBlank(System.getenv("TIGER_OPENAPI_ACCOUNT"), "");
+            String license = firstNonBlank(System.getenv("TIGER_OPENAPI_LICENSE"), "");
+            String env = firstNonBlank(System.getenv("TIGER_OPENAPI_ENV"), "PROD");
+            logger.info("Tiger credentials loaded from environment variables (tiger_id={})", envTigerId.trim());
+            return credentialsFromEnv(envTigerId, envPrivateKey, account, license, env);
+        }
+
         Properties props = loadConfigProperties(configFilePath);
 
         String tigerId = props.getProperty("tiger_id");
@@ -59,12 +71,13 @@ public class TigerApiConfig {
         }
 
         if (tigerId == null || tigerId.isEmpty()) {
-            throw new IllegalArgumentException("tiger_id is required but not configured in tiger_openapi_config.properties");
+            throw new IllegalArgumentException("tiger_id is required but not configured (env TIGER_OPENAPI_TIGER_ID or tiger_openapi_config.properties)");
         }
         if (privateKey == null || privateKey.isEmpty()) {
-            throw new IllegalArgumentException("private_key is required but not configured in tiger_openapi_config.properties");
+            throw new IllegalArgumentException("private_key is required but not configured (env TIGER_OPENAPI_PRIVATE_KEY or tiger_openapi_config.properties)");
         }
 
+        logger.info("Tiger credentials loaded from classpath properties file: {}", configFilePath);
         return new TigerCredentials(
             tigerId.trim(),
             cleanPrivateKey(privateKey),
@@ -72,6 +85,41 @@ public class TigerApiConfig {
             license != null ? license.trim() : "",
             env != null ? env.trim() : "PROD"
         );
+    }
+
+    /**
+     * 从环境变量值构建凭证（包级可见，便于测试环境变量优先路径）。
+     */
+    static TigerCredentials credentialsFromEnv(String tigerId, String privateKey,
+                                              String account, String license, String env) {
+        return new TigerCredentials(
+                tigerId.trim(),
+                cleanPrivateKey(privateKey),
+                account == null ? "" : account.trim(),
+                license == null ? "" : license.trim(),
+                isNotBlank(env) ? env.trim() : "PROD"
+        );
+    }
+
+    private static boolean isNotBlank(String value) {
+        return value != null && !value.trim().isEmpty();
+    }
+
+    private static String firstNonBlank(String value, String defaultValue) {
+        return isNotBlank(value) ? value : defaultValue;
+    }
+
+    /**
+     * 是否配置了可用的 Tiger 凭证（env 或 classpath fallback）。
+     * 供可用性规则使用；配置缺失时返回 false，不抛异常中断启动。
+     */
+    public boolean hasCredentials() {
+        try {
+            return getCredentials().isValid();
+        } catch (RuntimeException e) {
+            logger.warn("Tiger credentials are not available: {}", e.getMessage());
+            return false;
+        }
     }
 
     /**
@@ -95,7 +143,7 @@ public class TigerApiConfig {
     /**
      * 清理 PEM 私钥：移除头尾标记及所有空白字符。
      */
-    private String cleanPrivateKey(String rawKey) {
+    private static String cleanPrivateKey(String rawKey) {
         // Step 1: 移除 PEM 头尾标记
         String cleaned = rawKey
                 .replaceAll("-----BEGIN [A-Z ]+-----", "")

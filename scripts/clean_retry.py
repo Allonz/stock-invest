@@ -6,10 +6,15 @@ clean_retry.py — 将黑名单 symbol 的补缺任务标记为 stopped。
   python3 clean_retry.py              # dry-run 模式，只打印影响行数
   python3 clean_retry.py --force      # 实际执行 UPDATE
 """
+import os
 import subprocess
 import sys
 
-DB_ARGS = ['-h127.0.0.1', '-P3307', '-uroot', '-pallon23', 'stock_invest']
+MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD')
+if not MYSQL_PASSWORD:
+    sys.exit('ERROR: MYSQL_PASSWORD environment variable is required')
+
+DB_ARGS = ['-h127.0.0.1', '-P3307', '-uroot', '-p' + MYSQL_PASSWORD, 'stock_invest']
 UPDATE_SQL = (
     "UPDATE data_fill_task t JOIN symbol_blacklist b ON t.symbol = b.symbol "
     "AND b.status = 'active' SET t.status = 'stopped', "

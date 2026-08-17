@@ -6,9 +6,12 @@ import com.stock.invest.enums.dto.ApiResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -33,6 +36,9 @@ class StockInvestE2ETest {
     @Autowired
     private TestRestTemplate rest;
 
+    @Value("${ingest.api-key}")
+    private String ingestApiKey;
+
     private String url(String path) {
         return "http://localhost:" + port + path;
     }
@@ -53,9 +59,13 @@ class StockInvestE2ETest {
                 List.of(row)
         );
 
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-INGEST-API-KEY", ingestApiKey);
+        HttpEntity<TigerWatchlistIngestRequestDto> request = new HttpEntity<>(body, headers);
+
         ResponseEntity<ApiResponse> resp = rest.postForEntity(
                 url("/api/ingest/tiger-watchlist"),
-                body,
+                request,
                 ApiResponse.class
         );
 
@@ -76,9 +86,13 @@ class StockInvestE2ETest {
                 List.of()
         );
 
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-INGEST-API-KEY", ingestApiKey);
+        HttpEntity<TigerWatchlistIngestRequestDto> request = new HttpEntity<>(body, headers);
+
         ResponseEntity<ApiResponse> resp = rest.postForEntity(
                 url("/api/ingest/tiger-watchlist"),
-                body,
+                request,
                 ApiResponse.class
         );
 

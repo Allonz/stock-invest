@@ -26,13 +26,4 @@ public final class KLineDataUtils {
         sorted.sort(Comparator.comparingLong(KLineIterator::getTime).reversed());
         data.setItems(sorted);
     }
-
-    public static List<KLineIterator> firstItems(KLineData data, int count) {
-        if (data == null || data.getItems() == null) {
-            return new ArrayList<>();
-        }
-        List<KLineIterator> items = data.getItems();
-        int n = Math.min(count, items.size());
-        return new ArrayList<>(items.subList(0, n));
-    }
 }

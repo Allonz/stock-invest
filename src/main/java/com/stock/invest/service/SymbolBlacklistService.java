@@ -2,6 +2,7 @@ package com.stock.invest.service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -17,6 +18,8 @@ import com.stock.invest.repository.SymbolBlacklistRepository;
 
 @Service
 public class SymbolBlacklistService {
+
+    private static final ZoneId AMERICA_NY = ZoneId.of("America/New_York");
 
     private final SymbolBlacklistRepository repository;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -53,7 +56,7 @@ public class SymbolBlacklistService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordNotFound(String symbol, Map<String, String> sourceErrors) {
         Optional<SymbolBlacklist> existing = repository.findBySymbol(symbol);
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(AMERICA_NY);
 
         if (existing.isPresent()) {
             SymbolBlacklist record = existing.get();

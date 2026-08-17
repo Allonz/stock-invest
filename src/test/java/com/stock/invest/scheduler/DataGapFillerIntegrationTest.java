@@ -53,7 +53,7 @@ class DataGapFillerIntegrationTest {
             if (checkedSymbols >= 10) break;
 
             List<StockDailyBar> bars = stockDailyBarRepository
-                    .findTop7BySymbolOrderByTradeDateDesc(symbol);
+                    .findBySymbolOrderByTradeDateDesc(symbol, org.springframework.data.domain.PageRequest.of(0, 7));
             if (bars.isEmpty()) continue;
 
             checkedSymbols++;
@@ -88,7 +88,7 @@ class DataGapFillerIntegrationTest {
             if (verifiedSymbols >= 20) break; // limit to 20 symbols
 
             List<StockDailyBar> bars = stockDailyBarRepository
-                    .findTop7BySymbolOrderByTradeDateDesc(symbol);
+                    .findBySymbolOrderByTradeDateDesc(symbol, org.springframework.data.domain.PageRequest.of(0, 7));
             if (bars.size() < 2) continue;
 
             // bars are ordered by tradeDate DESC, reverse to go chronological

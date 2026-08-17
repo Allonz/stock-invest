@@ -94,7 +94,10 @@ class DataGapFillerAfterHoursTest {
     void mergeAfterHoursHappyPath() {
         LocalDate today = nyToday();
         LocalDate tradeDate = today.minusDays(2);
-        LocalDate stopDate = today.minusDays(5);
+        while (tradeDate.getDayOfWeek().getValue() >= 6) {
+            tradeDate = tradeDate.minusDays(1);
+        }
+        LocalDate stopDate = tradeDate.minusDays(2);
 
         StockDailyBar existingBar = createLowPriceBar("AAPL", stopDate);
 
@@ -242,7 +245,10 @@ class DataGapFillerAfterHoursTest {
     void afterHoursChangePercentCalculation() {
         LocalDate today = nyToday();
         LocalDate tradeDate = today.minusDays(2);
-        LocalDate stopDate = today.minusDays(5);
+        while (tradeDate.getDayOfWeek().getValue() >= 6) {
+            tradeDate = tradeDate.minusDays(1);
+        }
+        LocalDate stopDate = tradeDate.minusDays(2);
 
         StockDailyBar existingBar = createLowPriceBar("AAPL", stopDate);
 

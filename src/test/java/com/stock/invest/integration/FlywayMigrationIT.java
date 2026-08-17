@@ -43,7 +43,7 @@ class FlywayMigrationIT {
 
     private static final String BASE_URL = "jdbc:mysql://127.0.0.1:3307/";
     private static final String USER = "root";
-    private static final String PASSWORD = "allon23";
+    private static final String PASSWORD = System.getenv().getOrDefault("MYSQL_PASSWORD", "");
     private static final String URL_OPTS = "?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=Asia/Shanghai";
 
     private static final String UNIQUE_CONSTRAINT = "uk_screening_match_trade_symbol_window_algorithm";

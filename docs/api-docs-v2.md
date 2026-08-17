@@ -824,7 +824,7 @@ The response is a `Map<String, Object>` with the following structure:
 | `scanner.defaultMarket` | — | `US` | Default scanner market |
 | `spring.datasource.url` | `MYSQL_DATABASE` | `stock_invest` | MySQL database name |
 | `spring.datasource.username` | `MYSQL_USERNAME` | `root` | Database user |
-| `spring.datasource.password` | `MYSQL_PASSWORD` | `allon23` | Database password |
+| `spring.datasource.password` | `MYSQL_PASSWORD` | `${MYSQL_PASSWORD}` | Database password |
 
 ---
 

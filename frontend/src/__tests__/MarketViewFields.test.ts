@@ -36,7 +36,13 @@ vi.mock('../api/screening', () => ({
   fetchLatestScreening: vi.fn(),
 }))
 
+// Mock bars API for K-line click behavior
+vi.mock('../api/bars', () => ({
+  fetchCandles: vi.fn(),
+}))
+
 import { fetchLatestNotification, fetchLatestScreening } from '../api/screening'
+import { fetchCandles } from '../api/bars'
 import type { ScreeningMatch } from '../api/screening'
 
 describe('MarketView.vue — 字段列展示', () => {
@@ -153,14 +159,14 @@ describe('MarketView.vue — 字段列展示', () => {
     })
     await flushPromises()
 
-    const vm = wrapper.vm as any
-    // Spy on onSymbolClick
-    const spy = vi.spyOn(vm, 'onSymbolClick')
+    vi.mocked(fetchCandles).mockResolvedValue({
+      data: { success: true, data: [], timestamp: '' },
+    } as any)
 
     const firstStockCell = wrapper.find('td.stock-col')
     expect(firstStockCell.exists()).toBe(true)
     await firstStockCell.trigger('click')
-    expect(spy).toHaveBeenCalledWith('AAPL')
+    expect(fetchCandles).toHaveBeenCalledWith('AAPL', 30)
   })
 
   // E2E-MK-004: 无名称时显示 — 

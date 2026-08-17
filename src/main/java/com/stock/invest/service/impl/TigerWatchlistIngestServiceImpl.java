@@ -10,7 +10,8 @@ import com.stock.invest.util.WatchlistVolumeParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -26,15 +27,18 @@ public class TigerWatchlistIngestServiceImpl implements TigerWatchlistIngestServ
 
     private static final Logger log = LoggerFactory.getLogger(TigerWatchlistIngestServiceImpl.class);
     private static final Pattern SYMBOL_PATTERN = Pattern.compile("^[A-Z0-9\\-]{1,32}$");
+    private static final int SAVE_BATCH_SIZE = 100;
 
     private final StockDailyBarRepository stockDailyBarRepository;
+    private final TransactionTemplate transactionTemplate;
 
-    public TigerWatchlistIngestServiceImpl(StockDailyBarRepository stockDailyBarRepository) {
+    public TigerWatchlistIngestServiceImpl(StockDailyBarRepository stockDailyBarRepository,
+                                           PlatformTransactionManager transactionManager) {
         this.stockDailyBarRepository = stockDailyBarRepository;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
     @Override
-    @Transactional
     public TigerWatchlistIngestResponseDto ingest(TigerWatchlistIngestRequestDto request) {
         Instant start = Instant.now();
 
@@ -58,6 +62,7 @@ public class TigerWatchlistIngestServiceImpl implements TigerWatchlistIngestServ
         int imported = 0;
         int skipped = 0;
         List<String> reasons = new ArrayList<>();
+        List<StockDailyBar> pendingSaves = new ArrayList<>();
 
         for (TigerWatchlistRowDto row : request.rows()) {
             if (row == null) {
@@ -124,13 +129,18 @@ public class TigerWatchlistIngestServiceImpl implements TigerWatchlistIngestServ
                 }
                 bar.setName(n);
             }
-            stockDailyBarRepository.save(bar);
+            pendingSaves.add(bar);
+            if (pendingSaves.size() >= SAVE_BATCH_SIZE) {
+                flushPendingSaves(pendingSaves);
+            }
             log.info("[TigerIngest] importScreenCapture: save symbol={}, closePrice={}, openPrice={}, high={}, low={}, changePct={}, afterHours={}, afterHoursChangePct={}, volume={}, date={}",
                     sym, px, bar.getOpenPrice(), bar.getHighPrice(), bar.getLowPrice(),
                     bar.getChangePercent(), bar.getAfterHours(), bar.getAfterHoursChangePercent(),
                     vol, tradeDate);
             imported++;
         }
+
+        flushPendingSaves(pendingSaves);
 
         TigerWatchlistIngestResponseDto out = new TigerWatchlistIngestResponseDto(batchId, tradeDate, imported, skipped, reasons);
         log.info("[TigerIngest] importScreenCapture: completed — batchId={}, tradeDate={}, total={}, imported={}, skipped={}, elapsedMs={}",
@@ -139,6 +149,16 @@ public class TigerWatchlistIngestServiceImpl implements TigerWatchlistIngestServ
             log.debug("[TigerIngest] importScreenCapture: skip reasons: {}", reasons);
         }
         return out;
+    }
+
+    /** 每批独立事务 saveAll，避免大批量截图导入单事务过长。 */
+    private void flushPendingSaves(List<StockDailyBar> pending) {
+        if (pending.isEmpty()) {
+            return;
+        }
+        List<StockDailyBar> batch = List.copyOf(pending);
+        pending.clear();
+        transactionTemplate.executeWithoutResult(status -> stockDailyBarRepository.saveAll(batch));
     }
 
     private static String volumeToParseString(Object v) {

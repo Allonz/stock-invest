@@ -113,7 +113,7 @@ public class StockInvestMcpTools {
     @McpTool(name = "screening_history",
              description = "获取历史筛选批次列表（对应 GET /api/notification/history）")
     public List<Map<String, Object>> screeningHistory() {
-        return screeningService.getScreeningHistory();
+        return screeningService.getScreeningHistory(100);
     }
 
     @McpTool(name = "screening_batch_detail",

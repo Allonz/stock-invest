@@ -3,10 +3,12 @@ import { mount, flushPromises } from '@vue/test-utils'
 import BlacklistView from '../views/BlacklistView.vue'
 
 vi.mock('naive-ui', () => ({
+  NCard: { template: '<div class="n-card"><slot /></div>' },
   NDataTable: { template: '<div class="n-data-table"><slot /></div>' },
   NButton: { template: '<button><slot /></button>' },
   NSpin: { template: '<div class="n-spin" />' },
   useNotification: () => ({ error: vi.fn(), success: vi.fn() }),
+  useMessage: () => ({ error: vi.fn(), success: vi.fn(), warning: vi.fn(), info: vi.fn() }),
 }))
 
 vi.mock('../api/request', () => ({

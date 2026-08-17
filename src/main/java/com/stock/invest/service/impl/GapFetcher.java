@@ -102,9 +102,16 @@ class GapFetcher {
                 }
                 log.info("[GapFetcher] {} source then received response: itemsCount={}", source.name(), klineData.getItems().size());
                 for (KLineIterator item : klineData.getItems()) {
-                    LocalDate itemDate = item.getTimeString() != null && !item.getTimeString().isEmpty()
-                            ? LocalDate.parse(item.getTimeString())
-                            : epochMillisToLocalDate(item.getTime());
+                    LocalDate itemDate;
+                    try {
+                        itemDate = item.getTimeString() != null && !item.getTimeString().isEmpty()
+                                ? LocalDate.parse(item.getTimeString())
+                                : epochMillisToLocalDate(item.getTime());
+                    } catch (java.time.format.DateTimeParseException parseEx) {
+                        log.warn("[GapFetcher] {} source item has invalid timeString='{}', skip item symbol={}",
+                                source.name(), item.getTimeString(), item.getSymbol());
+                        continue;
+                    }
                     log.info("[GapFetcher] {} source item: symbol={}, epochTime={}, timeString='{}', parsedDate={}, open={}, close={}",
                             source.name(), item.getSymbol(), item.getTime(), item.getTimeString(), itemDate,
                             item.getOpen(), item.getClose());
@@ -119,8 +126,8 @@ class GapFetcher {
                         StockDailyBar bar = persist(symbol, tradeDate, item, source.name());
                         missingFieldFiller.mergeAfterHoursIfAvailable(symbol, tradeDate, bar, source.ds());
                         final String sourceName = source.name();
-                        runInTx(() -> stockDataSourcePriorityService.updatePriority(
-                                symbol, sourceName, java.time.LocalDateTime.now()));
+                        stockDataSourcePriorityService.updatePriority(
+                                symbol, sourceName, java.time.LocalDateTime.now());
                         log.info("[GapFetcher] fillWithFallback: success symbol={}, source={}", symbol, source.name());
                         log.info("[GapFetcher] {} source end", source.name());
                         log.info("");

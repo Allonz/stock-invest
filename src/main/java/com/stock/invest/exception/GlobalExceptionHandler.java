@@ -48,8 +48,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse<?>> handleIllegalArgument(IllegalArgumentException e) {
         log.warn("[400] 非法参数: {}", e.getMessage());
+        String message = e.getMessage();
+        // 防止内部异常细节/超长堆栈被直接回显给客户端
+        if (message == null || message.length() > 200 || message.contains("\n")) {
+            message = "非法参数";
+        }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error(e.getMessage(), "BadRequest"));
+                .body(ApiResponse.error(message, "BadRequest"));
     }
 
     /**

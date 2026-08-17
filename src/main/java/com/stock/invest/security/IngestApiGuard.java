@@ -17,9 +17,14 @@ public class IngestApiGuard {
         this.ingestProperties = ingestProperties;
     }
 
+    /**
+     * 校验截图导入 API Key（必选，fail closed）。
+     * 服务端未配置 key 时返回 503，缺失/错误 key 返回 401。
+     */
     public void verifyOptionalKey(String headerValue) {
         if (!ingestProperties.isKeyRequired()) {
-            return;
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "INGEST_API_KEY is not configured on server");
         }
         if (headerValue == null || headerValue.trim().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or missing X-INGEST-API-KEY");

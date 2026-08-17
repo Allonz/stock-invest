@@ -49,7 +49,7 @@ public interface ScreeningService {
      *
      * @return 每个批次的摘要 Map 列表
      */
-    List<Map<String, Object>> getScreeningHistory();
+    List<Map<String, Object>> getScreeningHistory(int limit);
 
     /**
      * 获取某批次筛选详情（含 stock name）。

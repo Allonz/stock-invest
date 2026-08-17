@@ -2,20 +2,6 @@
 import request from './request'
 import type { ApiResponse } from './request'
 
-/** 快速触发全量筛选（同步） */
-export function triggerScreening() {
-  return request.post<ApiResponse<{ message: string }>>('/api/admin/trigger-screening')
-}
-
-/** 高级筛选（同步，自定义参数） */
-export function runScreener(params: {
-  date?: string
-  limit?: number
-  windowDays?: number
-}) {
-  return request.post<ApiResponse<{ message: string; batchId: string }>>('/api/admin/run-screening', null, { params })
-}
-
 /** 异步全量筛选 - 立即返回 taskId */
 export function triggerScreeningAsync() {
   return request.post<ApiResponse<{ taskId: string; message: string }>>('/api/admin/trigger-screening-async')

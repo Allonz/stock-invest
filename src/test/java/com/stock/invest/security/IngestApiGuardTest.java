@@ -20,11 +20,12 @@ class IngestApiGuardTest {
     }
 
     @Test
-    @DisplayName("未配置 key 时任意 header 放行")
-    void noKeyConfigured_allowsAnyHeader() {
+    @DisplayName("未配置 key 时 fail closed 返回 503")
+    void noKeyConfigured_failsClosedWith503() {
         IngestApiGuard guard = guardWith("");
-        assertDoesNotThrow(() -> guard.verifyOptionalKey(null));
-        assertDoesNotThrow(() -> guard.verifyOptionalKey("anything"));
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> guard.verifyOptionalKey("anything"));
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, ex.getStatusCode());
     }
 
     @Test

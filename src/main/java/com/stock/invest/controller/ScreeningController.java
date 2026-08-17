@@ -50,10 +50,14 @@ public class ScreeningController {
         try {
             Map<String, Object> result = screeningService.getScreeningByDate(tradeDate);
             return ResponseEntity.ok(ApiResponse.ok(result));
+        } catch (IllegalArgumentException e) {
+            log.warn("screening by-date invalid argument tradeDate={}: {}", tradeDate, e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage(), "INVALID_DATE"));
         } catch (Exception e) {
             log.error("screening by-date failed tradeDate={}", tradeDate, e);
             return ResponseEntity.internalServerError()
-                    .body(ApiResponse.error("Failed to retrieve screening result for " + tradeDate));
+                    .body(ApiResponse.error("Failed to retrieve screening result", "INTERNAL_ERROR"));
         }
     }
 
@@ -61,9 +65,10 @@ public class ScreeningController {
      * GET /api/screening/history — 历史筛选批次列表
      */
     @GetMapping("/history")
-    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> history() {
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> history(
+            @RequestParam(defaultValue = "50") int limit) {
         try {
-            List<Map<String, Object>> history = screeningService.getScreeningHistory();
+            List<Map<String, Object>> history = screeningService.getScreeningHistory(limit);
             return ResponseEntity.ok(ApiResponse.ok(history));
         } catch (Exception e) {
             log.error("screening history failed", e);

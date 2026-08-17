@@ -3,6 +3,7 @@ package com.stock.invest.repository;
 import com.stock.invest.entity.ScreeningMatch;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -30,7 +31,7 @@ public interface ScreeningMatchRepository extends JpaRepository<ScreeningMatch, 
     List<String> findDistinctBatchIds();
 
     @Query("SELECT sm.batchId, COUNT(sm) as matchCount, MAX(sm.tradeDate) as lastTradeDate FROM ScreeningMatch sm GROUP BY sm.batchId ORDER BY MAX(sm.tradeDate) DESC")
-    List<Object[]> findBatchSummary();
+    List<Object[]> findBatchSummary(Pageable pageable);
 
     @Query("SELECT sm.windowDays, COUNT(sm) FROM ScreeningMatch sm WHERE sm.batchId = :batchId GROUP BY sm.windowDays ORDER BY sm.windowDays")
     List<Object[]> countByBatchIdGroupByWindowDays(@Param("batchId") String batchId);

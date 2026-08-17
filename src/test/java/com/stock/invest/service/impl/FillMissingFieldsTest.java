@@ -123,7 +123,7 @@ class FillMissingFieldsTest {
         legacy.setAfterHours(null);               // 盘后缺失
         legacy.setAfterHoursChangePercent(null);
 
-        when(stockDailyBarRepository.findUnchecked()).thenReturn(List.of(legacy));
+        when(stockDailyBarRepository.findUnchecked(any(org.springframework.data.domain.Pageable.class))).thenReturn(List.of(legacy));
 
         int n = service.discoverMissingFields();
 
@@ -142,7 +142,7 @@ class FillMissingFieldsTest {
         legacy.setAfterHours(null);
         legacy.setAfterHoursChangePercent(null);
 
-        when(stockDailyBarRepository.findUnchecked()).thenReturn(List.of(legacy));
+        when(stockDailyBarRepository.findUnchecked(any(org.springframework.data.domain.Pageable.class))).thenReturn(List.of(legacy));
 
         service.discoverMissingFields();
 
@@ -159,7 +159,7 @@ class FillMissingFieldsTest {
         bar.setAfterHours(null);
         bar.setAfterHoursChangePercent(null);
 
-        when(stockDailyBarRepository.findUnchecked()).thenReturn(List.of(bar));
+        when(stockDailyBarRepository.findUnchecked(any(org.springframework.data.domain.Pageable.class))).thenReturn(List.of(bar));
 
         service.discoverMissingFields();
 
@@ -173,7 +173,7 @@ class FillMissingFieldsTest {
     @DisplayName("FF-01: 盘后增补成功 → 写入 + 清标记 + CONFIRMED")
     void fillAfterHours_success() {
         StockDailyBar bar = pendingBar("after_hours,after_hours_change_percent");
-        when(stockDailyBarRepository.findByFieldFillStatus(DataGapFillerServiceImpl.STATUS_PENDING))
+        when(stockDailyBarRepository.findByFieldFillStatus(eq(DataGapFillerServiceImpl.STATUS_PENDING), any(org.springframework.data.domain.Pageable.class)))
                 .thenReturn(List.of(bar));
         when(yfinanceSource.getAfterHoursKLineDataByDateRange(eq("JSPR"), eq(TRADE_DATE)))
                 .thenReturn(ahData("JSPR", TRADE_DATE, 0.87));
@@ -192,7 +192,7 @@ class FillMissingFieldsTest {
     @DisplayName("FF-01b: 脚本直取盘后涨跌幅 → 直接使用源值（不兜底计算）")
     void fillAfterHours_sourceDirectChangePercent() {
         StockDailyBar bar = pendingBar("after_hours,after_hours_change_percent");
-        when(stockDailyBarRepository.findByFieldFillStatus(DataGapFillerServiceImpl.STATUS_PENDING))
+        when(stockDailyBarRepository.findByFieldFillStatus(eq(DataGapFillerServiceImpl.STATUS_PENDING), any(org.springframework.data.domain.Pageable.class)))
                 .thenReturn(List.of(bar));
         // 脚本返回 afterHoursChangePercent=5.5（源直取优先）
         when(yfinanceSource.getAfterHoursKLineDataByDateRange(eq("JSPR"), eq(TRADE_DATE)))
@@ -212,7 +212,7 @@ class FillMissingFieldsTest {
     @DisplayName("FF-02: 源确认无盘后（null）→ 清标记 + CONFIRMED（防死循环）")
     void fillAfterHours_confirmedNone() {
         StockDailyBar bar = pendingBar("after_hours,after_hours_change_percent");
-        when(stockDailyBarRepository.findByFieldFillStatus(DataGapFillerServiceImpl.STATUS_PENDING))
+        when(stockDailyBarRepository.findByFieldFillStatus(eq(DataGapFillerServiceImpl.STATUS_PENDING), any(org.springframework.data.domain.Pageable.class)))
                 .thenReturn(List.of(bar));
         when(yfinanceSource.getAfterHoursKLineDataByDateRange(eq("JSPR"), eq(TRADE_DATE)))
                 .thenReturn(new KLineData());
@@ -229,7 +229,7 @@ class FillMissingFieldsTest {
     @DisplayName("FF-03: 瞬态失败 → 保留 PENDING + 缺失标记（下次再试）")
     void fillAfterHours_transientFailure_keepsPending() {
         StockDailyBar bar = pendingBar("after_hours,after_hours_change_percent");
-        when(stockDailyBarRepository.findByFieldFillStatus(DataGapFillerServiceImpl.STATUS_PENDING))
+        when(stockDailyBarRepository.findByFieldFillStatus(eq(DataGapFillerServiceImpl.STATUS_PENDING), any(org.springframework.data.domain.Pageable.class)))
                 .thenReturn(List.of(bar));
         when(yfinanceSource.getAfterHoursKLineDataByDateRange(eq("JSPR"), eq(TRADE_DATE)))
                 .thenThrow(new RuntimeException("API timeout"));
@@ -248,7 +248,7 @@ class FillMissingFieldsTest {
     void fillChangePercent_recalc() {
         StockDailyBar bar = pendingBar("change_percent");
         bar.setChangePercent(null);
-        when(stockDailyBarRepository.findByFieldFillStatus(DataGapFillerServiceImpl.STATUS_PENDING))
+        when(stockDailyBarRepository.findByFieldFillStatus(eq(DataGapFillerServiceImpl.STATUS_PENDING), any(org.springframework.data.domain.Pageable.class)))
                 .thenReturn(List.of(bar));
         when(yfinanceSource.getDailyKLineDataByDateRange(eq("JSPR"), eq(TRADE_DATE)))
                 .thenReturn(dailyData("JSPR", TRADE_DATE, 0.86));
@@ -273,7 +273,7 @@ class FillMissingFieldsTest {
     void fillKline_confirmedNotFound() {
         StockDailyBar bar = pendingBar("close_price");
         bar.setClosePrice(null);
-        when(stockDailyBarRepository.findByFieldFillStatus(DataGapFillerServiceImpl.STATUS_PENDING))
+        when(stockDailyBarRepository.findByFieldFillStatus(eq(DataGapFillerServiceImpl.STATUS_PENDING), any(org.springframework.data.domain.Pageable.class)))
                 .thenReturn(List.of(bar));
         when(yfinanceSource.getDailyKLineDataByDateRange(eq("JSPR"), eq(TRADE_DATE)))
                 .thenThrow(new StockDataException("JSPR", "yfinance", "symbol not found",
@@ -290,7 +290,7 @@ class FillMissingFieldsTest {
     @DisplayName("FF-06: 全部源不可用 → 保持 PENDING（下次再试）")
     void fill_noSource_keepsPending() {
         StockDailyBar bar = pendingBar("after_hours,after_hours_change_percent");
-        when(stockDailyBarRepository.findByFieldFillStatus(DataGapFillerServiceImpl.STATUS_PENDING))
+        when(stockDailyBarRepository.findByFieldFillStatus(eq(DataGapFillerServiceImpl.STATUS_PENDING), any(org.springframework.data.domain.Pageable.class)))
                 .thenReturn(List.of(bar));
         when(yfinanceSource.isAvailable()).thenReturn(false);
 
@@ -305,7 +305,7 @@ class FillMissingFieldsTest {
     void fill_snapSource_fallbackToAvailableSource() {
         StockDailyBar bar = pendingBar("after_hours,after_hours_change_percent");
         bar.setSource("tiger_snap");   // 截图源无对应 bean → fallback yfinance
-        when(stockDailyBarRepository.findByFieldFillStatus(DataGapFillerServiceImpl.STATUS_PENDING))
+        when(stockDailyBarRepository.findByFieldFillStatus(eq(DataGapFillerServiceImpl.STATUS_PENDING), any(org.springframework.data.domain.Pageable.class)))
                 .thenReturn(List.of(bar));
         when(yfinanceSource.getAfterHoursKLineDataByDateRange(eq("JSPR"), eq(TRADE_DATE)))
                 .thenReturn(ahData("JSPR", TRADE_DATE, 0.87));
@@ -323,7 +323,7 @@ class FillMissingFieldsTest {
     @Test
     @DisplayName("FF-07: CONFIRMED 记录不被增补阶段处理（防死循环）")
     void confirmedRecordsSkipped() {
-        when(stockDailyBarRepository.findByFieldFillStatus(DataGapFillerServiceImpl.STATUS_PENDING))
+        when(stockDailyBarRepository.findByFieldFillStatus(eq(DataGapFillerServiceImpl.STATUS_PENDING), any(org.springframework.data.domain.Pageable.class)))
                 .thenReturn(new ArrayList<>());
 
         int completed = service.fillMissingFields();

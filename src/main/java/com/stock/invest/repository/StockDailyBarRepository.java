@@ -15,15 +15,9 @@ import java.util.Optional;
 
 public interface StockDailyBarRepository extends JpaRepository<StockDailyBar, Long> {
 
-    List<StockDailyBar> findTop7BySymbolOrderByTradeDateDesc(String symbol);
-
-    List<StockDailyBar> findTop7BySymbolAndSourceOrderByTradeDateDesc(String symbol, String source);
+    Optional<StockDailyBar> findBySymbolAndTradeDate(String symbol, LocalDate tradeDate);
 
     List<StockDailyBar> findBySymbolOrderByTradeDateDesc(String symbol, Pageable pageable);
-
-    List<StockDailyBar> findBySymbolAndSourceOrderByTradeDateDesc(String symbol, String source, Pageable pageable);
-
-    Optional<StockDailyBar> findBySymbolAndTradeDate(String symbol, LocalDate tradeDate);
 
     /**
      * 查某股票前一个交易日的数据（用于 changePercent 自动计算）
@@ -40,36 +34,6 @@ public interface StockDailyBarRepository extends JpaRepository<StockDailyBar, Lo
             @Param("symbols") Collection<String> symbols,
             @Param("src") String source,
             @Param("td") LocalDate tradeDate);
-
-    @Query("SELECT DISTINCT b.symbol FROM StockDailyBar b WHERE b.tradeDate = :td AND b.source = :src "
-            + "AND b.closePrice >= :minP AND b.closePrice <= :maxP")
-    List<String> findDistinctSymbolsByTradeDateAndSourceAndClosePriceBetween(
-            @Param("td") LocalDate tradeDate,
-            @Param("src") String source,
-            @Param("minP") java.math.BigDecimal minPrice,
-            @Param("maxP") java.math.BigDecimal maxPrice);
-
-    @Query("SELECT DISTINCT b.symbol FROM StockDailyBar b WHERE b.tradeDate = :td "
-            + "AND b.closePrice >= :minP AND b.closePrice <= :maxP")
-    List<String> findDistinctSymbolsByTradeDateAndClosePriceBetween(
-            @Param("td") LocalDate tradeDate,
-            @Param("minP") java.math.BigDecimal minPrice,
-            @Param("maxP") java.math.BigDecimal maxPrice);
-
-    @Query("SELECT DISTINCT b.tradeDate FROM StockDailyBar b WHERE b.source = :src ORDER BY b.tradeDate ASC")
-    List<LocalDate> findDistinctTradeDatesBySourceAsc(@Param("src") String src);
-
-    @Query("SELECT b FROM StockDailyBar b WHERE b.symbol IN :symbols AND b.source = :src "
-            + "ORDER BY b.symbol ASC, b.tradeDate DESC")
-    List<StockDailyBar> findBySymbolInAndSourceOrderBySymbolAscTradeDateDesc(
-            @Param("symbols") Collection<String> symbols,
-            @Param("src") String source);
-
-    @Query("SELECT b FROM StockDailyBar b WHERE b.source = :src AND b.tradeDate IN :dates ORDER BY b.symbol ASC, b.tradeDate ASC")
-    List<StockDailyBar> findBySourceAndTradeDateInOrderBySymbolAscTradeDateAsc(
-            @Param("src") String src,
-            @Param("dates") Collection<LocalDate> dates);
-
     @Query("SELECT DISTINCT b.symbol FROM StockDailyBar b ORDER BY b.symbol ASC")
     List<String> findAllSymbols();
 
@@ -89,10 +53,6 @@ public interface StockDailyBarRepository extends JpaRepository<StockDailyBar, Lo
             @Param("source") String source,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate);
-
-    @Query("SELECT b FROM StockDailyBar b WHERE b.source = :source ORDER BY b.tradeDate DESC")
-    List<StockDailyBar> findBySourceOrderByTradeDateDesc(@Param("source") String source);
-
     /**
      * 根据 symbol 列表查询有 name 的记录（取每个 symbol 最新的一条，P2-7）。
      * <p>原实现返回全部匹配行（注释与实现不符，靠调用方 toMap 合并键兜底），
@@ -118,13 +78,13 @@ public interface StockDailyBarRepository extends JpaRepository<StockDailyBar, Lo
 
     // ---- 字段增补（2026-08-14）----
 
-    /** 发现阶段：从未检查过的记录（存量回填标记用） */
+    /** 发现阶段：从未检查过的记录（存量回填标记用，分批处理） */
     @Query("SELECT b FROM StockDailyBar b WHERE b.fieldFillStatus IS NULL")
-    List<StockDailyBar> findUnchecked();
+    List<StockDailyBar> findUnchecked(Pageable pageable);
 
-    /** 增补阶段：待增补记录（最新日期优先，保证当日/近期待补先处理） */
+    /** 增补阶段：待增补记录（最新日期优先，保证当日/近期待补先处理，DB 侧限量） */
     @Query("SELECT b FROM StockDailyBar b WHERE b.fieldFillStatus = :status ORDER BY b.tradeDate DESC")
-    List<StockDailyBar> findByFieldFillStatus(@Param("status") String status);
+    List<StockDailyBar> findByFieldFillStatus(@Param("status") String status, Pageable pageable);
 
     /** 超窗 PENDING 批量确认终态（30 交易日窗口外不补，用户 2026-08-14） */
     @Modifying

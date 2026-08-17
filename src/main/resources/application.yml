@@ -31,7 +31,7 @@ spring:
     url: jdbc:mysql://127.0.0.1:3307/${MYSQL_DATABASE:stock_invest}?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: ${MYSQL_USERNAME:root}
-    password: ${MYSQL_PASSWORD:allon23}
+    password: ${MYSQL_PASSWORD:}
     hikari:
       connection-init-sql: SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci
   # P2-1：版本化迁移（原 schema.sql / fix_constraint_name.sql / DatabaseInitializer 三套并行 DDL 已废弃）
@@ -79,10 +79,10 @@ tiger:
 
 twelvedata:
   api:
-    api-key: dbad6e2929d54beca7083fbbf111b6be
+    api-key: ${TWELVEDATA_API_KEY:}
 tiingo:
   api:
-    token: e8d9f9e86a9e5a6261e9cefa7caa55c2e1080394
+    token: ${TIINGO_API_TOKEN:}
     # ============================================================
 # Alpaca Markets 配置（仅用于交易日历查询）
 # 注册：https://alpaca.markets → Dashboard → API Keys
@@ -115,4 +115,22 @@ stock-invest:
 # ── 串行编排（tiger 导入 → 补缺 → 筛选 → 汇报）──
 orchestration:
   webhook-url: http://localhost:8644/webhooks/tiger-orch
-  webhook-secret: 3BJOXKLFLzZX2bACPOxJy87lkPw93tFHY1LzE_-QWh0
+  webhook-secret: ${ORCHESTRATION_WEBHOOK_SECRET:}
+
+# 管理/MCP 接口鉴权（生产必须通过环境变量注入；测试环境在 application-test/integration.yml 中覆盖）
+admin:
+  api-key: ${STOCK_INVEST_ADMIN_API_KEY:}
+
+# 截图导入接口鉴权（必选）
+ingest:
+  api-key: ${INGEST_API_KEY:}
+
+# 锁定 actuator 只暴露 health，且不显示细节
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never

@@ -70,6 +70,14 @@ public class TradingCalendarFallback implements TradingCalendarService {
             return cached;
         }
 
+        // 1.1 周末直接判定为非交易日，避免全年同步时对周末打外部 API
+        if (date.getDayOfWeek().getValue() >= 6) {
+            TradingCalendarResult weekend = TradingCalendarResult.nonTrading(
+                    market, date, "system", "WEEKEND", "weekend");
+            cache.put(cacheKey, weekend);
+            return weekend;
+        }
+
         // 2. 顺序 fallback
         for (TradingCalendarService source : sources) {
             if (!source.isAvailable()) {

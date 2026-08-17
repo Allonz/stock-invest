@@ -225,8 +225,10 @@ public class ScreeningServiceImpl implements ScreeningService {
     }
 
     @Override
-    public List<Map<String, Object>> getScreeningHistory() {
-        List<Object[]> batchSummaries = screeningMatchRepository.findBatchSummary();
+    public List<Map<String, Object>> getScreeningHistory(int limit) {
+        int safeLimit = Math.min(Math.max(1, limit), 500);
+        List<Object[]> batchSummaries = screeningMatchRepository.findBatchSummary(
+                org.springframework.data.domain.PageRequest.of(0, safeLimit));
         List<Map<String, Object>> history = new ArrayList<>();
         for (Object[] row : batchSummaries) {
             Map<String, Object> item = new HashMap<>();
@@ -275,7 +277,7 @@ public class ScreeningServiceImpl implements ScreeningService {
      */
     @Override
     public Map<String, Object> getNotificationGroupedByDate(String tradeDate, String windows) {
-        LocalDate date = LocalDate.parse(tradeDate);
+        LocalDate date = parseTradeDate(tradeDate);
         Optional<ScreeningMatch> top = screeningMatchRepository.findTopByTradeDateOrderByIdDesc(date);
         if (top.isEmpty()) {
             Map<String, Object> empty = new HashMap<>();
@@ -292,7 +294,7 @@ public class ScreeningServiceImpl implements ScreeningService {
      */
     @Override
     public Map<String, Object> getScreeningByDate(String tradeDate) {
-        LocalDate date = LocalDate.parse(tradeDate);
+        LocalDate date = parseTradeDate(tradeDate);
         Optional<ScreeningMatch> top = screeningMatchRepository.findTopByTradeDateOrderByIdDesc(date);
         if (top.isEmpty()) {
             Map<String, Object> emptyResult = new HashMap<>();
@@ -310,6 +312,17 @@ public class ScreeningServiceImpl implements ScreeningService {
         result.put("totalMatches", matches.size());
         result.put("matches", buildMatchesWithName(matches));
         return result;
+    }
+
+    private static LocalDate parseTradeDate(String tradeDate) {
+        if (tradeDate == null || tradeDate.isBlank()) {
+            throw new IllegalArgumentException("tradeDate is required");
+        }
+        try {
+            return LocalDate.parse(tradeDate.trim());
+        } catch (java.time.format.DateTimeParseException e) {
+            throw new IllegalArgumentException("tradeDate must be yyyy-MM-dd", e);
+        }
     }
 
     /**
@@ -408,7 +421,8 @@ public class ScreeningServiceImpl implements ScreeningService {
         row.setLastClose(latest.getClosePrice());
         row.setTradeDate(targetDate);
         row.setPrice(latest.getClosePrice());
-        row.setRise(latest.getClosePrice().compareTo(latest.getOpenPrice()) > 0);
+        row.setRise(latest.getOpenPrice() != null
+                && latest.getClosePrice().compareTo(latest.getOpenPrice()) > 0);
         row.setWindowDays(windowDays);
         row.setAlgorithm(algorithm);
         return row;

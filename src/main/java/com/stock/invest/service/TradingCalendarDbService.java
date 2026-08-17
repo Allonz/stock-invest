@@ -8,7 +8,6 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.stock.invest.entity.TradingCalendarEntity;
 import com.stock.invest.model.TradingCalendarResult;
@@ -51,21 +50,21 @@ public class TradingCalendarDbService {
      * @param date    美东日期
      * @return true=交易日，false=非交易日，null=所有数据源不可用
      */
-    @Transactional
     public Boolean isTradingDay(String market, LocalDate date) {
-        // 1. 查 DB
+        // 1. 查 DB（无事务，只读）
         Optional<TradingCalendarEntity> cached = repository.findByMarketAndTradeDate(market, date);
         if (cached.isPresent()) {
             log.debug("[TradingCalendarDbService] DB 命中: {}-{} -> isOpen={}", market, date, cached.get().getIsOpen());
             return cached.get().getIsOpen();
         }
 
-        // 2. DB 无记录 → fallback 链实时查
+        // 2. DB 无记录 → fallback 链实时查（不占用 DB 连接/事务）
         TradingCalendarResult result = fallback.isTradingDay(market, date);
         if (result != null) {
-            // 3. 结果入库
-            upsert(market, date, result.isTradingDay(), result.getSource(),
-                   result.getType(), result.getDetail());
+            // 3. 结果入库（独立短事务）
+            final TradingCalendarResult r = result;
+            transactionTemplate.executeWithoutResult(status ->
+                    upsert(market, date, r.isTradingDay(), r.getSource(), r.getType(), r.getDetail()));
             return result.isTradingDay();
         }
 

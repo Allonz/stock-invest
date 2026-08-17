@@ -35,6 +35,8 @@ class MissingFieldFiller {
 
     private static final ZoneId AMERICA_NY = ZoneId.of("America/New_York");
     private static final int FILL_WINDOW_CALENDAR_DAYS = 45;
+    /** 发现阶段单批最大记录数，避免一次性把存量未检查记录全部载入内存 */
+    private static final int DISCOVER_BATCH_SIZE = 1000;
 
     private final StockDailyBarRepository stockDailyBarRepository;
     private final List<DataSourceStrategy> dataSources;
@@ -89,7 +91,8 @@ class MissingFieldFiller {
     }
 
     int discoverMissingFields() {
-        List<StockDailyBar> unchecked = stockDailyBarRepository.findUnchecked();
+        List<StockDailyBar> unchecked = stockDailyBarRepository.findUnchecked(
+                org.springframework.data.domain.PageRequest.of(0, DISCOVER_BATCH_SIZE));
         LocalDate windowStart = fillWindowStart();
         int discovered = 0;
         for (StockDailyBar bar : unchecked) {
@@ -126,12 +129,9 @@ class MissingFieldFiller {
             log.info("[MissingFieldFiller] fillMissingFields: confirmed {} stale pending (tradeDate < {}) as terminal",
                     stale, windowStart);
         }
-        List<StockDailyBar> pending = stockDailyBarRepository.findByFieldFillStatus(DataGapFillerServiceImpl.STATUS_PENDING);
-        if (pending.size() > DataGapFillerServiceImpl.MAX_FILL_FIELDS_PER_RUN) {
-            log.info("[MissingFieldFiller] fillMissingFields: pending={} exceeds per-run limit {}, processing newest {} only",
-                    pending.size(), DataGapFillerServiceImpl.MAX_FILL_FIELDS_PER_RUN, DataGapFillerServiceImpl.MAX_FILL_FIELDS_PER_RUN);
-            pending = pending.subList(0, DataGapFillerServiceImpl.MAX_FILL_FIELDS_PER_RUN);
-        }
+        List<StockDailyBar> pending = stockDailyBarRepository.findByFieldFillStatus(
+                DataGapFillerServiceImpl.STATUS_PENDING,
+                org.springframework.data.domain.PageRequest.of(0, DataGapFillerServiceImpl.MAX_FILL_FIELDS_PER_RUN));
         int completed = 0;
         for (StockDailyBar bar : pending) {
             try {
@@ -205,14 +205,14 @@ class MissingFieldFiller {
                 List<String> nonCalcFields = klineFields.stream()
                         .filter(f -> !DataGapFillerServiceImpl.F_CHANGE_PERCENT.equals(f)).toList();
                 if (!nonCalcFields.isEmpty()) {
-                    clearMissingFields(bar, nonCalcFields.toArray(new String[0]));
+                    clearMissingFields(bar, "source-has-no-kline-item", nonCalcFields.toArray(new String[0]));
                 }
                 if (klineFields.contains(DataGapFillerServiceImpl.F_CHANGE_PERCENT)) {
                     java.math.BigDecimal pct = calcChangePercentFromPrevClose(
                             bar.getSymbol(), bar.getTradeDate(), bar.getClosePrice());
                     if (pct != null) {
                         bar.setChangePercent(pct);
-                        clearMissingFields(bar, DataGapFillerServiceImpl.F_CHANGE_PERCENT);
+                        clearMissingFields(bar, "calculated-from-prev-close", DataGapFillerServiceImpl.F_CHANGE_PERCENT);
                         anyUpdated = true;
                     }
                 }
@@ -246,7 +246,7 @@ class MissingFieldFiller {
                                         .setScale(4, java.math.RoundingMode.HALF_UP));
                             }
                         }
-                        clearMissingFields(bar, DataGapFillerServiceImpl.F_AFTER_HOURS,
+                        clearMissingFields(bar, "after-hours-value-resolved", DataGapFillerServiceImpl.F_AFTER_HOURS,
                                 DataGapFillerServiceImpl.F_AFTER_HOURS_CHANGE_PERCENT);
                         anyUpdated = true;
                         updaterSource = ds.getSourceName();
@@ -260,7 +260,7 @@ class MissingFieldFiller {
                 }
             }
             if (!ahResolved && !transientFailure) {
-                clearMissingFields(bar, DataGapFillerServiceImpl.F_AFTER_HOURS,
+                clearMissingFields(bar, "after-hours-confirmed-unavailable", DataGapFillerServiceImpl.F_AFTER_HOURS,
                         DataGapFillerServiceImpl.F_AFTER_HOURS_CHANGE_PERCENT);
             }
         }
@@ -292,7 +292,7 @@ class MissingFieldFiller {
         try {
             KLineData ahData = source.getAfterHoursKLineDataByDateRange(symbol, tradeDate);
             if (isKLineDataEmpty(ahData)) {
-                return;
+                    return;
             }
             for (KLineIterator item : ahData.getItems()) {
                 LocalDate itemDate = item.getTimeString() != null && !item.getTimeString().isEmpty()
@@ -310,7 +310,7 @@ class MissingFieldFiller {
                             .multiply(java.math.BigDecimal.valueOf(100))
                             .setScale(4, java.math.RoundingMode.HALF_UP));
                 }
-                clearMissingFields(bar, DataGapFillerServiceImpl.F_AFTER_HOURS,
+                clearMissingFields(bar, "after-hours-merged", DataGapFillerServiceImpl.F_AFTER_HOURS,
                         DataGapFillerServiceImpl.F_AFTER_HOURS_CHANGE_PERCENT);
                 runInTx(() -> stockDailyBarRepository.save(bar));
                 return;
@@ -417,13 +417,20 @@ class MissingFieldFiller {
         return null;
     }
 
-    void clearMissingFields(StockDailyBar bar, String... fields) {
+    /**
+     * 将指定字段从缺失集中移除。
+     * reason 明确记录本次移除语义：
+     * 源返回了值 / 源确认无值 / 本地计算得出 / 盘后合并，避免“清标记”语义混淆。
+     */
+    void clearMissingFields(StockDailyBar bar, String reason, String... fields) {
         List<String> missing = parseMissingFields(bar.getMissingFields());
         if (missing.isEmpty()) {
             return;
         }
         Set<String> toClear = new HashSet<>(java.util.Arrays.asList(fields));
         missing.removeIf(toClear::contains);
+        log.debug("[MissingFieldFiller] clearMissingFields symbol={}, date={}, fields={}, reason={}",
+                bar.getSymbol(), bar.getTradeDate(), toClear, reason);
         if (missing.isEmpty()) {
             bar.setMissingFields(null);
             bar.setFieldFillStatus(DataGapFillerServiceImpl.STATUS_CONFIRMED);

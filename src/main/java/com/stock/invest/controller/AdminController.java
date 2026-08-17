@@ -80,24 +80,6 @@ public class AdminController {
     }
 
     /**
-     * POST /api/admin/trigger-screening — 同步筛选（一键路径，前端无参调用）
-     * <p>R2 P1-3：limit/windowDays 无默认值（required=false）—— 无参 = 全窗口 2~7 天、
-     * 全量 symbol，与 trigger-screening-async 无参语义一致；显式传参则收窄范围。
-     * 无参全量同步可能耗时数分钟，前端需有等待/超时预期。</p>
-     */
-    @PostMapping("/trigger-screening")
-    public ResponseEntity<ApiResponse<?>> triggerScreening(
-            @RequestParam(value = "date", required = false) String date,
-            @RequestParam(value = "limit", required = false) Integer limit,
-            @RequestParam(value = "windowDays", required = false) Integer windowDays) {
-        LocalDate targetDate = (date != null) ? LocalDate.parse(date) : ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate();
-        log.info("[Admin] triggerScreening: date={}, limit={}, windowDays={} (null = 全窗口全量)", targetDate, limit, windowDays);
-        // R2 P1-3：null 由 Service 层映射为全窗口（2~7 天）+ limit 不限（ScreeningServiceImpl）
-        screeningService.runScreening(targetDate, windowDays, limit);
-        return ResponseEntity.ok(ApiResponse.ok("Screening triggered. date=" + targetDate));
-    }
-
-    /**
      * POST /api/admin/trigger-screening-async — 异步全量筛选（windowDays=2,3,4,5,6,7, limit=TOTAL）
      */
     @PostMapping("/trigger-screening-async")
@@ -115,22 +97,29 @@ public class AdminController {
                 log.info("[Admin] async screening: starting (all windows 2~7d)");
                 String batchId = screeningService.runScreening(tradeDate);
 
-                // Query real matched counts per window from DB
-                List<Object[]> counts = screeningService.countByBatchIdGroupByWindowDays(batchId);
-                java.util.Map<Integer, Long> countMap = new java.util.HashMap<>();
-                for (Object[] row : counts) {
-                    countMap.put((Integer) row[0], (Long) row[1]);
-                }
-
-                // Update progress windows with real data
                 List<ScreeningProgressService.WindowProgress> windowList = progress.getWindows();
-                int completed = 0;
-                for (ScreeningProgressService.WindowProgress wp : windowList) {
-                    wp.setStatus("DONE");
-                    wp.setMatched(countMap.getOrDefault(wp.getDays(), 0L).intValue());
-                    completed++;
-                    progress.setCompletedWindows(completed);
-                    log.info("[Admin] async screening: window {} day(s) done, matched={}", wp.getDays(), wp.getMatched());
+                if (batchId == null) {
+                    // 互斥拒绝：筛选已在运行，本次实际未执行，不得标记为 DONE
+                    for (ScreeningProgressService.WindowProgress wp : windowList) {
+                        wp.setStatus("SKIPPED");
+                    }
+                    log.warn("[Admin] async screening: skipped because another screening is already running");
+                } else {
+                    // Query real matched counts per window from DB
+                    List<Object[]> counts = screeningService.countByBatchIdGroupByWindowDays(batchId);
+                    java.util.Map<Integer, Long> countMap = new java.util.HashMap<>();
+                    for (Object[] row : counts) {
+                        countMap.put((Integer) row[0], (Long) row[1]);
+                    }
+
+                    int completed = 0;
+                    for (ScreeningProgressService.WindowProgress wp : windowList) {
+                        wp.setStatus("DONE");
+                        wp.setMatched(countMap.getOrDefault(wp.getDays(), 0L).intValue());
+                        completed++;
+                        progress.setCompletedWindows(completed);
+                        log.info("[Admin] async screening: window {} day(s) done, matched={}", wp.getDays(), wp.getMatched());
+                    }
                 }
             } catch (Exception e) {
                 log.error("[Admin] async screening failed", e);
@@ -173,14 +162,19 @@ public class AdminController {
                     ScreeningProgressService.WindowProgress wp = windowList.get(0);
                     log.info("[Admin] async screening: starting window {} day(s)", wp.getDays());
                     String batchId = screeningService.runScreening(tradeDate, windowDays, limit);
-                    // Query real matched count for this window
-                    long realMatched = screeningService.countByBatchIdGroupByWindowDays(batchId).stream()
-                        .filter(r -> r[0].equals(wp.getDays()))
-                        .mapToLong(r -> (Long) r[1])
-                        .findFirst().orElse(0L);
-                    wp.setStatus("DONE");
-                    wp.setMatched((int) realMatched);
-                    progress.setCompletedWindows(1);
+                    if (batchId == null) {
+                        wp.setStatus("SKIPPED");
+                        log.warn("[Admin] async advanced screening: skipped because another screening is already running");
+                    } else {
+                        // Query real matched count for this window
+                        long realMatched = screeningService.countByBatchIdGroupByWindowDays(batchId).stream()
+                            .filter(r -> r[0].equals(wp.getDays()))
+                            .mapToLong(r -> (Long) r[1])
+                            .findFirst().orElse(0L);
+                        wp.setStatus("DONE");
+                        wp.setMatched((int) realMatched);
+                        progress.setCompletedWindows(1);
+                    }
                 }
             } catch (Exception e) {
                 log.error("[Admin] async advanced screening failed", e);
@@ -326,7 +320,9 @@ public class AdminController {
      */
     @GetMapping("/stock-data-source-priority")
     public ResponseEntity<ApiResponse<?>> getStockDataSourcePriority(
-            @RequestParam(required = false) String symbol) {
+            @RequestParam(required = false) String symbol,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size) {
         if (symbol != null && !symbol.isBlank()) {
             List<StockDataSourcePriority> records = stockDataSourcePriorityService
                     .getPriorityRecords(symbol);
@@ -335,11 +331,19 @@ public class AdminController {
                             r.getSymbol(), r.getDataSource(), r.getLastSuccessTime()))
                     .toList()));
         }
-        return ResponseEntity.ok(ApiResponse.ok(
-                stockDataSourcePriorityService.getAllRecords().stream()
-                        .map(r -> new com.stock.invest.enums.dto.StockDataSourcePriorityDto(
-                                r.getSymbol(), r.getDataSource(), r.getLastSuccessTime()))
-                        .toList()));
+        int safePage = Math.max(0, page);
+        int safeSize = Math.min(Math.max(1, size), 500);
+        Page<StockDataSourcePriority> pageResult = stockDataSourcePriorityService
+                .getAllRecords(PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.ASC, "symbol")));
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("total", pageResult.getTotalElements());
+        data.put("page", safePage);
+        data.put("size", safeSize);
+        data.put("records", pageResult.getContent().stream()
+                .map(r -> new com.stock.invest.enums.dto.StockDataSourcePriorityDto(
+                        r.getSymbol(), r.getDataSource(), r.getLastSuccessTime()))
+                .toList());
+        return ResponseEntity.ok(ApiResponse.ok(data));
     }
 
     @GetMapping("/data-fill-progress")
@@ -380,7 +384,7 @@ public class AdminController {
             try {
                 tradeDate = LocalDate.parse(tradeDateStr.trim());
             } catch (Exception e) {
-                tradeDate = null;
+                throw new IllegalArgumentException("tradeDate must be yyyy-MM-dd");
             }
         }
 
@@ -452,32 +456,6 @@ public class AdminController {
         result.put("completed", completed);
         result.put("stopped", stopped);
         return ResponseEntity.ok(ApiResponse.ok(result));
-    }
-
-    /**
-     * POST /api/admin/run-screening 完整版筛选
-     */
-    @PostMapping("/run-screening")
-    public ResponseEntity<ApiResponse<?>> runScreening(
-            @RequestParam(value = "date", required = false) String date,
-            @RequestParam(value = "limit", defaultValue = "50") Integer limit,
-            @RequestParam(value = "windowDays", defaultValue = "2") Integer windowDays
-    ) {
-        LocalDate tradeDate = (date == null || date.trim().isEmpty())
-                ? ZonedDateTime.now(ZoneId.of("America/New_York")).toLocalDate()
-                : LocalDate.parse(date);
-        log.info("[Admin] runScreening: date={}, limit={}, windowDays={}", tradeDate, limit, windowDays);
-        try {
-            String batchId = screeningService.runScreening(tradeDate, windowDays, limit);
-            return ResponseEntity.ok(ApiResponse.ok(Map.of(
-                    "message", "Screening completed",
-                    "batchId", batchId != null ? batchId : ""
-            )));
-        } catch (Exception e) {
-            log.error("[Admin] runScreening failed", e);
-            return ResponseEntity.internalServerError()
-                    .body(ApiResponse.error("Screening failed, please check server logs", "ScreeningFailed"));
-        }
     }
 
     /**

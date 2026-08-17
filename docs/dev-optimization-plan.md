@@ -158,10 +158,10 @@ public class SchedulerConfig implements SchedulingConfigurer {
 ```yaml
 twelvedata:
   api:
-    api-key: dbad6e2929d54beca7083fbbf111b6be   # ← 明文
+    api-key: ${TWELVEDATA_API_KEY}   # ← 明文
 tiingo:
   api:
-    token: e8d9f9e86a9e5a6261e9cefa7caa55c2e1080394  # ← 明文
+    token: ${TIINGO_API_TOKEN}  # ← 明文
 ```
 
 **建议**：通过环境变量注入，而非硬编码：

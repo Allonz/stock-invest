@@ -5,9 +5,12 @@ import com.stock.invest.repository.StockDataSourcePriorityRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -26,9 +29,12 @@ public class StockDataSourcePriorityService {
     );
 
     private final StockDataSourcePriorityRepository repository;
+    private final TransactionTemplate transactionTemplate;
 
-    public StockDataSourcePriorityService(StockDataSourcePriorityRepository repository) {
+    public StockDataSourcePriorityService(StockDataSourcePriorityRepository repository,
+                                          PlatformTransactionManager transactionManager) {
         this.repository = repository;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
     /**
@@ -65,9 +71,9 @@ public class StockDataSourcePriorityService {
         return repository.findBySymbolOrderByLastSuccessTimeDesc(symbol);
     }
 
-    /** 查询所有记录（按 symbol 升序） */
-    public List<StockDataSourcePriority> getAllRecords() {
-        return repository.findAll(Sort.by(Sort.Direction.ASC, "symbol"));
+    /** 分页查询所有记录（按 symbol 升序） */
+    public Page<StockDataSourcePriority> getAllRecords(Pageable pageable) {
+        return repository.findAll(pageable);
     }
 
     /**
@@ -76,15 +82,17 @@ public class StockDataSourcePriorityService {
      * 原删除+插入非原子，并发调用互相覆盖或触发唯一约束冲突。
      * 并发兜底：(symbol, data_source) 唯一约束，插入冲突时捕获后重试一次按更新处理。</p>
      */
-    @Transactional
+    /**
+     * 更新数据源成功时间。每次 upsert 使用独立短事务；
+     * 并发插入冲突时事务先回滚，再在全新事务中重试一次，避免 rollback-only 提交失败。
+     */
     public void updatePriority(String symbol, String dataSource, LocalDateTime successTime) {
         try {
-            upsertOnce(symbol, dataSource, successTime);
+            transactionTemplate.executeWithoutResult(status -> upsertOnce(symbol, dataSource, successTime));
         } catch (org.springframework.dao.DataIntegrityViolationException e) {
-            // 并发插入冲突：另一线程已插入该 (symbol, data_source)，按更新处理
             log.debug("[DataSourcePriority] concurrent insert conflict, retry as update: symbol={}, dataSource={}",
                     symbol, dataSource);
-            upsertOnce(symbol, dataSource, successTime);
+            transactionTemplate.executeWithoutResult(status -> upsertOnce(symbol, dataSource, successTime));
         }
     }
 

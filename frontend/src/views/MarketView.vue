@@ -218,6 +218,13 @@ const {
   copySymbol,
   candleChartOption
 } = useCandleChart()
+// 暴露给测试与父组件使用
+defineExpose({
+  filteredMatches,
+  onSymbolClick,
+  selectedWindow,
+  selectedAlgo
+})
 
 // ============ 数据加载 ============
 /** 数据日期左右切换：按美东交易日历跳过周末/节假日，步长一个交易日 */

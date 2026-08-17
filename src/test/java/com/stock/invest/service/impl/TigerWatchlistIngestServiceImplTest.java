@@ -9,11 +9,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
 
 import java.math.BigDecimal;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("TigerWatchlistIngestServiceImpl — 请求校验")
@@ -22,11 +27,16 @@ class TigerWatchlistIngestServiceImplTest {
     @Mock
     private StockDailyBarRepository stockDailyBarRepository;
 
+    @Mock
+    private PlatformTransactionManager transactionManager;
+
     private TigerWatchlistIngestServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new TigerWatchlistIngestServiceImpl(stockDailyBarRepository);
+        lenient().when(transactionManager.getTransaction(any()))
+                .thenReturn(mock(TransactionStatus.class));
+        service = new TigerWatchlistIngestServiceImpl(stockDailyBarRepository, transactionManager);
     }
 
     @Test

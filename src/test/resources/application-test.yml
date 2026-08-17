@@ -21,3 +21,9 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+# 测试环境管理/MCP 鉴权 key（与生产环境不同）
+admin:
+  api-key: test-UNoob6qjyWCO7ueReKWDkOiicvr-MByw
+ingest:
+  api-key: ingest-test-QBtfAz9XCXhBf6fem7z_ZguyLqDNFdJj

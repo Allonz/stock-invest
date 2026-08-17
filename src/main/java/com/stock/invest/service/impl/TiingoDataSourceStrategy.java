@@ -7,7 +7,7 @@ import com.stock.invest.exception.StockDataException;
 import com.stock.invest.model.KLineData;
 import com.stock.invest.model.KLineIterator;
 import com.stock.invest.model.StockInfo;
-import com.stock.invest.service.StockScannerStrategy;
+import com.stock.invest.service.DataSourceStrategy;
 import com.stock.invest.util.PythonScriptExecutor;
 import com.tigerbrokers.stock.openapi.client.struct.enums.Market;
 import org.slf4j.Logger;
@@ -34,7 +34,7 @@ import java.util.Map;
  */
 @Component
 @Order(3)
-public class TiingoDataSourceStrategy implements StockScannerStrategy {
+public class TiingoDataSourceStrategy implements DataSourceStrategy {
 
     private static final Logger log = LoggerFactory.getLogger(TiingoDataSourceStrategy.class);
 
@@ -73,13 +73,7 @@ public class TiingoDataSourceStrategy implements StockScannerStrategy {
         return Map.of("TIINGO_API_KEY", token.trim());
     }
 
-    @Override
-    public String getDailyKLineData(String symbol) {
-        KLineData kLineData = getDailyKLineDataAsObject(symbol);
-        return kLineData == null ? "{}" : kLineData.toString();
-    }
-
-    @Override
+@Override
     public KLineData getDailyKLineDataAsObject(String symbol) {
         try {
             String result = pythonScriptExecutor.executeScriptWithEnvironment(
@@ -135,97 +129,7 @@ public class TiingoDataSourceStrategy implements StockScannerStrategy {
         }
     }
 
-    public StockInfo getStockInfo(String symbol) {
-        try {
-            KLineData data = getDailyKLineDataAsObject(symbol);
-            if (data == null || data.getItems() == null || data.getItems().isEmpty()) {
-                return null;
-            }
-            com.stock.invest.model.KLineIterator latest = data.getItems().get(0);
-            StockInfo info = new StockInfo();
-            info.setSymbol(symbol);
-            info.setCurrentPrice(latest.getClose());
-            info.setOpenPrice(latest.getOpen());
-            info.setVolume(latest.getVolume());
-            // 标准涨跌幅计算：(今日收盘 - 昨日收盘) / 昨日收盘 * 100
-            if (data.getItems().size() >= 2) {
-                com.stock.invest.model.KLineIterator prev = data.getItems().get(1);
-                java.math.BigDecimal prevClose = prev.getClose();
-                java.math.BigDecimal change = latest.getClose().subtract(prevClose);
-                info.setChange(change);
-                if (prevClose.compareTo(java.math.BigDecimal.ZERO) != 0) {
-                    // R2 P3-4：精度统一 —— setScale(4, HALF_UP)，与 DB DECIMAL(12,4) 对齐
-                    info.setChangePercent(change
-                            .divide(prevClose, 8, java.math.RoundingMode.HALF_UP)
-                            .multiply(java.math.BigDecimal.valueOf(100))
-                            .setScale(4, java.math.RoundingMode.HALF_UP));
-                }
-            } else {
-                info.setChange(java.math.BigDecimal.ZERO);
-                info.setChangePercent(java.math.BigDecimal.ZERO);
-            }
-            return info;
-        } catch (Exception e) {
-            log.warn("tiingo getStockInfo failed for {}: {}", symbol, e.getMessage());
-            return null;
-        }
-    }
-
-    @Override
-    public List<String> getStockList() {
-        // 低价股扫描（原 IEX）已确认用不到 —— 空实现（2026-08-14）
-        return Collections.emptyList();
-    }
-
-    @Override
-    public KLineData getDailyKLine(String symbol) {
-        return getDailyKLineDataAsObject(symbol);
-    }
-
-    public List<KLineData> getBatchKline(List<String> symbols, String period, int count) {
-        try {
-            String result = pythonScriptExecutor.executeScriptWithEnvironment(
-                    apiKeyEnv(), getScriptName(), "get_batch_kline",
-                    String.join(",", symbols), period, String.valueOf(count));
-            if (result != null && result.contains("\"error\"")) {
-                log.warn("[Tiingo] getBatchKline error: {}", result.substring(0, Math.min(result.length(), 500)));
-                return Collections.emptyList();
-            }
-            List<KLineData> out = new ArrayList<>();
-            JsonNode arr = objectMapper.readTree(result);
-            if (arr.isArray()) {
-                for (JsonNode node : arr) {
-                    KLineData data = objectMapper.treeToValue(node, KLineData.class);
-                    if (data != null && data.getItems() != null && !data.getItems().isEmpty()) {
-                        out.add(data);
-                    }
-                }
-            }
-            return out;
-        } catch (Exception e) {
-            log.warn("tiingo getBatchKline failed: {}", e.getMessage());
-            return Collections.emptyList();
-        }
-    }
-
-    @Override
-    public List<String> scanStocks(Market market, int limit, Double minPrice, Double maxPrice) {
-        // 低价股扫描（原 IEX）已确认用不到 —— 空实现（2026-08-14）
-        return Collections.emptyList();
-    }
-
-    @Override
-    public List<String> scanStocks(String market, int limit, String minPrice, String maxPrice) {
-        // 低价股扫描（原 IEX）已确认用不到 —— 空实现（2026-08-14）
-        return Collections.emptyList();
-    }
-
-    @Override
-    public Map<String, Object> scanLowPriceStocksWithVolumePattern(int limit) {
-        return Collections.emptyMap();
-    }
-
-    /**
+/**
      * 解析 Python 脚本输出的 KLineData JSON（{"symbol": ..., "items": [...]}）。
      */
     private KLineData parseKLineData(String symbol, String json) throws Exception {

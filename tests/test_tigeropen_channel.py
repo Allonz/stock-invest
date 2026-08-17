@@ -20,7 +20,7 @@ def _build_bars_df(symbol: str = "AAPL", n: int = 3):
     for i in range(n):
         data.append({
             "symbol": symbol,
-            "time": 1000000000 + i * 86400,
+            "time": 1000000000000 + i * 86400000,
             "open": 150.0 + i,
             "high": 152.0 + i,
             "low": 149.0 + i,

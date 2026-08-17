@@ -62,8 +62,8 @@ export function fetchNotificationByDate(tradeDate: string) {
 }
 
 /** 获取筛选历史批次列表 */
-export function fetchScreeningHistory() {
-  return request.get<ApiResponse<ScreeningBatch[]>>('/api/screening/history')
+export function fetchScreeningHistory(limit = 50) {
+  return request.get<ApiResponse<ScreeningBatch[]>>('/api/screening/history', { params: { limit } })
 }
 
 /** 获取指定批次的详情 */
@@ -86,8 +86,8 @@ export interface NotificationBatchDetail {
 }
 
 /** 获取通知历史列表 */
-export function fetchNotificationHistory() {
-  return request.get<ApiResponse<NotificationBatch[]>>('/api/notification/history')
+export function fetchNotificationHistory(limit = 50) {
+  return request.get<ApiResponse<NotificationBatch[]>>('/api/notification/history', { params: { limit } })
 }
 
 /** 获取通知批次详情 */

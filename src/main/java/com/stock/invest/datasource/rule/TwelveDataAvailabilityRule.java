@@ -29,7 +29,7 @@ public class TwelveDataAvailabilityRule implements AvailabilityRule {
 
     @Override
     public boolean check() {
-        return true;
+        return !properties.resolvedKeys().isEmpty();
     }
 
     @Override
@@ -38,7 +38,7 @@ public class TwelveDataAvailabilityRule implements AvailabilityRule {
         if (hasKey) {
             return "已配置 API Key（" + properties.resolvedKeys().size() + " 个密钥）";
         }
-        return "未配置 API Key，降级使用（速率受限）";
+        return "缺失 TwelveData API Key";
     }
 
     @Override

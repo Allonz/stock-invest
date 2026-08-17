@@ -89,4 +89,30 @@ class TigerApiConfigTest {
         assertFalse(hasOld, "prepareConfigFiles/prepareConfigDirectory should be removed");
         assertTrue(hasNew, "resolveCredentials should exist as replacement");
     }
+
+    @Test
+    @DisplayName("credentialsFromEnv: 环境变量优先路径清理私钥并保留 account/license/env")
+    void credentialsFromEnv_cleansAndNormalizes() {
+        TigerApiConfig.TigerCredentials creds = TigerApiConfig.credentialsFromEnv(
+                " 20155300 ", "-----BEGIN PRIVATE KEY-----\nABC DEF\n-----END PRIVATE KEY-----",
+                " 910964 ", " TBNZ ", " PROD ");
+
+        assertEquals("20155300", creds.tigerId());
+        assertEquals("ABCDEF", creds.privateKey());
+        assertEquals("910964", creds.account());
+        assertEquals("TBNZ", creds.license());
+        assertEquals("PROD", creds.env());
+        assertTrue(creds.isValid());
+    }
+
+    @Test
+    @DisplayName("credentialsFromEnv: 空 env 回退 PROD，空 account 使 isValid=false")
+    void credentialsFromEnv_defaults() {
+        TigerApiConfig.TigerCredentials creds = TigerApiConfig.credentialsFromEnv(
+                "20155300", "ABCDEF", null, null, "");
+
+        assertEquals("PROD", creds.env());
+        assertEquals("", creds.account());
+        assertFalse(creds.isValid(), "account is required for valid Tiger credentials");
+    }
 }

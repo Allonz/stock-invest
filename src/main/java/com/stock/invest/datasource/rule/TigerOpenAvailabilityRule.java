@@ -1,17 +1,21 @@
 package com.stock.invest.datasource.rule;
 
+import com.stock.invest.config.TigerApiConfig;
 import com.stock.invest.datasource.AvailabilityRule;
 import com.stock.invest.datasource.DataSourceCapability;
 import com.stock.invest.datasource.SourceRequirement;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
-import java.io.InputStream;
-import java.util.Properties;
 import java.util.Set;
 
 @Component
 public class TigerOpenAvailabilityRule implements AvailabilityRule {
+
+    private final TigerApiConfig tigerApiConfig;
+
+    public TigerOpenAvailabilityRule(TigerApiConfig tigerApiConfig) {
+        this.tigerApiConfig = tigerApiConfig;
+    }
 
     @Override
     public String getSourceName() {
@@ -25,37 +29,19 @@ public class TigerOpenAvailabilityRule implements AvailabilityRule {
 
     @Override
     public boolean check() {
-        return checkTigerConfig();
+        return tigerApiConfig.hasCredentials();
     }
 
     @Override
     public String getDetail() {
-        if (checkTigerConfig()) {
-            return "已配置 tiger_openapi_config.properties（tiger_id + private_key + account）";
+        if (tigerApiConfig.hasCredentials()) {
+            return "已配置 Tiger 凭证（环境变量或本地 properties）";
         }
-        return "缺失 tiger_openapi_config.properties 或凭证不完整";
+        return "缺失 Tiger 凭证（TIGER_OPENAPI_* 环境变量或 tiger_openapi_config.properties）";
     }
 
     @Override
     public Set<DataSourceCapability> capabilities() {
         return Set.of(DataSourceCapability.STOCK_QUOTE, DataSourceCapability.TRADING_CALENDAR);
-    }
-
-    private boolean checkTigerConfig() {
-        try {
-            ClassPathResource r = new ClassPathResource("tiger_openapi_config.properties");
-            if (!r.exists()) return false;
-            Properties p = new Properties();
-            try (InputStream is = r.getInputStream()) { p.load(is); }
-            return nonEmpty(p.getProperty("tiger_id", ""))
-                && nonEmpty(p.getProperty("private_key_pk8", ""))
-                && nonEmpty(p.getProperty("account", ""));
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    private static boolean nonEmpty(String s) {
-        return s != null && !s.trim().isEmpty();
     }
 }

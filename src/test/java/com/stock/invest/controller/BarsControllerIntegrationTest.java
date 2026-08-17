@@ -195,7 +195,7 @@ class BarsControllerIntegrationTest {
         List<String> symbols = repository.findAllSymbols();
         for (String sym : symbols) {
             List<StockDailyBar> bars = repository
-                    .findTop7BySymbolOrderByTradeDateDesc(sym);
+                    .findBySymbolOrderByTradeDateDesc(sym, org.springframework.data.domain.PageRequest.of(0, 7));
             for (StockDailyBar bar : bars) {
                 if (bar.getChangePercent() != null) {
                     return sym;
@@ -209,7 +209,7 @@ class BarsControllerIntegrationTest {
         List<String> symbols = repository.findAllSymbols();
         for (String sym : symbols) {
             List<StockDailyBar> bars = repository
-                    .findTop7BySymbolOrderByTradeDateDesc(sym);
+                    .findBySymbolOrderByTradeDateDesc(sym, org.springframework.data.domain.PageRequest.of(0, 7));
             for (StockDailyBar bar : bars) {
                 if (bar.getAfterHours() == null) {
                     return sym;

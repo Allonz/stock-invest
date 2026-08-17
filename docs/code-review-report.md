@@ -49,7 +49,7 @@
 - **建议**：至少为 `/api/admin/**` 与 MCP 管理工具引入 API Key（`X-ADMIN-API-KEY`）或 Spring Security 基础鉴权；MCP ingest 的 `keyRequired` 默认应为 true。
 
 #### P1-2 硬编码密钥与默认口令（main 遗留，本分支沿用）
-- **位置**：`src/main/resources/application.yml`：`twelvedata.api.api-key`（明文）、`tiingo.api.token`（明文）、`spring.datasource.password: ${MYSQL_PASSWORD:allon23}`（默认口令）
+- **位置**：`src/main/resources/application.yml`：`twelvedata.api.api-key`（明文）、`tiingo.api.token`（明文）、`spring.datasource.password: ${MYSQL_PASSWORD:***}`（默认口令）
 - **问题**：付费 API 密钥与 DB 口令随仓库分发；本地库（127.0.0.1:3307）实测以该默认口令可直连。
 - **根因**：配置默认值落库。
 - **建议**：密钥改为无默认值环境变量（缺失即启动失败），DB 口令默认值移除；与本分支"密钥从命令行参数透传"的整改方向（P1-9 相关提交）保持一致。

@@ -1,5 +1,6 @@
 package com.stock.invest.datasource.rule;
 
+import com.stock.invest.config.TigerApiConfig;
 import com.stock.invest.config.TiingoProperties;
 import com.stock.invest.config.TwelveDataProperties;
 import com.stock.invest.datasource.AvailabilityRule;
@@ -22,12 +23,13 @@ class AvailabilityRuleCapabilitiesTest {
 
     @Mock private TwelveDataProperties twelveDataProps;
     @Mock private TiingoProperties tiingoProps;
+    @Mock private TigerApiConfig tigerApiConfig;
 
     // UT-10 已删除：Tiger Java 数据源移除（2026-08-14）
 
     @Test @DisplayName("UT-11: TigerOpen supports STOCK_QUOTE + TRADING_CALENDAR")
     void tigerOpenCapabilities() {
-        AvailabilityRule rule = new TigerOpenAvailabilityRule();
+        AvailabilityRule rule = new TigerOpenAvailabilityRule(tigerApiConfig);
         assertEquals(Set.of(DataSourceCapability.STOCK_QUOTE, DataSourceCapability.TRADING_CALENDAR),
                      rule.capabilities());
     }

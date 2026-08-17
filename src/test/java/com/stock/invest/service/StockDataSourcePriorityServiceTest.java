@@ -2,14 +2,18 @@ package com.stock.invest.service;
 
 import com.stock.invest.entity.StockDataSourcePriority;
 import com.stock.invest.repository.StockDataSourcePriorityRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,8 +29,17 @@ class StockDataSourcePriorityServiceTest {
     @Mock
     private StockDataSourcePriorityRepository repository;
 
-    @InjectMocks
+    @Mock
+    private PlatformTransactionManager transactionManager;
+
     private StockDataSourcePriorityService service;
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(transactionManager.getTransaction(any()))
+                .thenReturn(mock(TransactionStatus.class));
+        service = new StockDataSourcePriorityService(repository, transactionManager);
+    }
 
     @Test
     @DisplayName("getPriorityList: no history returns default order")
@@ -111,14 +124,15 @@ class StockDataSourcePriorityServiceTest {
     }
 
     @Test
-    @DisplayName("getAllRecords: delegates to repository with sort")
+    @DisplayName("getAllRecords: delegates to repository with pagination")
     void test_getAllRecords() {
         StockDataSourcePriority rec = StockDataSourcePriority.of("AAPL", "yfinance", LocalDateTime.now());
-        when(repository.findAll(any(Sort.class))).thenReturn(List.of(rec));
+        Page<StockDataSourcePriority> page = new PageImpl<>(List.of(rec));
+        when(repository.findAll(any(Pageable.class))).thenReturn(page);
 
-        var result = service.getAllRecords();
+        var result = service.getAllRecords(org.springframework.data.domain.PageRequest.of(0, 100));
 
-        assertEquals(1, result.size());
-        verify(repository).findAll(Sort.by(Sort.Direction.ASC, "symbol"));
+        assertEquals(1, result.getTotalElements());
+        verify(repository).findAll(any(Pageable.class));
     }
 }

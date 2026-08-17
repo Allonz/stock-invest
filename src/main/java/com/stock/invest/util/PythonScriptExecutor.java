@@ -23,6 +23,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
@@ -65,6 +66,8 @@ public class PythonScriptExecutor {
      * 排空任务排队，调用线程 30s 超时强杀进程后排队 drain 可能未开始 → 空输出丢数据。</p>
      */
     private static final int MAX_CONCURRENT_SCRIPTS = 4;
+    /** 并发脚本信号量：与 drain 池容量（2 路输出/脚本）严格匹配，防止超发导致 drain 排队超时 */
+    private static final Semaphore SCRIPT_SEMAPHORE = new Semaphore(MAX_CONCURRENT_SCRIPTS);
     private static final ExecutorService DRAIN_POOL = Executors.newFixedThreadPool(
             2 * MAX_CONCURRENT_SCRIPTS, new ThreadFactory() {
         private int seq;
@@ -98,7 +101,25 @@ public class PythonScriptExecutor {
             throw new IOException("Python脚本资源不存在: python/" + scriptName);
         }
 
-        Path tempFile = Files.createTempFile("py_script_", ".py");
+        boolean acquired = false;
+        try {
+            acquired = SCRIPT_SEMAPHORE.tryAcquire(timeoutSeconds, TimeUnit.SECONDS);
+            if (!acquired) {
+                log.error("Python脚本执行并发已满（上限 {}），拒绝执行: {}", MAX_CONCURRENT_SCRIPTS, scriptName);
+                throw new IOException("Python脚本执行并发已满，请稍后重试");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("等待Python执行槽位时被中断", e);
+        }
+
+        Path tempFile;
+        try {
+            tempFile = Files.createTempFile("py_script_", ".py");
+        } catch (IOException e) {
+            SCRIPT_SEMAPHORE.release();
+            throw e;
+        }
         try {
             Files.copy(resource.getInputStream(), tempFile, StandardCopyOption.REPLACE_EXISTING);
             File scriptFile = tempFile.toFile();
@@ -178,6 +199,8 @@ public class PythonScriptExecutor {
                 Files.deleteIfExists(tempFile);
             } catch (IOException ignored) {
                 // cleanup best-effort
+            } finally {
+                SCRIPT_SEMAPHORE.release();
             }
         }
     }

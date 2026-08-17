@@ -63,8 +63,8 @@ public class TradingCalendarController {
                 queryDate = LocalDate.now(NY_ZONE);
             }
 
-            String market = resolveMarket(exchange);
-            Boolean isOpen = dbService.isTradingDay(market, queryDate);
+            String normalizedMarket = resolveMarket(exchange);
+            Boolean isOpen = dbService.isTradingDay(normalizedMarket, queryDate);
 
             // 数据库和 fallback 链都不可用 → 默认 true（宁可重复不遗漏）
             if (isOpen == null) {
@@ -78,7 +78,7 @@ public class TradingCalendarController {
             data.put("exchange", exchange);
             data.put("timezone", "America/New_York");
             data.put("source", "dbService");
-            data.put("market", market);
+            data.put("market", normalizedMarket);
 
             return ResponseEntity.ok(ApiResponse.ok(data));
 
@@ -88,7 +88,7 @@ public class TradingCalendarController {
         } catch (Exception e) {
             log.error("[TradingCalendarController] is-open failed", e);
             return ResponseEntity.internalServerError()
-                    .body(ApiResponse.error("Internal error: " + e.getMessage()));
+                    .body(ApiResponse.error("Internal error", "INTERNAL_ERROR"));
         }
     }
 
@@ -100,16 +100,17 @@ public class TradingCalendarController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> prevOpen(
             @RequestParam(value = "date", required = false) String dateParam,
             @RequestParam(value = "market", required = false, defaultValue = DEFAULT_MARKET) String market) {
+        String normalizedMarket = normalizeMarket(market);
         try {
             LocalDate queryDate = (dateParam != null && !dateParam.trim().isEmpty())
                     ? LocalDate.parse(dateParam.trim(), DATE_FMT)
                     : LocalDate.now(NY_ZONE);
-            Optional<LocalDate> prev = dbService.findPreviousTradingDay(market, queryDate, 14);
+            Optional<LocalDate> prev = dbService.findPreviousTradingDay(normalizedMarket, queryDate, 14);
 
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("date", queryDate.format(DATE_FMT));
             data.put("prevOpenDate", prev.map(d -> d.format(DATE_FMT)).orElse(null));
-            data.put("market", market);
+            data.put("market", normalizedMarket);
             data.put("timezone", "America/New_York");
             return ResponseEntity.ok(ApiResponse.ok(data));
         } catch (DateTimeParseException e) {
@@ -118,7 +119,7 @@ public class TradingCalendarController {
         } catch (Exception e) {
             log.error("[TradingCalendarController] prev-open failed", e);
             return ResponseEntity.internalServerError()
-                    .body(ApiResponse.error("Internal error: " + e.getMessage()));
+                    .body(ApiResponse.error("Internal error", "INTERNAL_ERROR"));
         }
     }
 
@@ -130,16 +131,17 @@ public class TradingCalendarController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> nextOpen(
             @RequestParam(value = "date", required = false) String dateParam,
             @RequestParam(value = "market", required = false, defaultValue = DEFAULT_MARKET) String market) {
+        String normalizedMarket = normalizeMarket(market);
         try {
             LocalDate queryDate = (dateParam != null && !dateParam.trim().isEmpty())
                     ? LocalDate.parse(dateParam.trim(), DATE_FMT)
                     : LocalDate.now(NY_ZONE);
-            Optional<LocalDate> next = dbService.findNextTradingDay(market, queryDate, 14);
+            Optional<LocalDate> next = dbService.findNextTradingDay(normalizedMarket, queryDate, 14);
 
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("date", queryDate.format(DATE_FMT));
             data.put("nextOpenDate", next.map(d -> d.format(DATE_FMT)).orElse(null));
-            data.put("market", market);
+            data.put("market", normalizedMarket);
             data.put("timezone", "America/New_York");
             return ResponseEntity.ok(ApiResponse.ok(data));
         } catch (DateTimeParseException e) {
@@ -148,7 +150,7 @@ public class TradingCalendarController {
         } catch (Exception e) {
             log.error("[TradingCalendarController] next-open failed", e);
             return ResponseEntity.internalServerError()
-                    .body(ApiResponse.error("Internal error: " + e.getMessage()));
+                    .body(ApiResponse.error("Internal error", "INTERNAL_ERROR"));
         }
     }
 
@@ -161,7 +163,7 @@ public class TradingCalendarController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> fetchFullYear(
             @RequestParam(value = "year", required = false) Integer year,
             @RequestParam(value = "market", required = false, defaultValue = DEFAULT_MARKET) String market) {
-
+        String normalizedMarket = normalizeMarket(market);
         try {
             int currentYear = Year.now(NY_ZONE).getValue();
             int targetYear = (year != null) ? year : currentYear;
@@ -175,7 +177,7 @@ public class TradingCalendarController {
 
             // R2 P2-8：冷却时间戳改为 putIfAbsent 原子抢占（并发互斥），
             // 且只在执行成功后覆盖为完成时刻 —— 失败不写冷却，可立即重试
-            String cooldownKey = market + ":" + targetYear;
+            String cooldownKey = normalizedMarket + ":" + targetYear;
             long now = System.currentTimeMillis();
             Long lastSync = lastFullYearSyncAt.get(cooldownKey);
             if (lastSync != null && now - lastSync < FULL_YEAR_COOLDOWN_MINUTES * 60_000L) {
@@ -195,25 +197,25 @@ public class TradingCalendarController {
 
             log.info("[TradingCalendarController] fetchFullYear: market={}, year={}", market, targetYear);
 
-            int fetched = dbService.fetchAndStoreFullYear(market, targetYear);
+            int fetched = dbService.fetchAndStoreFullYear(normalizedMarket, targetYear);
 
             // R2 P2-8：成功后冷却时间戳以完成时刻为准（失败路径不写冷却）
             lastFullYearSyncAt.put(cooldownKey, System.currentTimeMillis());
 
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("fetched", fetched);
-            data.put("market", market);
+            data.put("market", normalizedMarket);
             data.put("year", targetYear);
 
             return ResponseEntity.ok(ApiResponse.ok(data));
 
         } catch (Exception e) {
             // R2 P2-8：失败不写冷却（抢占的占位时间戳一并移除），可立即重试
-            String cooldownKey = market + ":" + (year != null ? year : Year.now(NY_ZONE).getValue());
+            String cooldownKey = normalizedMarket + ":" + (year != null ? year : Year.now(NY_ZONE).getValue());
             lastFullYearSyncAt.remove(cooldownKey);
             log.error("[TradingCalendarController] fetchFullYear failed", e);
             return ResponseEntity.internalServerError()
-                    .body(ApiResponse.error("Fetch failed: " + e.getMessage()));
+                    .body(ApiResponse.error("Internal error", "INTERNAL_ERROR"));
         }
     }
 
@@ -224,7 +226,7 @@ public class TradingCalendarController {
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> list(
             @RequestParam(value = "year", required = false) Integer year,
             @RequestParam(value = "market", required = false, defaultValue = DEFAULT_MARKET) String market) {
-
+        String normalizedMarket = normalizeMarket(market);
         try {
             int targetYear = (year != null) ? year : Year.now(NY_ZONE).getValue();
             List<TradingCalendarEntity> entities = dbService.getYearCalendar(market, targetYear);
@@ -248,6 +250,13 @@ public class TradingCalendarController {
             return ResponseEntity.internalServerError()
                     .body(ApiResponse.error("List failed: " + e.getMessage()));
         }
+    }
+
+    private static String normalizeMarket(String market) {
+        if (market == null || market.isBlank()) {
+            return DEFAULT_MARKET;
+        }
+        return market.trim().toUpperCase(Locale.ROOT);
     }
 
     private static String resolveMarket(String exchange) {

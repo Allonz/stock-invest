@@ -58,10 +58,14 @@ public class NotificationController {
         try {
             Map<String, Object> result = screeningService.getNotificationGroupedByDate(tradeDate, windows);
             return ResponseEntity.ok(ApiResponse.ok(result));
+        } catch (IllegalArgumentException e) {
+            log.warn("getNotificationByDate invalid argument tradeDate={}: {}", tradeDate, e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage(), "INVALID_DATE"));
         } catch (Exception e) {
             log.error("getNotificationByDate failed tradeDate={}", tradeDate, e);
             return ResponseEntity.internalServerError()
-                    .body(ApiResponse.error("Failed to retrieve notification data for " + tradeDate));
+                    .body(ApiResponse.error("Failed to retrieve notification data", "INTERNAL_ERROR"));
         }
     }
 
@@ -69,9 +73,10 @@ public class NotificationController {
      * GET /api/notification/history — 历史通知批次列表
      */
     @GetMapping("/history")
-    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> history() {
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> history(
+            @RequestParam(defaultValue = "50") int limit) {
         try {
-            List<Map<String, Object>> history = screeningService.getScreeningHistory();
+            List<Map<String, Object>> history = screeningService.getScreeningHistory(limit);
             return ResponseEntity.ok(ApiResponse.ok(history));
         } catch (Exception e) {
             log.error("notification history failed", e);

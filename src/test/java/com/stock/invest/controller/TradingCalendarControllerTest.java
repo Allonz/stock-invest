@@ -26,8 +26,10 @@ import com.stock.invest.service.TradingCalendarDbService;
  * ET-12 ~ ET-15: TradingCalendarController 端点测试
  * Controller 仅委托 TradingCalendarDbService。
  */
-@WebMvcTest(TradingCalendarController.class)
+@WebMvcTest(value = TradingCalendarController.class, properties = "admin.api-key=test-admin-key")
 class TradingCalendarControllerTest {
+
+    private static final String ADMIN_API_KEY = "test-admin-key";
 
     @Autowired
     private MockMvc mockMvc;
@@ -82,19 +84,26 @@ class TradingCalendarControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+
+    @Test @DisplayName("fetch-full-year 无 X-Admin-API-Key 返回 401")
+    void fetchFullYearWithoutKey_returns401() throws Exception {
+        mockMvc.perform(post("/api/v1/trading-calendar/fetch-full-year").param("year", "2026"))
+                .andExpect(status().isUnauthorized());
+    }
+
     // ---- R2 P2-8: fetch-full-year 冷却只写成功、失败不冷却 ----
 
     @Test @DisplayName("R2 P2-8: 成功 → 冷却写入，窗口内二次触发 429 SYNC_IN_PROGRESS")
     void fetchFullYear_successThenCooldown() throws Exception {
         when(tradingCalendarDbService.fetchAndStoreFullYear(eq("US"), eq(2026))).thenReturn(250);
 
-        mockMvc.perform(post("/api/v1/trading-calendar/fetch-full-year")
+        mockMvc.perform(post("/api/v1/trading-calendar/fetch-full-year").header("X-Admin-API-Key", ADMIN_API_KEY)
                         .param("year", "2026"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.fetched").value(250));
 
         // 冷却窗口（30 分钟）内二次触发 → 429
-        mockMvc.perform(post("/api/v1/trading-calendar/fetch-full-year")
+        mockMvc.perform(post("/api/v1/trading-calendar/fetch-full-year").header("X-Admin-API-Key", ADMIN_API_KEY)
                         .param("year", "2026"))
                 .andExpect(status().isTooManyRequests())
                 .andExpect(jsonPath("$.success").value(false))
@@ -108,13 +117,13 @@ class TradingCalendarControllerTest {
                 .thenThrow(new RuntimeException("external api down"))
                 .thenReturn(250);
 
-        mockMvc.perform(post("/api/v1/trading-calendar/fetch-full-year")
+        mockMvc.perform(post("/api/v1/trading-calendar/fetch-full-year").header("X-Admin-API-Key", ADMIN_API_KEY)
                         .param("year", "2025"))
                 .andExpect(status().is5xxServerError())
                 .andExpect(jsonPath("$.success").value(false));
 
         // 失败不冷却 → 立即重试成功（无需等 30 分钟）
-        mockMvc.perform(post("/api/v1/trading-calendar/fetch-full-year")
+        mockMvc.perform(post("/api/v1/trading-calendar/fetch-full-year").header("X-Admin-API-Key", ADMIN_API_KEY)
                         .param("year", "2025"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.fetched").value(250));
@@ -131,13 +140,13 @@ class TradingCalendarControllerTest {
         try {
             java.util.concurrent.Future<Integer> f1 = pool.submit(() -> {
                 start.await(5, java.util.concurrent.TimeUnit.SECONDS);
-                return mockMvc.perform(post("/api/v1/trading-calendar/fetch-full-year")
+                return mockMvc.perform(post("/api/v1/trading-calendar/fetch-full-year").header("X-Admin-API-Key", ADMIN_API_KEY)
                                 .param("year", "2027"))
                         .andReturn().getResponse().getStatus();
             });
             java.util.concurrent.Future<Integer> f2 = pool.submit(() -> {
                 start.await(5, java.util.concurrent.TimeUnit.SECONDS);
-                return mockMvc.perform(post("/api/v1/trading-calendar/fetch-full-year")
+                return mockMvc.perform(post("/api/v1/trading-calendar/fetch-full-year").header("X-Admin-API-Key", ADMIN_API_KEY)
                                 .param("year", "2027"))
                         .andReturn().getResponse().getStatus();
             });

@@ -326,6 +326,15 @@ const {
   copySymbol,
   candleChartOption
 } = useCandleChart()
+// 暴露给测试与父组件使用
+defineExpose({
+  showCandleChart,
+  candleLoading,
+  candleData,
+  selectedSymbol,
+  onSymbolClick,
+  candleChartOption
+})
 
 // ===================== Tab 切换 =====================
 function switchTab(tab: 'screening' | 'notification') {

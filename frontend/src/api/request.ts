@@ -11,6 +11,12 @@ const request: AxiosInstance = axios.create({
   }
 })
 
+// 管理接口鉴权：为所有请求附加 X-Admin-API-Key（MCP 端点不经过 axios，不受影响）
+const adminApiKey = import.meta.env.VITE_ADMIN_API_KEY as string | undefined
+if (adminApiKey) {
+  request.defaults.headers.common['X-Admin-API-Key'] = adminApiKey
+}
+
 // 通用 API 响应格式
 export interface ApiResponse<T = any> {
   success: boolean

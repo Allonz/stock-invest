@@ -14,6 +14,7 @@ import org.springframework.core.task.TaskRejectedException;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.time.LocalDate;
 import java.util.concurrent.Executor;
@@ -28,12 +29,33 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * P1-7/P1-8：AdminController 管理接口参数生效 + scanExecutor AbortPolicy + 409 并发拒绝。
  */
-@WebMvcTest(AdminController.class)
+@WebMvcTest(value = AdminController.class, properties = "admin.api-key=test-admin-key")
 @DisplayName("AdminController — 管理接口")
 class AdminControllerTest {
 
+    private static final String ADMIN_API_KEY = "test-admin-key";
+
     @Autowired
     private MockMvc mockMvc;
+
+    private static MockHttpServletRequestBuilder adminPost(String urlTemplate, Object... uriVars) {
+        return post(urlTemplate, uriVars).header("X-Admin-API-Key", ADMIN_API_KEY);
+    }
+
+    @Test
+    @DisplayName("缺少 X-Admin-API-Key 返回 401")
+    void adminEndpoint_missingKey_returns401() throws Exception {
+        mockMvc.perform(post("/api/admin/trigger-screening-async"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("错误 X-Admin-API-Key 返回 401")
+    void adminEndpoint_wrongKey_returns401() throws Exception {
+        mockMvc.perform(post("/api/admin/trigger-screening-async")
+                        .header("X-Admin-API-Key", "wrong-key"))
+                .andExpect(status().isUnauthorized());
+    }
 
     @MockitoBean
     private ScreeningService screeningService;
@@ -59,64 +81,14 @@ class AdminControllerTest {
 
     // ---- P1-7: windowDays/limit 透传 ----
 
-    @Test
-    @DisplayName("P1-7: trigger-screening 透传 date/windowDays/limit 给 runScreening")
-    void triggerScreening_passesParams() throws Exception {
-        mockMvc.perform(post("/api/admin/trigger-screening")
-                        .param("date", "2026-05-18")
-                        .param("limit", "3")
-                        .param("windowDays", "5")
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
-
-        verify(screeningService).runScreening(LocalDate.of(2026, 5, 18), 5, 3);
-    }
-
-    @Test
-    @DisplayName("P1-7: windowDays=1 原样透传（回退全窗口是 Service 侧约定），limit 缺省为 null")
-    void triggerScreening_invalidWindowPassedThrough() throws Exception {
-        mockMvc.perform(post("/api/admin/trigger-screening")
-                        .param("date", "2026-05-18")
-                        .param("windowDays", "1")
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
-
-        verify(screeningService).runScreening(LocalDate.of(2026, 5, 18), 1, null);
-    }
-
-    @Test
-    @DisplayName("R2 P1-3: 无参调用 → limit/windowDays 均为 null（全窗口全量，与 async 语义一致）")
-    void triggerScreening_noParamsDefaultsToNull() throws Exception {
-        mockMvc.perform(post("/api/admin/trigger-screening")
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
-
-        verify(screeningService).runScreening(any(LocalDate.class), isNull(), isNull());
-    }
-
-    @Test
-    @DisplayName("R2 P1-3: 只传 windowDays=4 → limit 不绑定默认值（null）")
-    void triggerScreening_explicitWindowDaysOnly() throws Exception {
-        mockMvc.perform(post("/api/admin/trigger-screening")
-                        .param("date", "2026-05-18")
-                        .param("windowDays", "4")
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
-
-        verify(screeningService).runScreening(LocalDate.of(2026, 5, 18), 4, null);
-    }
-
-    // ---- P1-8: 409 并发拒绝 ----
+// ---- P1-8: 409 并发拒绝 ----
 
     @Test
     @DisplayName("P1-8: 补缺已在运行时 trigger-data-fill 返回 409")
     void triggerDataFill_busyReturns409() throws Exception {
         when(dataGapFillerService.isRunning()).thenReturn(true);
 
-        mockMvc.perform(post("/api/admin/trigger-data-fill")
+        mockMvc.perform(adminPost("/api/admin/trigger-data-fill")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.success").value(false))
@@ -130,7 +102,7 @@ class AdminControllerTest {
     void triggerRetryTasks_busyReturns409() throws Exception {
         when(dataGapFillerService.isRunning()).thenReturn(true);
 
-        mockMvc.perform(post("/api/admin/trigger-retry-tasks")
+        mockMvc.perform(adminPost("/api/admin/trigger-retry-tasks")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.success").value(false));
@@ -147,7 +119,7 @@ class AdminControllerTest {
         doThrow(new TaskRejectedException("queue full"))
                 .when(scanExecutor).execute(any(Runnable.class));
 
-        mockMvc.perform(post("/api/admin/trigger-screening-async")
+        mockMvc.perform(adminPost("/api/admin/trigger-screening-async")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.success").value(false))
@@ -166,7 +138,7 @@ class AdminControllerTest {
         doThrow(new TaskRejectedException("queue full"))
                 .when(scanExecutor).execute(any(Runnable.class));
 
-        mockMvc.perform(post("/api/admin/trigger-data-fill")
+        mockMvc.perform(adminPost("/api/admin/trigger-data-fill")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.success").value(false))
@@ -184,7 +156,7 @@ class AdminControllerTest {
         doThrow(new TaskRejectedException("queue full"))
                 .when(scanExecutor).execute(any(Runnable.class));
 
-        mockMvc.perform(post("/api/admin/run-screening-async")
+        mockMvc.perform(adminPost("/api/admin/run-screening-async")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}")
                         .accept(MediaType.APPLICATION_JSON))
@@ -202,7 +174,7 @@ class AdminControllerTest {
         doThrow(new TaskRejectedException("queue full"))
                 .when(scanExecutor).execute(any(Runnable.class));
 
-        mockMvc.perform(post("/api/admin/trigger-retry-tasks")
+        mockMvc.perform(adminPost("/api/admin/trigger-retry-tasks")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.success").value(false))
@@ -223,7 +195,7 @@ class AdminControllerTest {
         DataFillProgressService.FillProgress progress = new DataFillProgressService.FillProgress();
         when(dataFillProgressService.getProgress("fill-001")).thenReturn(progress);
 
-        mockMvc.perform(post("/api/admin/trigger-data-fill")
+        mockMvc.perform(adminPost("/api/admin/trigger-data-fill")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.taskId").value("fill-001"));
@@ -242,7 +214,7 @@ class AdminControllerTest {
         DataFillProgressService.FillProgress progress = new DataFillProgressService.FillProgress();
         when(dataFillProgressService.getProgress("fill-skip")).thenReturn(progress);
 
-        mockMvc.perform(post("/api/admin/trigger-data-fill")
+        mockMvc.perform(adminPost("/api/admin/trigger-data-fill")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.taskId").value("fill-skip"));
@@ -265,7 +237,7 @@ class AdminControllerTest {
         DataFillProgressService.FillProgress progress = new DataFillProgressService.FillProgress();
         when(dataFillProgressService.getProgress("fill-ok")).thenReturn(progress);
 
-        mockMvc.perform(post("/api/admin/trigger-data-fill")
+        mockMvc.perform(adminPost("/api/admin/trigger-data-fill")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
 
@@ -291,7 +263,7 @@ class AdminControllerTest {
         when(screeningProgressService.getProgress("adv-param"))
                 .thenReturn(progress);
 
-        mockMvc.perform(post("/api/admin/run-screening-async")
+        mockMvc.perform(adminPost("/api/admin/run-screening-async")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"limit\":3,\"windowDays\":2}")
                         .accept(MediaType.APPLICATION_JSON))
@@ -308,7 +280,7 @@ class AdminControllerTest {
     @Test
     @DisplayName("run-screening-async 非法 limit 返回 400")
     void runScreeningAsync_invalidLimitReturns400() throws Exception {
-        mockMvc.perform(post("/api/admin/run-screening-async")
+        mockMvc.perform(adminPost("/api/admin/run-screening-async")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"limit\":\"abc\",\"windowDays\":2}")
                         .accept(MediaType.APPLICATION_JSON))
@@ -321,7 +293,7 @@ class AdminControllerTest {
     @Test
     @DisplayName("run-screening-async limit=0 返回 400")
     void runScreeningAsync_zeroLimitReturns400() throws Exception {
-        mockMvc.perform(post("/api/admin/run-screening-async")
+        mockMvc.perform(adminPost("/api/admin/run-screening-async")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"limit\":0,\"windowDays\":2}")
                         .accept(MediaType.APPLICATION_JSON))
@@ -333,7 +305,7 @@ class AdminControllerTest {
     @Test
     @DisplayName("run-screening-async 负数 windowDays 返回 400")
     void runScreeningAsync_negativeWindowDaysReturns400() throws Exception {
-        mockMvc.perform(post("/api/admin/run-screening-async")
+        mockMvc.perform(adminPost("/api/admin/run-screening-async")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"limit\":3,\"windowDays\":-2}")
                         .accept(MediaType.APPLICATION_JSON))
@@ -342,22 +314,4 @@ class AdminControllerTest {
         verify(scanExecutor, never()).execute(any());
     }
 
-    @Test
-    @DisplayName("run-screening 服务异常时返回 500 但不泄露内部异常消息")
-    void runScreening_serviceException_returnsGeneric500() throws Exception {
-        when(screeningService.runScreening(any(LocalDate.class), any(), any()))
-                .thenThrow(new RuntimeException("secret db connection detail"));
-
-        mockMvc.perform(post("/api/admin/run-screening")
-                        .param("date", "2026-08-16")
-                        .param("limit", "50")
-                        .param("windowDays", "2")
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isInternalServerError())
-                .andExpect(result -> {
-                    String body = result.getResponse().getContentAsString();
-                    assertFalse(body.contains("secret db connection detail"),
-                            "response must not leak internal exception message");
-                });
-    }
 }
