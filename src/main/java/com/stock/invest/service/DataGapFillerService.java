@@ -17,7 +17,7 @@ public interface DataGapFillerService {
      * 执行全量数据补全：
      * 1. 读取所有 symbol，按 tradeDate 降序排列
      * 2. 检查日期连续性，发现缺失日期
-     * 3. 检查最新价，> $1.00 跳过
+     * 3. 检查最新价，> $2.10 跳过（阈值见 gap-fill.min-price-threshold，2026-08-18 由 1.00 调至 2.10）
      * 4. 按 fallback 链补查
      *
      * @return R2 P3-9：是否实际执行（CAS 抢占成功 true；互斥拒绝 false），

@@ -16,8 +16,9 @@ public class GapFillProperties {
 
     /**
      * 最低价格阈值，低于此价格的股票将触发数据补全。
+     * 2026-08-18 用户确认由 1.00 调至 2.10（与 application.yml gap-fill.min-price-threshold 保持一致）。
      */
-    private BigDecimal minPriceThreshold = BigDecimal.valueOf(1.00);
+    private BigDecimal minPriceThreshold = BigDecimal.valueOf(2.10);
 
     /**
      * 字段增补开关（2026-08-14）：补缺时是否对已有记录执行缺失字段增补（发现+增补）。
