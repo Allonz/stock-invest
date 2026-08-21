@@ -1,7 +1,7 @@
 package com.stock.invest.service;
 
-import com.stock.invest.enums.dto.TigerWatchlistIngestRequestDto;
-import com.stock.invest.enums.dto.TigerWatchlistIngestResponseDto;
+import com.stock.invest.dto.TigerWatchlistIngestRequestDto;
+import com.stock.invest.dto.TigerWatchlistIngestResponseDto;
 
 public interface TigerWatchlistIngestService {
 

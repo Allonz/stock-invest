@@ -4,7 +4,7 @@ import com.stock.invest.config.GapFillProperties;
 import com.stock.invest.entity.DataFillTask;
 import com.stock.invest.entity.StockDailyBar;
 import com.stock.invest.model.KLineData;
-import com.stock.invest.model.KLineIterator;
+import com.stock.invest.model.KLineItem;
 import com.stock.invest.repository.DataFillTaskRepository;
 import com.stock.invest.repository.StockDailyBarRepository;
 import com.stock.invest.service.impl.DataGapFillerServiceImpl;
@@ -16,6 +16,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import com.stock.invest.service.impl.DataGapFillerTestSupport;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import java.time.LocalDate;
@@ -76,7 +77,7 @@ class DataGapFillerPersistTest {
                 .thenReturn(java.util.List.of("yfinance", "tiger"));
 
         List<DataSourceStrategy> dataSources = List.of(tigerDataSource, yfinanceDataSource);
-        service = new DataGapFillerServiceImpl(
+        service = DataGapFillerTestSupport.buildService(
                 stockDailyBarRepository, dataFillTaskRepository, dataSources,
                 gapFillProperties, dataFillProgressService, retryProgressService, tradingCalendarDbService,
                 stockDataSourcePriorityService, symbolBlacklistService,
@@ -115,7 +116,7 @@ class DataGapFillerPersistTest {
                     LocalDate date = inv.getArgument(1);
                     KLineData kd = new KLineData();
                     kd.setSymbol("AAPL");
-                    KLineIterator item = new KLineIterator(
+                    KLineItem item = new KLineItem(
                             "AAPL", date.atStartOfDay(AMERICA_NY).toInstant().toEpochMilli(),
                             java.math.BigDecimal.valueOf(150.0), java.math.BigDecimal.valueOf(155.0),
                             java.math.BigDecimal.valueOf(148.0), java.math.BigDecimal.valueOf(152.5),
@@ -180,7 +181,7 @@ class DataGapFillerPersistTest {
                     LocalDate date = inv.getArgument(1);
                     KLineData kd = new KLineData();
                     kd.setSymbol("AAPL");
-                    KLineIterator item = new KLineIterator(
+                    KLineItem item = new KLineItem(
                             "AAPL", date.atStartOfDay(AMERICA_NY).toInstant().toEpochMilli(),
                             java.math.BigDecimal.valueOf(155.0), java.math.BigDecimal.valueOf(158.0),
                             java.math.BigDecimal.valueOf(152.0), java.math.BigDecimal.valueOf(156.0),
@@ -230,7 +231,7 @@ class DataGapFillerPersistTest {
                     LocalDate date = inv.getArgument(1);
                     KLineData kd = new KLineData();
                     kd.setSymbol("AAPL");
-                    KLineIterator item = new KLineIterator(
+                    KLineItem item = new KLineItem(
                             "AAPL", date.atStartOfDay(AMERICA_NY).toInstant().toEpochMilli(),
                             java.math.BigDecimal.valueOf(150.0), java.math.BigDecimal.valueOf(155.0),
                             java.math.BigDecimal.valueOf(148.0), java.math.BigDecimal.valueOf(152.5),
@@ -331,7 +332,7 @@ class DataGapFillerPersistTest {
                     LocalDate date = inv.getArgument(1);
                     KLineData kd = new KLineData();
                     kd.setSymbol("AAPL");
-                    KLineIterator item = new KLineIterator(
+                    KLineItem item = new KLineItem(
                             "AAPL", date.atStartOfDay(AMERICA_NY).toInstant().toEpochMilli(),
                             java.math.BigDecimal.valueOf(150.0), java.math.BigDecimal.valueOf(155.0),
                             java.math.BigDecimal.valueOf(148.0), java.math.BigDecimal.valueOf(152.5),
@@ -349,7 +350,7 @@ class DataGapFillerPersistTest {
         StockDailyBar saved = barCaptor.getValue();
         assertEquals("yfinance", saved.getSource());
         // mergeAfterHours should not be called for yfinance source
-        // The afterHours should remain ZERO (from KLineIterator constructor default)
+        // The afterHours should remain ZERO (from KLineItem constructor default)
         assertEquals(0, java.math.BigDecimal.ZERO.compareTo(saved.getAfterHours()),
                 "afterHours remains ZERO for non-tiger source");
     }
@@ -382,7 +383,7 @@ class DataGapFillerPersistTest {
                     LocalDate date = inv.getArgument(1);
                     KLineData kd = new KLineData();
                     kd.setSymbol(inv.getArgument(0));
-                    KLineIterator item = new KLineIterator(
+                    KLineItem item = new KLineItem(
                             inv.getArgument(0), date.atStartOfDay(AMERICA_NY).toInstant().toEpochMilli(),
                             java.math.BigDecimal.valueOf(150.0), java.math.BigDecimal.valueOf(155.0),
                             java.math.BigDecimal.valueOf(148.0), java.math.BigDecimal.valueOf(152.5),

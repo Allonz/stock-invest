@@ -1,6 +1,6 @@
 package com.stock.invest.controller;
 
-import com.stock.invest.enums.dto.StockDailyBarDto;
+import com.stock.invest.dto.StockDailyBarDto;
 import com.stock.invest.service.StockDailyBarService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -51,7 +51,9 @@ class BarsControllerQueryTest {
 
         mockMvc.perform(get("/api/bars/single/query").param("symbol", " aapl "))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.symbol").value("AAPL"))
-                .andExpect(jsonPath("$.total").value(1));
+                // 评审 A-3：统一 ApiResponse 包装，业务字段在 data 内
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.symbol").value("AAPL"))
+                .andExpect(jsonPath("$.data.total").value(1));
     }
 }

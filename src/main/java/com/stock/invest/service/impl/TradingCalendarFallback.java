@@ -16,10 +16,9 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 交易日历 Fallback 编排 + 缓存。
- * 按顺序尝试三个数据源：
- *   1. Tiger Java SDK
- *   2. TigerOpen Python
- *   3. Alpaca Markets
+ * 按顺序尝试两个数据源（Tiger Java SDK 已下线移除，评审 A-7）：
+ *   1. TigerOpen Python
+ *   2. Alpaca Markets
  * 全部不可用时返回 null（未知状态，P2-11）——不再默认 tradingDay=true：
  * 补缺路径按"未知"跳过该日期（宁可漏一天，不可错补白打配额）；
  * REST/MCP 查询端点自行决定未知态展示。

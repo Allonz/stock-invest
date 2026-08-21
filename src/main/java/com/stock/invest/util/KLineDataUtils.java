@@ -1,7 +1,7 @@
 package com.stock.invest.util;
 
 import com.stock.invest.model.KLineData;
-import com.stock.invest.model.KLineIterator;
+import com.stock.invest.model.KLineItem;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -22,8 +22,8 @@ public final class KLineDataUtils {
         if (data == null || data.getItems() == null || data.getItems().isEmpty()) {
             return;
         }
-        List<KLineIterator> sorted = new ArrayList<>(data.getItems());
-        sorted.sort(Comparator.comparingLong(KLineIterator::getTime).reversed());
+        List<KLineItem> sorted = new ArrayList<>(data.getItems());
+        sorted.sort(Comparator.comparingLong(KLineItem::getTime).reversed());
         data.setItems(sorted);
     }
 }

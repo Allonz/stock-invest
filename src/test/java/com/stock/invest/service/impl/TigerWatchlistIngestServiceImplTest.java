@@ -1,8 +1,9 @@
 package com.stock.invest.service.impl;
 
-import com.stock.invest.enums.dto.TigerWatchlistIngestRequestDto;
-import com.stock.invest.enums.dto.TigerWatchlistRowDto;
+import com.stock.invest.dto.TigerWatchlistIngestRequestDto;
+import com.stock.invest.dto.TigerWatchlistRowDto;
 import com.stock.invest.repository.StockDailyBarRepository;
+import com.stock.invest.service.TradingCalendarDbService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,9 @@ class TigerWatchlistIngestServiceImplTest {
     private StockDailyBarRepository stockDailyBarRepository;
 
     @Mock
+    private TradingCalendarDbService tradingCalendarDbService;
+
+    @Mock
     private PlatformTransactionManager transactionManager;
 
     private TigerWatchlistIngestServiceImpl service;
@@ -36,7 +40,8 @@ class TigerWatchlistIngestServiceImplTest {
     void setUp() {
         lenient().when(transactionManager.getTransaction(any()))
                 .thenReturn(mock(TransactionStatus.class));
-        service = new TigerWatchlistIngestServiceImpl(stockDailyBarRepository, transactionManager);
+        service = new TigerWatchlistIngestServiceImpl(
+                stockDailyBarRepository, tradingCalendarDbService, transactionManager);
     }
 
     @Test

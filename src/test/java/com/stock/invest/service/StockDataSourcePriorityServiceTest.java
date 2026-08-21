@@ -91,7 +91,6 @@ class StockDataSourcePriorityServiceTest {
 
         verify(repository).save(existing);
         assertEquals(now, existing.getLastSuccessTime());
-        verify(repository, never()).deleteBySymbolAndDataSource(anyString(), anyString());
     }
 
     @Test
@@ -108,7 +107,6 @@ class StockDataSourcePriorityServiceTest {
         assertEquals("AAPL", captor.getValue().getSymbol());
         assertEquals("twelvedata", captor.getValue().getDataSource());
         assertEquals(now, captor.getValue().getLastSuccessTime());
-        verify(repository, never()).deleteBySymbolAndDataSource(anyString(), anyString());
     }
 
     @Test

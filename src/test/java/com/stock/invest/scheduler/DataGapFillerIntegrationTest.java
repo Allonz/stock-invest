@@ -3,15 +3,21 @@ package com.stock.invest.scheduler;
 import com.stock.invest.entity.StockDailyBar;
 import com.stock.invest.repository.StockDailyBarRepository;
 import com.stock.invest.service.DataGapFillerService;
+import com.stock.invest.support.IntegrationSchemaResetInitializer;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -23,10 +29,14 @@ import static org.junit.jupiter.api.Assertions.*;
  * 使用 @Tag("integration") 标记，不干扰 CI 的 Mock 测试。
  * 验证数据库中现有数据的字段完整性和 change_percent 计算一致性。
  * </p>
+ * <p>评审 F-7：连接独立测试库 stock_invest_it（每次上下文启动前重建），
+ * 不再直连生产 stock_invest 库；@BeforeAll 种入已知数据作为断言基准。</p>
  */
 @SpringBootTest
 @ActiveProfiles("integration")
+@ContextConfiguration(initializers = IntegrationSchemaResetInitializer.class)
 @Tag("integration")
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class DataGapFillerIntegrationTest {
 
     private static final Logger log = LoggerFactory.getLogger(DataGapFillerIntegrationTest.class);
@@ -36,6 +46,37 @@ class DataGapFillerIntegrationTest {
 
     @Autowired
     private DataGapFillerService dataGapFillerService;
+
+    /**
+     * 评审 F-7：独立测试库为空库 —— 种入 3 个已知交易日（跨周末，验证 change_percent
+     * 按上一交易日计算）作为 INT-FILL-001/002 的确定性基准，不再依赖生产库数据。
+     */
+    @BeforeAll
+    void seedKnownData() {
+        stockDailyBarRepository.saveAll(List.of(
+                bar("AAPL", "2026-08-13", "99.00", "101.00", "98.00", "100.00", "1000000", null),
+                bar("AAPL", "2026-08-14", "100.00", "106.00", "99.00", "105.00", "1100000", "5.0000"),
+                bar("AAPL", "2026-08-17", "105.00", "111.00", "104.00", "110.00", "1200000", "4.7619")
+        ));
+        log.info("Seeded 3 AAPL bars into stock_invest_it for INT-FILL-001/002");
+    }
+
+    private static StockDailyBar bar(String symbol, String date, String open, String high,
+                                     String low, String close, String vol, String changePct) {
+        StockDailyBar b = new StockDailyBar();
+        b.setSymbol(symbol);
+        b.setTradeDate(LocalDate.parse(date));
+        b.setOpenPrice(new BigDecimal(open));
+        b.setHighPrice(new BigDecimal(high));
+        b.setLowPrice(new BigDecimal(low));
+        b.setClosePrice(new BigDecimal(close));
+        b.setVolume(Long.parseLong(vol));
+        b.setSource("test");
+        if (changePct != null) {
+            b.setChangePercent(new BigDecimal(changePct));
+        }
+        return b;
+    }
 
     // ---- INT-FILL-001: 验证现有数据包含 high_price/low_price/change_percent ----
 

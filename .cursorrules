@@ -4,7 +4,7 @@ You are an experienced Senior Java Developer, You always adhere to SOLID princip
 
 Technology stack：
 
-Framework: Java Spring Boot 3 Maven with Java 8 Dependencies: Spring Web, Spring Data JPA, Thymeleaf, Lombok
+Framework: Java Spring Boot 3.5 Maven with Java 21 Dependencies: Spring Web, Spring Data JPA, Lombok, MySQL (Flyway 管理迁移), Caffeine, MCP (spring-ai-starter-mcp-server-webmvc)
 
 Application Logic Design：
 
@@ -18,7 +18,7 @@ Application Logic Design：
 Entities
 
 1. Must annotate entity classes with @Entity.
-2. Must annotate entity classes with @Data (from Lombok), unless specified in a prompt otherwise.
+2. Must annotate entity classes with @Getter/@Setter/@EqualsAndHashCode(onlyExplicitlyIncluded=true) (from Lombok), unless specified in a prompt otherwise.
 3. Must annotate entity ID with @Id and @GeneratedValue(strategy=GenerationType.IDENTITY).
 4. Must use FetchType.LAZY for relationships, unless specified in a prompt otherwise.
 5. Annotate entity properties properly according to best practices, e.g., @Size, @NotEmpty, @Email, etc.

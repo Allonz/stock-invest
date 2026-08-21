@@ -35,14 +35,14 @@ describe('fetchCandles', () => {
       ],
       timestamp: '2025-01-13T10:00:00Z',
     }
-    mockRequestGet.mockResolvedValue(mockData)
+    mockRequestGet.mockResolvedValue({ data: mockData })
 
     const result = await fetchCandles('AAPL')
-    expect(result.success).toBe(true)
-    expect(result.data).toHaveLength(7)
+    expect(result.data.success).toBe(true)
+    expect(result.data.data).toHaveLength(7)
 
     // Verify each candle matches CandleData interface
-    result.data.forEach((candle: CandleData) => {
+    result.data.data.forEach((candle: CandleData) => {
       expect(candle).toHaveProperty('date')
       expect(candle).toHaveProperty('open')
       expect(candle).toHaveProperty('high')
@@ -71,11 +71,11 @@ describe('fetchCandles', () => {
       data: [],
       timestamp: '2025-01-13T10:00:00Z',
     }
-    mockRequestGet.mockResolvedValue(mockData)
+    mockRequestGet.mockResolvedValue({ data: mockData })
 
     const result = await fetchCandles('TEST', 30)
-    expect(result.success).toBe(true)
-    expect(result.data).toHaveLength(0)
+    expect(result.data.success).toBe(true)
+    expect(result.data.data).toHaveLength(0)
     expect(mockRequestGet).toHaveBeenCalledWith('/api/bars/TEST/candles?days=30')
   })
 
@@ -92,10 +92,10 @@ describe('fetchCandles', () => {
       data: [],
       timestamp: '2025-01-13T10:00:00Z',
     }
-    mockRequestGet.mockResolvedValue(mockData)
+    mockRequestGet.mockResolvedValue({ data: mockData })
 
     const result = await fetchCandles('BRK.A', 7)
-    expect(result.success).toBe(true)
+    expect(result.data.success).toBe(true)
     // The symbol appears as-is in the URL
     expect(mockRequestGet).toHaveBeenCalledWith('/api/bars/BRK.A/candles?days=7')
   })

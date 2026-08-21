@@ -1,7 +1,7 @@
 package com.stock.invest.service;
 
 import com.stock.invest.entity.StockDailyBar;
-import com.stock.invest.enums.dto.StockDailyBarCandleDto;
+import com.stock.invest.dto.StockDailyBarCandleDto;
 import com.stock.invest.repository.StockDailyBarRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

@@ -9,40 +9,46 @@ stock-invest/
 ├── src/
 │   ├── main/
 │   │   ├── java/com/stock/invest/
-│   │   │   ├── client/          # 数据源客户端（Yahoo / TwelveData / Tiingo / Tiger Python Bridge）
-│   │   │   ├── config/          # 配置属性类（@ConfigurationProperties）
-│   │   │   ├── controller/      # REST API 控制器（5个）
-│   │   │   ├── dto/             # 请求/响应 DTO
+│   │   │   ├── client/          # 数据源客户端（TigerOpen Python Bridge / Alpaca REST）
+│   │   │   ├── config/          # 配置属性类（@ConfigurationProperties）、拦截器与安全配置
+│   │   │   ├── constant/        # 常量（筛选窗口定义等）
+│   │   │   ├── controller/      # REST API 控制器（9个）
+│   │   │   ├── datasource/      # 数据源能力模型与可用性规则
+│   │   │   ├── dto/             # 请求/响应 DTO（record，含统一 ApiResponse）
 │   │   │   ├── entity/          # JPA 实体
-│   │   │   ├── enums/           # 枚举
-│   │   │   ├── http/            # 弹性 HTTP 执行器
+│   │   │   ├── exception/       # 全局异常处理（GlobalExceptionHandler）
+│   │   │   ├── mcp/             # MCP Server 工具（供 OpenClaw 调用）
 │   │   │   ├── model/           # 领域模型（KLineData, StockInfo 等）
 │   │   │   ├── repository/      # Spring Data JPA Repository
-│   │   │   ├── security/        # API 鉴权
-│   │   │   ├── service/         # 服务接口 + 10个实现类
-│   │   │   └── util/            # 工具类
+│   │   │   ├── scheduler/       # 定时任务（数据补缺 / 筛选 / 交易日历）
+│   │   │   ├── security/        # API 鉴权（admin/ingest key）
+│   │   │   ├── service/         # 服务接口 + 实现类（fallback 链补缺、筛选、字段增补等）
+│   │   │   ├── util/            # 工具类（Python 脚本执行器等）
+│   │   │   └── verifier/        # 数据库结构校验
 │   │   └── resources/
 │   │       ├── application.yml           # 主配置（多 profile）
-│   │       ├── application-test.yml      # 测试配置
-│   │       ├── python/                   # Python 脚本（Tiger OpenAPI 通道）
-│   │       ├── db/schema.sql             # 数据库建表语句
+│   │       ├── application-test.yml      # 测试配置（H2）
+│   │       ├── python/                   # Python 桥接脚本（yfinance / twelvedata / tiingo / tigeropen）
+│   │       ├── db/migration/             # Flyway 迁移脚本（V1~V5）
 │   │       └── logback-spring.xml        # 日志配置
-│   └── test/java/             # 单元测试（10个）
+│   └── test/java/             # 单元测试与集成测试
 ├── pom.xml
 ├── README.md
-└── api-docs.md                # API 接口文档
+└── docs/api-docs.md           # API 接口文档
 ```
 
 ## 数据源
 
 | 数据源 | Profile | 说明 |
 |--------|---------|------|
-| **TwelveData**（默认） | `twelvedata` | REST API，支持多 API Key 轮换 |
-| **YFinance (Yahoo)** | `yfinance` | REST API，缓存支持 |
-| **Tiger Brokers** | `tiger` | Java SDK (tigeropen) + Python 通道 |
+| **TwelveData**（默认） | `twelvedata` | REST API，支持多 API Key 轮换（429/限流时自动换 key 重试，`twelvedata.api.apiKeys` 逗号分隔配置） |
+| **YFinance (Yahoo)** | `yfinance` | Python 桥接脚本 |
+| **Tiger Brokers** | `tiger` | TigerOpen Python 通道 |
 | **Tiingo** | — | 备选数据源，仅在主源失败时激活 |
 
-数据源通过 `PriorityStockServiceImpl`（`@Primary`）按优先级链式回退：tigeropen → tiger → yfinance → twelvedata → tiingo。
+补缺（DataGapFiller）链路由 `FallbackChainBuilder` 构建：优先按个股历史成功记录排序，
+无历史记录时按默认优先级 **yfinance → twelvedata → tiingo → tigeropen** 链式回退；
+账户级错误触发 30 分钟熔断冷却，≥2 源确认 not-found 的 symbol 自动入黑名单。
 
 ## 构建与启动
 
@@ -50,7 +56,7 @@ stock-invest/
 
 - JDK 21+
 - Maven 3.6+
-- Python 3.8+（仅 Tiger 数据源需要）
+- Python 3.8+（数据采集经 Python 子进程桥接四个数据源，非仅 Tiger）
 - MySQL（生产环境）/ H2（测试环境）
 
 ### 构建
@@ -80,17 +86,24 @@ mvn test
 
 | 端点 | 方法 | 说明 |
 |------|------|------|
-| `/api/tiger/kline/daily/{symbol}` | GET | 获取日K线（JSON 字符串） |
-| `/api/tiger/kline/daily/object/{symbol}` | GET | 获取日K线（对象） |
-| `/api/tiger/stock/{symbol}` | GET | 获取股票信息 |
-| `/api/tiger/scan/low-price-volume-pattern` | GET | 低价放量模式扫描 |
-| `/api/scanner/custom` | POST | 自定义筛选 |
+| `/api/bars/single/query` | GET | 按股票代码查询日 K 线 |
+| `/api/bars/pages/query` | GET | 分页查询 K 线（可按 symbol/tradeDate/source 筛选） |
+| `/api/bars/{symbol}/candles` | GET | 蜡烛图数据（K线） |
+| `/api/bars/sources` | GET | 数据源列表 |
+| `/api/screening/latest`、`/by-date`、`/history`、`/batch/{batchId}` | GET | 筛选结果查询 |
+| `/api/admin/trigger-screening-async` | POST | 异步全量筛选 |
+| `/api/admin/run-screening-async` | POST | 异步高级筛选（{limit, windowDays}） |
+| `/api/admin/trigger-data-fill` | POST | 异步触发数据补缺 |
+| `/api/admin/trigger-retry-tasks` | POST | 触发失败任务重试 |
+| `/api/admin/screening-progress` 等 | GET | 任务进度 / 补缺任务 / 统计查询 |
+| `/api/blacklist/list`、`/clear` | GET/POST | 黑名单查询与清理 |
+| `/api/datasource/status`、`/health` | GET | 数据源状态与健康检查 |
+| `/api/notification/latest`、`/by-date`、`/history`、`/batch/{batchId}` | GET | 通知查询 |
+| `/api/orchestration/step` | POST | 编排执行（webhook 接力） |
 | `/api/ingest/tiger-watchlist` | POST | 导入老虎自选股截图数据 |
-| `/api/screener/run-from-snapshot` | POST | 基于截图快照运行筛选 |
-| `/api/screener/query` | GET | 查询筛选结果 |
-| `/screening` | GET | 筛选页面（Thymeleaf） |
+| `/api/v1/trading-calendar/is-open` 等 | GET/POST | 交易日历查询与全年抓取 |
 
-详细 API 说明见 [api-docs.md](api-docs.md)。
+详细 API 说明见 [docs/api-docs.md](docs/api-docs.md)。
 
 ## 配置
 
@@ -113,7 +126,7 @@ mvn test
 ### P1 — 精简样板代码
 - 15 个 DTO / 配置属性 / 模型类改用 Lombok `@Data`/`@Getter`，消除 ~400 行 getter/setter
 - `KLineRequest` 也纳入 Lombok（Builder 模式保留不变）
-- `KLineIterator` 因复杂的 `BigDecimal` 同步逻辑保留手动实现
+- `KLineItem` 因复杂的 `BigDecimal` 同步逻辑保留手动实现
 
 ### P2 — 接口拆分与清理
 - `StockService` 拆分为 3 个领域接口：

@@ -20,13 +20,17 @@ import os
 import random
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import pytz
 
 API_KEY = os.environ.get("TIINGO_API_KEY", "")
 
 NEW_YORK = pytz.timezone("America/New_York")
+# 评审 F-13：窗口端点统一用美东时区 —— datetime.now() 取服务器本地时区（Asia/Shanghai）
+# 会在跨时区边界错位 1 天；美股 bar 的日期归属是美东，端点必须与之一致
+NY_TZ = ZoneInfo("America/New_York")
 
 # 全局速率限制（2026-08-14）：对齐 yfinance 脚本的限速设计。
 # 背景：补缺字段增补时连续快速调用 tiingo API 打爆小时配额（429 hourly request allocation）。
@@ -108,7 +112,7 @@ def get_daily_kline(symbol: str, days: str = "30") -> str:
         except ValueError:
             n = 30
         from datetime import timedelta
-        end = datetime.now().date()
+        end = datetime.now(NY_TZ).date()
         start = end - timedelta(days=n * 2 + 10)
         rows = _client().get_ticker_price(
             symbol, startDate=start.isoformat(), endDate=end.isoformat())
@@ -127,7 +131,7 @@ def get_batch_kline(symbols: str, period: str = "daily", count: str = "30") -> s
         except ValueError:
             n = 30
         from datetime import timedelta
-        end = datetime.now().date()
+        end = datetime.now(NY_TZ).date()
         start = end - timedelta(days=n * 2 + 10)
         result = []
         for sym in symbols.split(","):

@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stock.invest.exception.StockDataException;
 import com.stock.invest.model.KLineData;
-import com.stock.invest.model.KLineIterator;
+import com.stock.invest.model.KLineItem;
 import com.stock.invest.service.DataSourceStrategy;
 import com.stock.invest.util.PythonScriptExecutor;
 import org.springframework.core.annotation.Order;
@@ -80,12 +80,12 @@ public class YFinanceStockServiceImpl implements DataSourceStrategy {
             if (pythonKLineData != null && pythonKLineData.getItems() != null && !pythonKLineData.getItems().isEmpty()) {
                 klineData.setItems(pythonKLineData.getItems());
                 // 填充每个 item 的 symbol 字段（Python 脚本返回的 JSON 中 item 不含 symbol）
-                for (KLineIterator item : klineData.getItems()) {
+                for (KLineItem item : klineData.getItems()) {
                     item.setSymbol(symbol);
                 }
                 
                 // 从第一个K线数据中提取价格信息
-                KLineIterator firstItem = pythonKLineData.getItems().get(0);
+                KLineItem firstItem = pythonKLineData.getItems().get(0);
                 klineData.setOpen(firstItem.getOpen());
                 klineData.setHigh(firstItem.getHigh());
                 klineData.setLow(firstItem.getLow());
@@ -93,7 +93,7 @@ public class YFinanceStockServiceImpl implements DataSourceStrategy {
                 klineData.setVolume(firstItem.getVolume());
             } else {
                 // 如果没有数据，添加一个空的数据项
-                KLineIterator item = new KLineIterator();
+                KLineItem item = new KLineItem();
                 item.setTime(System.currentTimeMillis());
                 klineData.setItems(List.of(item));
             }
@@ -126,13 +126,13 @@ public class YFinanceStockServiceImpl implements DataSourceStrategy {
             KLineData klineData = objectMapper.readValue(result, KLineData.class);
             // 填充每个 item 的 symbol 字段（Python 脚本返回的 JSON 中 item 不含 symbol）
             if (klineData != null && klineData.getItems() != null) {
-                for (KLineIterator item : klineData.getItems()) {
+                for (KLineItem item : klineData.getItems()) {
                     item.setSymbol(symbol);
                 }
             }
             if (klineData != null && klineData.getItems() != null && !klineData.getItems().isEmpty()) {
                 // 目标日响应日志：只打印脚本返回中 tradeDate 那一条的完整参数（便于日志分析字段正确性/空值）
-                KLineIterator target = klineData.getItems().stream()
+                KLineItem target = klineData.getItems().stream()
                         .filter(it -> it.getTimeString() != null && it.getTimeString().equals(tradeDate.toString()))
                         .findFirst().orElse(null);
                 if (target != null) {
@@ -226,7 +226,7 @@ public class YFinanceStockServiceImpl implements DataSourceStrategy {
             KLineData ahData = new KLineData();
             ahData.setSymbol(symbol);
 
-            KLineIterator item = new KLineIterator();
+            KLineItem item = new KLineItem();
             item.setSymbol(symbol);
             item.setTime(tradeDate.atStartOfDay(java.time.ZoneId.of("America/New_York")).toInstant().toEpochMilli());
             item.setTimeString(tradeDate.toString());

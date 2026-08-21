@@ -1,10 +1,15 @@
 package com.stock.invest.model;
 
 /**
- * K线数据迭代器
- * 为解决"KLineData.KLineItem cannot be resolved to a type"问题，将KLineItem从KLineData内部类提取为独立类
+ * 单根 K 线数据项。
+ *
+ * <p>承载单根 K 线的 OHLCV、涨跌幅、盘后价等字段，由各数据源（Python 脚本 JSON 反序列化
+ * 或服务实现手工构造）填充。</p>
+ *
+ * <p>评审 E-4：类名为数据项而非迭代器，已由 {@code KLineIterator} 更名回 {@code KLineItem}
+ * （该名与最初从 {@code KLineData} 内部类提取时的命名一致）。</p>
  */
-public class KLineIterator {
+public class KLineItem {
     private String symbol;
     private long time;
     private String timeString; // 用于存储时间字符串
@@ -18,17 +23,17 @@ public class KLineIterator {
     private java.math.BigDecimal afterHours;               // 盘后价
     private java.math.BigDecimal afterHoursChangePercent;  // 盘后涨跌幅（%）
 
-    public KLineIterator() {
+    public KLineItem() {
     }
 
     /**
      * 8 参数构造器（兼容旧代码），新增字段默认 BigDecimal.ZERO
      */
-    public KLineIterator(String symbol, long time, java.math.BigDecimal open, java.math.BigDecimal high, java.math.BigDecimal low, java.math.BigDecimal close, long volume, double amount) {
+    public KLineItem(String symbol, long time, java.math.BigDecimal open, java.math.BigDecimal high, java.math.BigDecimal low, java.math.BigDecimal close, long volume, double amount) {
         this(symbol, time, open, high, low, close, volume, amount, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO);
     }
 
-    public KLineIterator(String symbol, long time, java.math.BigDecimal open, java.math.BigDecimal high, java.math.BigDecimal low, java.math.BigDecimal close, long volume, double amount,
+    public KLineItem(String symbol, long time, java.math.BigDecimal open, java.math.BigDecimal high, java.math.BigDecimal low, java.math.BigDecimal close, long volume, double amount,
                          java.math.BigDecimal changePercent, java.math.BigDecimal afterHours, java.math.BigDecimal afterHoursChangePercent) {
         this.symbol = symbol;
         this.time = time;
@@ -61,18 +66,14 @@ public class KLineIterator {
     
     // 支持字符串格式的时间设置
     public void setTime(String timeStr) {
-        this.timeString = timeStr;
-        try {
-            if (timeStr != null && !timeStr.isEmpty()) {
-                // 尝试解析为数字时间戳
-                this.time = Long.parseLong(timeStr);
-            }
-        } catch (NumberFormatException e) {
-            this.time = 0L;
-            // 使用 java.lang.System.Logger（model 层不应依赖 SLF4J）
-            System.Logger logger = System.getLogger(KLineIterator.class.getName());
-            logger.log(System.Logger.Level.WARNING, "KLineIterator: failed to parse timeStr='" + timeStr + "'");
+        if (timeStr != null && !timeStr.isEmpty()) {
+            // 尝试解析为数字时间戳；解析失败直接抛 NumberFormatException，
+            // 避免坏数据静默置 0 后在链路中无声传播（评审 E-4）。
+            // 先解析后赋值：失败时不留下部分修改的状态。
+            long parsed = Long.parseLong(timeStr);
+            this.time = parsed;
         }
+        this.timeString = timeStr;
     }
     
     public String getTimeString() {
@@ -157,7 +158,7 @@ public class KLineIterator {
 
     @Override
     public String toString() {
-        return "KLineIterator{" +
+        return "KLineItem{" +
                 "symbol='" + symbol + '\'' +
                 ", time=" + time +
                 ", timeString='" + timeString + '\'' +

@@ -4,6 +4,7 @@ import com.stock.invest.config.GapFillProperties;
 import com.stock.invest.repository.DataFillTaskRepository;
 import com.stock.invest.repository.StockDailyBarRepository;
 import com.stock.invest.service.impl.DataGapFillerServiceImpl;
+import com.stock.invest.service.impl.DataGapFillerTestSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -53,7 +54,7 @@ class DataGapFillerConcurrencyTest {
         lenient().when(stockDataSourcePriorityService.getPriorityList(anyString()))
                 .thenReturn(List.of("tiger", "yfinance"));
 
-        service = new DataGapFillerServiceImpl(
+        service = DataGapFillerTestSupport.buildService(
                 stockDailyBarRepository, dataFillTaskRepository, List.of(tigerSource),
                 gapFillProperties, dataFillProgressService, retryProgressService, tradingCalendarDbService,
                 stockDataSourcePriorityService, symbolBlacklistService, transactionManager, fieldCapabilityService);

@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 解析项目将使用的 Python 解释器路径（与 {@link PythonScriptExecutor} 规则一致），并做 venv / 版本诊断。
@@ -110,12 +111,24 @@ public final class PythonRuntimeSupport {
         return sb.toString().trim();
     }
 
+    /**
+     * 检查 Python 解释器是否可运行（执行 {@code --version} 探活）。
+     * <p>评审 D-3：waitFor 带 5s 超时 —— 解释器挂起时不再无限阻塞调用线程
+     * （该探活至少每 60s 被触发一次）；超时强杀进程并返回 false。</p>
+     */
     static boolean isPythonRunnable(String pythonCmd, boolean logOnError) {
         Process process = null;
         try {
             process = new ProcessBuilder(pythonCmd, "--version").start();
-            int exitCode = process.waitFor();
-            return exitCode == 0;
+            if (!process.waitFor(5, TimeUnit.SECONDS)) {
+                // 解释器挂起：强杀进程避免残留，判定不可用
+                process.destroyForcibly();
+                if (logOnError) {
+                    log.warn("检查 Python 可用性超时({}): 5s 内未退出，判定不可用", pythonCmd);
+                }
+                return false;
+            }
+            return process.exitValue() == 0;
         } catch (Exception e) {
             if (logOnError) {
                 log.warn("检查 Python 可用性时出错({}): {}", pythonCmd, e.getMessage());

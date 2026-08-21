@@ -1,8 +1,8 @@
 package com.stock.invest.service;
 
 import com.stock.invest.entity.StockDailyBar;
-import com.stock.invest.enums.dto.StockDailyBarCandleDto;
-import com.stock.invest.enums.dto.StockDailyBarDto;
+import com.stock.invest.dto.StockDailyBarCandleDto;
+import com.stock.invest.dto.StockDailyBarDto;
 import com.stock.invest.repository.StockDailyBarRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

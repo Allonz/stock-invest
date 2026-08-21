@@ -1,7 +1,7 @@
 package com.stock.invest.service;
 
 import com.stock.invest.entity.StockDailyBar;
-import com.stock.invest.model.KLineIterator;
+import com.stock.invest.model.KLineItem;
 
 import java.util.List;
 
@@ -12,9 +12,9 @@ public interface PatternEvaluateService {
     boolean matchesIncreasingVolumePattern(List<StockDailyBar> barsOldestFirst, int windowDays);
 
     /**
-     * Evaluate volume pattern using {@link KLineIterator} list (oldest-first).
+     * Evaluate volume pattern using {@link KLineItem} list (oldest-first).
      */
-    boolean matchesIncreasingVolumePatternFromKLine(List<KLineIterator> barsOldestFirst, int windowDays);
+    boolean matchesIncreasingVolumePatternFromKLine(List<KLineItem> barsOldestFirst, int windowDays);
 
     /**
      * 放量突破模式：

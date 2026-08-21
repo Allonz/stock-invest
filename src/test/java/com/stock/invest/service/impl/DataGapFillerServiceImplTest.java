@@ -91,7 +91,7 @@ class DataGapFillerServiceImplTest {
         com.stock.invest.model.KLineData defaultKd = new com.stock.invest.model.KLineData();
         defaultKd.setSymbol("AAPL");
         defaultKd.setItems(java.util.List.of(
-            new com.stock.invest.model.KLineIterator("AAPL", 0L,
+            new com.stock.invest.model.KLineItem("AAPL", 0L,
                     java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
                     java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
                     0, 0,
@@ -106,7 +106,7 @@ class DataGapFillerServiceImplTest {
 
         List<DataSourceStrategy> dataSources = List.of(
                 tigerDataSource, yfinanceDataSource, twelvedataDataSource, tiingoDataSource);
-        service = new DataGapFillerServiceImpl(
+        service = DataGapFillerTestSupport.buildService(
                 stockDailyBarRepository,
                 dataFillTaskRepository,
                 dataSources,
@@ -248,7 +248,7 @@ class DataGapFillerServiceImplTest {
         com.stock.invest.model.KLineData nonNullKd = new com.stock.invest.model.KLineData();
         nonNullKd.setSymbol("AAPL");
         nonNullKd.setItems(java.util.List.of(
-            new com.stock.invest.model.KLineIterator("AAPL", 0L,
+            new com.stock.invest.model.KLineItem("AAPL", 0L,
                     java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
                     java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
                     0, 0,
@@ -302,7 +302,7 @@ class DataGapFillerServiceImplTest {
                 .thenReturn(latestOnDb);
         com.stock.invest.model.KLineData okKd = new com.stock.invest.model.KLineData();
         okKd.setSymbol("AAPL");
-        com.stock.invest.model.KLineIterator okItem = new com.stock.invest.model.KLineIterator(
+        com.stock.invest.model.KLineItem okItem = new com.stock.invest.model.KLineItem(
                 "AAPL", 0L, java.math.BigDecimal.ONE, java.math.BigDecimal.ONE,
                 java.math.BigDecimal.ONE, java.math.BigDecimal.ONE, 100, 0,
                 java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO);
@@ -357,7 +357,7 @@ class DataGapFillerServiceImplTest {
                         DataFillTask.class, 1L, new RuntimeException("version mismatch again")));
         com.stock.invest.model.KLineData okKd = new com.stock.invest.model.KLineData();
         okKd.setSymbol("AAPL");
-        com.stock.invest.model.KLineIterator okItem = new com.stock.invest.model.KLineIterator(
+        com.stock.invest.model.KLineItem okItem = new com.stock.invest.model.KLineItem(
                 "AAPL", 0L, java.math.BigDecimal.ONE, java.math.BigDecimal.ONE,
                 java.math.BigDecimal.ONE, java.math.BigDecimal.ONE, 100, 0,
                 java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO);
@@ -769,7 +769,7 @@ class DataGapFillerServiceImplTest {
                     String sym = inv.getArgument(0);
                     com.stock.invest.model.KLineData kd = new com.stock.invest.model.KLineData();
                     kd.setSymbol(sym);
-                    com.stock.invest.model.KLineIterator item = new com.stock.invest.model.KLineIterator(
+                    com.stock.invest.model.KLineItem item = new com.stock.invest.model.KLineItem(
                             sym, date.atStartOfDay(AMERICA_NY).toInstant().toEpochMilli(),
                             java.math.BigDecimal.valueOf(150.0), java.math.BigDecimal.valueOf(155.0),
                             java.math.BigDecimal.valueOf(148.0), java.math.BigDecimal.valueOf(152.5),
@@ -913,7 +913,7 @@ class DataGapFillerServiceImplTest {
                     LocalDate date = inv.getArgument(1);
                     com.stock.invest.model.KLineData kd = new com.stock.invest.model.KLineData();
                     kd.setSymbol("AAPL");
-                    com.stock.invest.model.KLineIterator item = new com.stock.invest.model.KLineIterator(
+                    com.stock.invest.model.KLineItem item = new com.stock.invest.model.KLineItem(
                             "AAPL", date.atStartOfDay(AMERICA_NY).toInstant().toEpochMilli(),
                             java.math.BigDecimal.valueOf(150.0), java.math.BigDecimal.valueOf(155.0),
                             java.math.BigDecimal.valueOf(148.0), java.math.BigDecimal.valueOf(152.5),

@@ -4,7 +4,7 @@ import com.stock.invest.config.GapFillProperties;
 import com.stock.invest.entity.StockDailyBar;
 import com.stock.invest.exception.StockDataException;
 import com.stock.invest.model.KLineData;
-import com.stock.invest.model.KLineIterator;
+import com.stock.invest.model.KLineItem;
 import com.stock.invest.repository.DataFillTaskRepository;
 import com.stock.invest.repository.StockDailyBarRepository;
 import com.stock.invest.service.DataFillProgressService;
@@ -57,7 +57,7 @@ class FillMissingFieldsTest {
 
     @BeforeEach
     void setUp() {
-        service = new DataGapFillerServiceImpl(
+        service = DataGapFillerTestSupport.buildService(
                 stockDailyBarRepository, dataFillTaskRepository, List.of(yfinanceSource),
                 gapFillProperties, dataFillProgressService, retryProgressService, tradingCalendarDbService,
                 stockDataSourcePriorityService, symbolBlacklistService,
@@ -94,7 +94,7 @@ class FillMissingFieldsTest {
     private static KLineData ahData(String symbol, LocalDate date, double close, java.math.BigDecimal ahChangePercent) {
         KLineData kd = new KLineData();
         kd.setSymbol(symbol);
-        KLineIterator item = new KLineIterator(symbol, date.atStartOfDay(java.time.ZoneId.of("America/New_York")).toInstant().toEpochMilli(),
+        KLineItem item = new KLineItem(symbol, date.atStartOfDay(java.time.ZoneId.of("America/New_York")).toInstant().toEpochMilli(),
                 BigDecimal.valueOf(close), BigDecimal.valueOf(close), BigDecimal.valueOf(close), BigDecimal.valueOf(close),
                 0, 0, BigDecimal.ZERO, BigDecimal.ZERO, ahChangePercent);
         item.setTimeString(date.toString());
@@ -105,7 +105,7 @@ class FillMissingFieldsTest {
     private static KLineData dailyData(String symbol, LocalDate date, double close) {
         KLineData kd = new KLineData();
         kd.setSymbol(symbol);
-        KLineIterator item = new KLineIterator(symbol, date.atStartOfDay(java.time.ZoneId.of("America/New_York")).toInstant().toEpochMilli(),
+        KLineItem item = new KLineItem(symbol, date.atStartOfDay(java.time.ZoneId.of("America/New_York")).toInstant().toEpochMilli(),
                 BigDecimal.valueOf(0.8), BigDecimal.valueOf(0.9), BigDecimal.valueOf(0.7), BigDecimal.valueOf(close),
                 1000, 0, null, null, null);
         item.setTimeString(date.toString());

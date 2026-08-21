@@ -3,10 +3,11 @@ package com.stock.invest.service;
 import com.stock.invest.config.GapFillProperties;
 import com.stock.invest.entity.StockDailyBar;
 import com.stock.invest.model.KLineData;
-import com.stock.invest.model.KLineIterator;
+import com.stock.invest.model.KLineItem;
 import com.stock.invest.repository.DataFillTaskRepository;
 import com.stock.invest.repository.StockDailyBarRepository;
 import com.stock.invest.service.impl.DataGapFillerServiceImpl;
+import com.stock.invest.service.impl.DataGapFillerTestSupport;
 import com.stock.invest.service.impl.TigerOpenStockServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -75,7 +76,7 @@ class DataGapFillerAfterHoursTest {
 
         // TigerOpenStockServiceImpl mock（getSourceName=tigeropen，supportsAfterHoursMerge 放行）
         List<DataSourceStrategy> dataSources = List.of(tigerOpenSource);
-        service = new DataGapFillerServiceImpl(
+        service = DataGapFillerTestSupport.buildService(
                 stockDailyBarRepository, dataFillTaskRepository, dataSources,
                 gapFillProperties, dataFillProgressService, retryProgressService, tradingCalendarDbService,
                 stockDataSourcePriorityService, symbolBlacklistService,
@@ -145,7 +146,7 @@ class DataGapFillerAfterHoursTest {
         when(yfinanceSource.isAvailable()).thenReturn(true);
 
         List<DataSourceStrategy> dataSources = List.of(yfinanceSource);
-        DataGapFillerServiceImpl yService = new DataGapFillerServiceImpl(
+        DataGapFillerServiceImpl yService = DataGapFillerTestSupport.buildService(
                 stockDailyBarRepository, dataFillTaskRepository, dataSources,
                 gapFillProperties, dataFillProgressService, retryProgressService, tradingCalendarDbService,
                 stockDataSourcePriorityService, symbolBlacklistService,
@@ -170,7 +171,7 @@ class DataGapFillerAfterHoursTest {
         verify(stockDailyBarRepository, atLeastOnce()).save(barCaptor.capture());
         StockDailyBar saved = barCaptor.getValue();
         assertEquals("yfinance", saved.getSource());
-        // KLineIterator stores afterHours as BigDecimal, constructor default ZERO
+        // KLineItem stores afterHours as BigDecimal, constructor default ZERO
         // mergeAfterHours not called for non-tiger source, so it stays ZERO
         assertEquals(0, java.math.BigDecimal.ZERO.compareTo(saved.getAfterHours()));
     }
@@ -201,7 +202,7 @@ class DataGapFillerAfterHoursTest {
 
         verify(stockDailyBarRepository, atLeastOnce()).save(barCaptor.capture());
         StockDailyBar saved = barCaptor.getValue();
-        // afterHours is ZERO (KLineIterator constructor default) when mergeAfterHours skipped null data
+        // afterHours is ZERO (KLineItem constructor default) when mergeAfterHours skipped null data
         assertEquals(0, java.math.BigDecimal.ZERO.compareTo(saved.getAfterHours()),
                 "afterHours remains ZERO when AH data is null");
     }
@@ -347,7 +348,7 @@ class DataGapFillerAfterHoursTest {
                 .toInstant().toEpochMilli();
         KLineData kd = new KLineData();
         kd.setSymbol(symbol);
-        KLineIterator item = new KLineIterator(
+        KLineItem item = new KLineItem(
                 symbol, epochMillis,
                 java.math.BigDecimal.valueOf(open), java.math.BigDecimal.valueOf(high),
                 java.math.BigDecimal.valueOf(low), java.math.BigDecimal.valueOf(close),

@@ -1,6 +1,6 @@
 package com.stock.invest.exception;
 
-import com.stock.invest.enums.dto.ApiResponse;
+import com.stock.invest.dto.ApiResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;

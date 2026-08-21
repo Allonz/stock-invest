@@ -114,11 +114,11 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- H2 Database for testing -->
+        <!-- H2 Database for testing（仅测试 classpath，不打进生产 jar——评审 E-6） -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
-            <scope>runtime</scope>
+            <scope>test</scope>
         </dependency>
 
         <!-- Caffeine 缓存（TradingCalendarFallback 直接使用） -->

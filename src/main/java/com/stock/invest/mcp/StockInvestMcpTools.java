@@ -10,9 +10,9 @@ import org.springaicommunity.mcp.annotation.McpTool;
 import org.springaicommunity.mcp.annotation.McpToolParam;
 import org.springframework.stereotype.Component;
 
-import com.stock.invest.enums.dto.TigerWatchlistIngestRequestDto;
-import com.stock.invest.enums.dto.TigerWatchlistIngestResponseDto;
-import com.stock.invest.enums.dto.TigerWatchlistRowDto;
+import com.stock.invest.dto.TigerWatchlistIngestRequestDto;
+import com.stock.invest.dto.TigerWatchlistIngestResponseDto;
+import com.stock.invest.dto.TigerWatchlistRowDto;
 import com.stock.invest.security.IngestApiGuard;
 import com.stock.invest.service.OrchestrationService;
 import com.stock.invest.service.ScreeningService;

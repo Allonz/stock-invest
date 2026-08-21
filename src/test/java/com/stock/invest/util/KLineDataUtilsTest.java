@@ -1,7 +1,7 @@
 package com.stock.invest.util;
 
 import com.stock.invest.model.KLineData;
-import com.stock.invest.model.KLineIterator;
+import com.stock.invest.model.KLineItem;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -15,8 +15,8 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class KLineDataUtilsTest {
 
-    private static KLineIterator kBar(long time, long volume) {
-        KLineIterator bar = new KLineIterator();
+    private static KLineItem kBar(long time, long volume) {
+        KLineItem bar = new KLineItem();
         bar.setSymbol("AAA");
         bar.setTime(time);
         bar.setOpen(java.math.BigDecimal.valueOf(10.0D));
@@ -33,14 +33,14 @@ public class KLineDataUtilsTest {
     @Test
     public void sortItemsAlreadyNewestFirst_unchanged() {
         KLineData data = new KLineData();
-        List<KLineIterator> items = new ArrayList<>();
+        List<KLineItem> items = new ArrayList<>();
         items.add(kBar(3000L, 100));
         items.add(kBar(2000L, 200));
         items.add(kBar(1000L, 300));
         data.setItems(items);
 
         KLineDataUtils.sortItemsNewestFirst(data);
-        List<KLineIterator> result = data.getItems();
+        List<KLineItem> result = data.getItems();
         assertEquals(3, result.size());
         assertEquals(3000L, result.get(0).getTime());
         assertEquals(2000L, result.get(1).getTime());
@@ -50,14 +50,14 @@ public class KLineDataUtilsTest {
     @Test
     public void sortItemsOldestFirst_shouldReorder() {
         KLineData data = new KLineData();
-        List<KLineIterator> items = new ArrayList<>();
+        List<KLineItem> items = new ArrayList<>();
         items.add(kBar(1000L, 100));
         items.add(kBar(2000L, 200));
         items.add(kBar(3000L, 300));
         data.setItems(items);
 
         KLineDataUtils.sortItemsNewestFirst(data);
-        List<KLineIterator> result = data.getItems();
+        List<KLineItem> result = data.getItems();
         assertEquals(3, result.size());
         assertEquals(3000L, result.get(0).getTime());
         assertEquals(2000L, result.get(1).getTime());
@@ -67,7 +67,7 @@ public class KLineDataUtilsTest {
     @Test
     public void sortItemsRandomOrder_shouldSortCorrectly() {
         KLineData data = new KLineData();
-        List<KLineIterator> items = new ArrayList<>();
+        List<KLineItem> items = new ArrayList<>();
         items.add(kBar(5000L, 100));
         items.add(kBar(1000L, 200));
         items.add(kBar(3000L, 300));
@@ -76,7 +76,7 @@ public class KLineDataUtilsTest {
         data.setItems(items);
 
         KLineDataUtils.sortItemsNewestFirst(data);
-        List<KLineIterator> result = data.getItems();
+        List<KLineItem> result = data.getItems();
         assertEquals(5, result.size());
         for (int i = 1; i < result.size(); i++) {
             assertTrue(result.get(i - 1).getTime() >= result.get(i).getTime(),
@@ -100,7 +100,7 @@ public class KLineDataUtilsTest {
     @Test
     public void sortItemsSingleItem_unchanged() {
         KLineData data = new KLineData();
-        List<KLineIterator> items = new ArrayList<>();
+        List<KLineItem> items = new ArrayList<>();
         items.add(kBar(1000L, 100));
         data.setItems(items);
 

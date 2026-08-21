@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stock.invest.config.TiingoProperties;
 import com.stock.invest.exception.StockDataException;
 import com.stock.invest.model.KLineData;
-import com.stock.invest.model.KLineIterator;
+import com.stock.invest.model.KLineItem;
 import com.stock.invest.service.DataSourceStrategy;
 import com.stock.invest.util.PythonScriptExecutor;
 import org.slf4j.Logger;
@@ -104,7 +104,7 @@ public class TiingoDataSourceStrategy implements DataSourceStrategy {
             // 目标日响应日志：只打印脚本返回中 tradeDate 那一条的完整参数（便于日志分析字段正确性/空值）
             KLineData parsed = parseKLineData(symbol, result);
             if (parsed != null && parsed.getItems() != null && !parsed.getItems().isEmpty()) {
-                KLineIterator target = parsed.getItems().stream()
+                KLineItem target = parsed.getItems().stream()
                         .filter(it -> it.getTimeString() != null && it.getTimeString().equals(tradeDate.toString()))
                         .findFirst().orElse(null);
                 if (target != null) {
@@ -132,7 +132,7 @@ public class TiingoDataSourceStrategy implements DataSourceStrategy {
         KLineData klineData = objectMapper.readValue(json, KLineData.class);
         // 填充每个 item 的 symbol 字段（脚本 JSON 中 item 不含 symbol）
         if (klineData != null && klineData.getItems() != null) {
-            for (com.stock.invest.model.KLineIterator item : klineData.getItems()) {
+            for (com.stock.invest.model.KLineItem item : klineData.getItems()) {
                 item.setSymbol(symbol);
             }
         }

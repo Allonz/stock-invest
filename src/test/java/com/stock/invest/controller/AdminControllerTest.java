@@ -249,6 +249,26 @@ class AdminControllerTest {
         assertFalse(progress.isRunning(), "running flag must clear after task body");
     }
 
+    @Test
+    @DisplayName("评审 D-6: 筛选任务完成后进度条目保留（不立即删除），供前端读取 DONE 状态")
+    void triggerScreeningAsync_completedKeepsProgressEntry() throws Exception {
+        when(screeningProgressService.startScreening(anyList(), anyInt())).thenReturn("keep-123");
+        ScreeningProgressService.ScreeningProgress progress = new ScreeningProgressService.ScreeningProgress();
+        when(screeningProgressService.getProgress("keep-123")).thenReturn(progress);
+
+        mockMvc.perform(adminPost("/api/admin/trigger-screening-async")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+
+        org.mockito.ArgumentCaptor<Runnable> captor = org.mockito.ArgumentCaptor.forClass(Runnable.class);
+        verify(scanExecutor).execute(captor.capture());
+        captor.getValue().run();
+
+        assertFalse(progress.isRunning(), "running flag must clear after task body");
+        // 完成后不删除条目：DONE 状态保留至 TTL（24h），由 ScreeningProgressService 定时清理
+        verify(screeningProgressService, never()).removeProgress(anyString());
+    }
+
     // ---- run-screening-async 参数透传与解析 ----
 
     @Test

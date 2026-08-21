@@ -5,9 +5,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
@@ -20,16 +18,13 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.stock.invest.config.GapFillProperties;
+import com.stock.invest.constant.GapFillConstants;
 import com.stock.invest.entity.DataFillTask;
 import com.stock.invest.entity.StockDailyBar;
 import com.stock.invest.repository.DataFillTaskRepository;
 import com.stock.invest.repository.StockDailyBarRepository;
 import com.stock.invest.service.DataFillProgressService;
 import com.stock.invest.service.DataGapFillerService;
-import com.stock.invest.service.DataSourceStrategy;
-import com.stock.invest.service.FieldCapabilityService;
-import com.stock.invest.service.RetryProgressService;
-import com.stock.invest.service.StockDataSourcePriorityService;
 import com.stock.invest.service.SymbolBlacklistService;
 import com.stock.invest.service.TradingCalendarDbService;
 
@@ -51,14 +46,9 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
     private static final Logger log = LoggerFactory.getLogger(DataGapFillerServiceImpl.class);
 
     private static final int MAX_SYMBOLS_PER_RUN = 200;
-    private static final int MAX_LOOKBACK_DAYS = 7;
 
     /** 字段增补单次上限：防止存量 PENDING 过多时一次性打爆外部 API（2026-08-14） */
     static final int MAX_FILL_FIELDS_PER_RUN = 100;
-
-    /** 字段增补窗口：只补最近 30 个交易日内的记录（≈45 日历日，含周末/节假日宽松覆盖）。
-     *  用户 2026-08-14：历史太久的不补（yfinance 盘后分钟数据 30 天窗口外不可得）。 */
-    static final int FILL_WINDOW_CALENDAR_DAYS = 45;
 
     // ---- 字段增补（2026-08-14）----
     /** 字段名常量 */
@@ -89,24 +79,26 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
     /** P1-2：批次运行互斥 —— 定时、REST、MCP 三路共用同一 Service 实例，天然互斥 */
     private final AtomicBoolean running = new AtomicBoolean(false);
 
-    /** P1-5：数据源熔断冷却表，key=数据源名，value=冷却截止 epochMillis */
-    private final Map<String, Long> sourceCooldownUntil = new ConcurrentHashMap<>();
-
     /** P1-2：事务边界收缩 —— 单次持久化用独立事务，失败不回滚整批 */
     private final TransactionTemplate transactionTemplate;
 
+    /**
+     * 评审 A-1：四个核心协作类（FallbackChainBuilder / MissingFieldFiller / GapFetcher /
+     * RetryTaskProcessor）已改为 {@code @Component} Spring Bean，此处由容器构造注入，
+     * 可被 AOP/事务代理覆盖；不再在构造器内手工 new。
+     */
     public DataGapFillerServiceImpl(
             StockDailyBarRepository stockDailyBarRepository,
             DataFillTaskRepository dataFillTaskRepository,
-            List<DataSourceStrategy> dataSources,
             GapFillProperties gapFillProperties,
             DataFillProgressService dataFillProgressService,
-            RetryProgressService retryProgressService,
             TradingCalendarDbService tradingCalendarDbService,
-            StockDataSourcePriorityService stockDataSourcePriorityService,
             SymbolBlacklistService symbolBlacklistService,
-            PlatformTransactionManager transactionManager,
-            FieldCapabilityService fieldCapabilityService) {
+            FallbackChainBuilder fallbackChainBuilder,
+            MissingFieldFiller missingFieldFiller,
+            GapFetcher gapFetcher,
+            RetryTaskProcessor retryTaskProcessor,
+            PlatformTransactionManager transactionManager) {
         this.stockDailyBarRepository = stockDailyBarRepository;
         this.dataFillTaskRepository = dataFillTaskRepository;
         this.gapFillProperties = gapFillProperties;
@@ -114,24 +106,10 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         this.tradingCalendarDbService = tradingCalendarDbService;
         this.symbolBlacklistService = symbolBlacklistService;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
-        this.fallbackChainBuilder = new FallbackChainBuilder(
-                dataSources, stockDataSourcePriorityService, sourceCooldownUntil);
-        this.missingFieldFiller = new MissingFieldFiller(
-                stockDailyBarRepository, dataSources, fieldCapabilityService, transactionManager);
-        this.gapFetcher = new GapFetcher(
-                stockDailyBarRepository,
-                dataFillTaskRepository,
-                stockDataSourcePriorityService,
-                symbolBlacklistService,
-                missingFieldFiller,
-                fallbackChainBuilder,
-                transactionManager);
-        this.retryTaskProcessor = new RetryTaskProcessor(
-                dataFillTaskRepository,
-                symbolBlacklistService,
-                retryProgressService,
-                gapFetcher,
-                transactionManager);
+        this.fallbackChainBuilder = fallbackChainBuilder;
+        this.missingFieldFiller = missingFieldFiller;
+        this.gapFetcher = gapFetcher;
+        this.retryTaskProcessor = retryTaskProcessor;
     }
 
     @Override
@@ -252,7 +230,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
     private FillResult fillGapsForSymbol(String symbol, DataFillProgressService.FillProgress progress) {
         // 查询结果按 tradeDate DESC（最新在前）
         List<StockDailyBar> bars = stockDailyBarRepository
-                .findBySymbolOrderByTradeDateDesc(symbol, PageRequest.of(0, MAX_LOOKBACK_DAYS));
+                .findBySymbolOrderByTradeDateDesc(symbol, PageRequest.of(0, GapFillConstants.MAX_LOOKBACK_DAYS));
         if (bars.isEmpty()) {
             return FillResult.empty();
         }
@@ -327,7 +305,7 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
 
     /**
      * 发现阶段：扫描 field_fill_status 为 NULL 的记录（存量），按能力表计算缺失字段并标记。
-     * 仅最近 {@link #FILL_WINDOW_CALENDAR_DAYS} 天内（≈30 交易日）的记录参与增补标记；
+     * 仅最近 {@link com.stock.invest.constant.GapFillConstants#FILL_WINDOW_CALENDAR_DAYS} 天内（≈30 交易日）的记录参与增补标记；
      * 超窗记录直接 CONFIRMED（终态，不补，用户 2026-08-14）。
      *
      * @return 处理的记录数

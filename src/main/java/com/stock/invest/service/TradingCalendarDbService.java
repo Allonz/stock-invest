@@ -13,7 +13,10 @@ import com.stock.invest.entity.TradingCalendarEntity;
 import com.stock.invest.model.TradingCalendarResult;
 import com.stock.invest.repository.TradingCalendarRepository;
 import com.stock.invest.service.impl.TradingCalendarFallback;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.UnexpectedRollbackException;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -33,6 +36,9 @@ public class TradingCalendarDbService {
     private final TradingCalendarFallback fallback;
     /** P2-13：单日持久化独立事务 —— 整年循环不再持有单个 DB 连接数小时，单日失败不回滚已入库日期 */
     private final TransactionTemplate transactionTemplate;
+    /** 评审 D-2：并发唯一键冲突重试专用事务 —— REQUIRES_NEW 全新事务，
+     *  不继承外层事务被 JPA 标记的 rollback-only 状态 */
+    private final TransactionTemplate conflictRetryTransactionTemplate;
 
     public TradingCalendarDbService(TradingCalendarRepository repository,
                                     TradingCalendarFallback fallback,
@@ -40,6 +46,9 @@ public class TradingCalendarDbService {
         this.repository = repository;
         this.fallback = fallback;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.conflictRetryTransactionTemplate = new TransactionTemplate(transactionManager);
+        this.conflictRetryTransactionTemplate.setPropagationBehavior(
+                TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
     /**
@@ -61,10 +70,9 @@ public class TradingCalendarDbService {
         // 2. DB 无记录 → fallback 链实时查（不占用 DB 连接/事务）
         TradingCalendarResult result = fallback.isTradingDay(market, date);
         if (result != null) {
-            // 3. 结果入库（独立短事务）
-            final TradingCalendarResult r = result;
-            transactionTemplate.executeWithoutResult(status ->
-                    upsert(market, date, r.isTradingDay(), r.getSource(), r.getType(), r.getDetail()));
+            // 3. 结果入库（独立短事务 upsert，内部含唯一键冲突 REQUIRES_NEW 重试，评审 D-2）
+            upsert(market, date, result.isTradingDay(),
+                    result.getSource(), result.getType(), result.getDetail());
             return result.isTradingDay();
         }
 
@@ -95,10 +103,10 @@ public class TradingCalendarDbService {
             try {
                 TradingCalendarResult result = fallback.isTradingDay(market, date);
                 if (result != null) {
-                    Integer affected = transactionTemplate.execute(status ->
-                            upsert(market, date, result.isTradingDay(),
-                                    result.getSource(), result.getType(), result.getDetail()));
-                    count += (affected != null ? affected : 0);
+                    // 单日独立事务 upsert（内部含唯一键冲突 REQUIRES_NEW 重试，评审 D-2）
+                    upsert(market, date, result.isTradingDay(),
+                            result.getSource(), result.getType(), result.getDetail());
+                    count++;
                 } else {
                     skipped++;
                     log.warn("[TradingCalendarDbService] fetchFullYear: 数据源不可用, 跳过 date={}", date);
@@ -178,8 +186,24 @@ public class TradingCalendarDbService {
 
     // ---- 内部方法 ----
 
-    private int upsert(String market, LocalDate date, boolean isOpen,
-                       String source, String type, String detail) {
-        return repository.upsert(market, date, isOpen, source, type, detail);
+    /**
+     * Upsert 入库（评审 D-2）：首次尝试在独立短事务 T1 内执行；
+     * 并发唯一键冲突时，冲突异常必须传播出 T1 回调使 T1 整体回滚
+     * （不能在事务内吞掉 —— 被标记 rollback-only 的事务即使内部重试成功，
+     * 提交时仍会抛 UnexpectedRollbackException），随后改到 REQUIRES_NEW
+     * 全新事务 T2 中重读重写一次（不继承 T1 的 rollback-only 标记）。
+     */
+    private void upsert(String market, LocalDate date, boolean isOpen,
+                        String source, String type, String detail) {
+        try {
+            transactionTemplate.executeWithoutResult(status ->
+                    repository.upsert(market, date, isOpen, source, type, detail));
+        } catch (DataIntegrityViolationException | UnexpectedRollbackException e) {
+            // 并发窗口：另一线程已插入同 (market, trade_date) —— 新事务中按"更新"处理
+            log.info("[TradingCalendarDbService] upsert 唯一键冲突，REQUIRES_NEW 事务重试: market={}, date={}",
+                    market, date);
+            conflictRetryTransactionTemplate.executeWithoutResult(status ->
+                    repository.upsert(market, date, isOpen, source, type, detail));
+        }
     }
 }

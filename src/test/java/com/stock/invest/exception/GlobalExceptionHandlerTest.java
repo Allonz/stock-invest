@@ -32,7 +32,7 @@ class GlobalExceptionHandlerTest {
     @Test
     @DisplayName("ResponseStatusException -> 保留原始状态码，不落入 500")
     void handleResponseStatus_preservesStatus() {
-        ResponseEntity<com.stock.invest.enums.dto.ApiResponse<?>> resp =
+        ResponseEntity<com.stock.invest.dto.ApiResponse<?>> resp =
                 handler.handleResponseStatus(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid key"));
 
         assertEquals(HttpStatus.UNAUTHORIZED, resp.getStatusCode());

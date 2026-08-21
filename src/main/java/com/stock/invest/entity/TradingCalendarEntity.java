@@ -1,15 +1,24 @@
 package com.stock.invest.entity;
 
 import jakarta.persistence.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 /**
  * 交易日历持久化实体。
  * 记录每个市场每日的开盘/休市状态，从多个数据源抓取后落库。
  * 唯一约束：(market, trade_date)，支持 upsert。
+ *
+ * <p>评审 E-5：审计字段（createdAt/updatedAt）统一为 JPA Auditing 风格
+ * （{@link AuditingEntityListener} + {@link Instant}），与其余实体一致，
+ * 不再使用 @PrePersist/@PreUpdate + LocalDateTime 的手写方案。</p>
  */
 @Entity
+@EntityListeners(AuditingEntityListener.class)
 @Table(name = "trading_calendar", uniqueConstraints = {
     @UniqueConstraint(name = "uk_trading_calendar_market_trade_date", columnNames = {"market", "trade_date"})
 })
@@ -43,22 +52,15 @@ public class TradingCalendarEntity {
     @Column(length = 256)
     private String detail;
 
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
+    /** 创建时间（JPA Auditing 自动填充，评审 E-5 统一为 Instant） */
+    @CreatedDate
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
 
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = createdAt;
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
+    /** 更新时间（JPA Auditing 自动填充） */
+    @LastModifiedDate
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
 
     // --- getters & setters ---
 
@@ -83,8 +85,8 @@ public class TradingCalendarEntity {
     public String getDetail() { return detail; }
     public void setDetail(String detail) { this.detail = detail; }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public Instant getCreatedAt() { return createdAt; }
+    public Instant getUpdatedAt() { return updatedAt; }
 
     @Override
     public String toString() {

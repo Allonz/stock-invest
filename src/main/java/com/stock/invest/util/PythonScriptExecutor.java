@@ -123,7 +123,9 @@ public class PythonScriptExecutor {
         try {
             Files.copy(resource.getInputStream(), tempFile, StandardCopyOption.REPLACE_EXISTING);
             File scriptFile = tempFile.toFile();
-            scriptFile.deleteOnExit();
+            // 评审 F-5：不再调用 deleteOnExit() —— 每次执行都会向 JVM 关闭钩子注册列表永久
+            // 追加 File 对象（finally 已删除文件但注册不撤销），长期运行的服务进程缓慢内存泄漏；
+            // 仅依赖下方 finally 中的 Files.deleteIfExists 删除。
 
             List<String> command = new ArrayList<>();
             command.add(pythonExec);

@@ -12,6 +12,4 @@ public interface StockDataSourcePriorityRepository
     List<StockDataSourcePriority> findBySymbolOrderByLastSuccessTimeDesc(String symbol);
 
     Optional<StockDataSourcePriority> findBySymbolAndDataSource(String symbol, String dataSource);
-
-    void deleteBySymbolAndDataSource(String symbol, String dataSource);
 }

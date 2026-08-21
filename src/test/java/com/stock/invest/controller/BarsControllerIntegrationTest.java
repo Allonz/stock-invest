@@ -2,6 +2,7 @@ package com.stock.invest.controller;
 
 import com.stock.invest.entity.StockDailyBar;
 import com.stock.invest.repository.StockDailyBarRepository;
+import com.stock.invest.support.IntegrationSchemaResetInitializer;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -15,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -29,9 +31,12 @@ import static org.junit.jupiter.api.Assertions.*;
  * 使用 @Tag("integration") 标记，不干扰 CI 的 Mock 测试。
  * 连接真实 MySQL，只读查询，不修改数据库。
  * </p>
+ * <p>评审 F-7：连接独立测试库 stock_invest_it（每次上下文启动前重建），
+ * 不再直连生产 stock_invest 库。</p>
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("integration")
+@ContextConfiguration(initializers = IntegrationSchemaResetInitializer.class)
 @Tag("integration")
 @SuppressWarnings("unchecked")
 class BarsControllerIntegrationTest {

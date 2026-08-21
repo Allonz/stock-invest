@@ -8,12 +8,12 @@ import java.math.BigDecimal;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * 模型字段测试 — KLineIterator（新增 changePercent/afterHours/afterHoursChangePercent）
+ * 模型字段测试 — KLineItem（新增 changePercent/afterHours/afterHoursChangePercent）
  * 覆盖 KLI-001 ~ KLI-006
- * 注意：KLineIterator 有 11 参数构造器。
+ * 注意：KLineItem 有 11 参数构造器。
  */
-@DisplayName("KLineIterator — 新增字段（changePercent/afterHours/afterHoursChangePercent）")
-class KLineIteratorFieldTest {
+@DisplayName("KLineItem — 新增字段（changePercent/afterHours/afterHoursChangePercent）")
+class KLineItemFieldTest {
 
     private static BigDecimal bd(String v) {
         return new BigDecimal(v);
@@ -23,7 +23,7 @@ class KLineIteratorFieldTest {
     @Test
     @DisplayName("KLI-001: 11 参数构造器设置全部新增字段")
     void constructorSetsNewFields() {
-        KLineIterator it = new KLineIterator(
+        KLineItem it = new KLineItem(
                 "AAPL", 1700000000000L,  // symbol, time
                 bd("150.0"), bd("155.0"), bd("148.0"), bd("152.5"),  // open, high, low, close
                 1_000_000L, 5_000_000.0,  // volume, amount
@@ -49,7 +49,7 @@ class KLineIteratorFieldTest {
     @Test
     @DisplayName("KLI-002: changePercent getter/setter")
     void changePercentGetterSetter() {
-        KLineIterator it = new KLineIterator();
+        KLineItem it = new KLineItem();
         assertNull(it.getChangePercent(), "default is null");
 
         it.setChangePercent(bd("-2.5"));
@@ -63,7 +63,7 @@ class KLineIteratorFieldTest {
     @Test
     @DisplayName("KLI-003: afterHours getter/setter")
     void afterHoursGetterSetter() {
-        KLineIterator it = new KLineIterator();
+        KLineItem it = new KLineItem();
         assertNull(it.getAfterHours(), "default is null");
 
         it.setAfterHours(bd("155.5"));
@@ -77,7 +77,7 @@ class KLineIteratorFieldTest {
     @Test
     @DisplayName("KLI-004: afterHoursChangePercent getter/setter")
     void afterHoursChangePercentGetterSetter() {
-        KLineIterator it = new KLineIterator();
+        KLineItem it = new KLineItem();
         assertNull(it.getAfterHoursChangePercent(), "default is null");
 
         it.setAfterHoursChangePercent(bd("0.88"));
@@ -91,7 +91,7 @@ class KLineIteratorFieldTest {
     @Test
     @DisplayName("KLI-005: toString 包含 changePercent/afterHours/afterHoursChangePercent")
     void toStringContainsNewFields() {
-        KLineIterator it = new KLineIterator(
+        KLineItem it = new KLineItem(
                 "MSFT", 1700000000000L,
                 bd("300.0"), bd("305.0"), bd("298.0"), bd("302.5"),
                 2_000_000L, 10_000_000.0,
@@ -107,7 +107,7 @@ class KLineIteratorFieldTest {
     @Test
     @DisplayName("KLI-006: 无参构造器默认值")
     void defaultValues() {
-        KLineIterator it = new KLineIterator();
+        KLineItem it = new KLineItem();
         assertNull(it.getChangePercent(), "default changePercent is null");
         assertNull(it.getAfterHours(), "default afterHours is null");
         assertNull(it.getAfterHoursChangePercent(), "default afterHoursChangePercent is null");

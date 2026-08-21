@@ -16,6 +16,4 @@ public interface SymbolBlacklistRepository extends JpaRepository<SymbolBlacklist
 
     @Query("SELECT b.symbol FROM SymbolBlacklist b WHERE b.status = 'active'")
     List<String> findBlacklistedSymbols();
-
-    void deleteBySymbol(String symbol);
 }

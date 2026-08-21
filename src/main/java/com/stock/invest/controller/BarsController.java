@@ -1,8 +1,8 @@
 package com.stock.invest.controller;
 
-import com.stock.invest.enums.dto.ApiResponse;
-import com.stock.invest.enums.dto.StockDailyBarCandleDto;
-import com.stock.invest.enums.dto.StockDailyBarDto;
+import com.stock.invest.dto.ApiResponse;
+import com.stock.invest.dto.StockDailyBarCandleDto;
+import com.stock.invest.dto.StockDailyBarDto;
 import com.stock.invest.service.StockDailyBarService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +42,7 @@ public class BarsController {
      * GET /api/bars/single/query?symbol=TOVX
      */
     @GetMapping("/single/query")
-    public ResponseEntity<Map<String, Object>> getBars(@RequestParam String symbol) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getBars(@RequestParam String symbol) {
         if (symbol == null || symbol.isBlank()) {
             throw new IllegalArgumentException("symbol is required");
         }
@@ -53,7 +53,7 @@ public class BarsController {
         result.put("symbol", code);
         result.put("total", bars.size());
         result.put("rows", bars);
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(ApiResponse.ok(result));
     }
 
     /**
@@ -61,7 +61,7 @@ public class BarsController {
      * GET /api/bars/pages/query?page=0&pageSize=20&sortBy=tradeDate&sortDir=desc&symbol=AAPL&tradeDate=2026-06-01&source=yfinance
      */
     @GetMapping("/pages/query")
-    public ResponseEntity<Map<String, Object>> queryBars(
+    public ResponseEntity<ApiResponse<Map<String, Object>>> queryBars(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int pageSize,
             @RequestParam(defaultValue = "tradeDate") String sortBy,
@@ -99,7 +99,7 @@ public class BarsController {
         result.put("page", barPage.getNumber());
         result.put("pageSize", barPage.getSize());
         result.put("rows", barPage.getContent());
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(ApiResponse.ok(result));
     }
 
     /**
@@ -107,11 +107,11 @@ public class BarsController {
      * GET /api/bars/sources
      */
     @GetMapping("/sources")
-    public ResponseEntity<Map<String, Object>> getSources() {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getSources() {
         List<String> sources = stockDailyBarService.getAllSources();
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("sources", sources);
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(ApiResponse.ok(result));
     }
 
     /**

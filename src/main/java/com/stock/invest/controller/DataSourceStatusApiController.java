@@ -3,7 +3,7 @@ package com.stock.invest.controller;
 import com.stock.invest.datasource.DataSourceAvailabilityChecker;
 import com.stock.invest.datasource.DataSourceCapability;
 import com.stock.invest.datasource.SourceStatus;
-import com.stock.invest.enums.dto.ApiResponse;
+import com.stock.invest.dto.ApiResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;

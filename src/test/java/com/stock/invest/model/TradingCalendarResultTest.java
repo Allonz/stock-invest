@@ -45,15 +45,6 @@ class TradingCalendarResultTest {
         assertEquals("EARLY_CLOSE", r.getType());
     }
 
-    @Test @DisplayName("UT-05: defaultTradingDay() source=none type=DEFAULT")
-    void defaultTradingDay_allSourcesUnavailable() {
-        TradingCalendarResult r = TradingCalendarResult.defaultTradingDay(MARKET, DATE);
-        assertTrue(r.isTradingDay());
-        assertEquals("none", r.getSource());
-        assertEquals("DEFAULT", r.getType());
-        assertEquals("所有数据源均不可用，默认交易日", r.getDetail());
-    }
-
     @Test @DisplayName("UT-06: constructor all fields")
     void constructor_allFields() {
         TradingCalendarResult r = new TradingCalendarResult(MARKET, DATE, true, "test", "TRADING", "detail");
@@ -62,13 +53,6 @@ class TradingCalendarResultTest {
         assertTrue(r.isTradingDay());
         assertEquals("test", r.getSource());
         assertEquals("detail", r.getDetail());
-    }
-
-    @Test @DisplayName("UT-07: defaultTradingDay preserves market")
-    void defaultTradingDay_differentMarket() {
-        TradingCalendarResult r = TradingCalendarResult.defaultTradingDay("HK", DATE);
-        assertEquals("HK", r.getMarket());
-        assertTrue(r.isTradingDay());
     }
 
     @Test @DisplayName("UT-07b: nonTrading with detail")

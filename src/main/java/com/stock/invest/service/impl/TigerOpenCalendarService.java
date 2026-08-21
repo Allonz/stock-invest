@@ -36,7 +36,7 @@ public class TigerOpenCalendarService implements TradingCalendarService {
 
     public TigerOpenCalendarService(ObjectMapper objectMapper,
                                     TigerOpenPythonBridge bridge,
-                                    @Qualifier("scanExecutor") Executor executor) {
+                                    @Qualifier("calendarExecutor") Executor executor) {
         this.objectMapper = objectMapper;
         this.bridge = bridge;
         this.executor = executor;
@@ -65,7 +65,8 @@ public class TigerOpenCalendarService implements TradingCalendarService {
             try {
                 return future.get(TIMEOUT.getSeconds(), TimeUnit.SECONDS);
             } catch (TimeoutException e) {
-                // P2-14：超时必须取消底层任务，避免僵尸任务占用 scanExecutor 线程
+                // 评审 D-1：日历查询使用独立 calendarExecutor，不再与编排/筛选/补缺
+                // 长任务争抢 scanExecutor 线程（避免自饥饿）；超时后放弃等待并取消 future
                 future.cancel(true);
                 log.warn("[tigeropen] 日历查询超时 ({}s)，触发 fallback", TIMEOUT.getSeconds());
                 return null;

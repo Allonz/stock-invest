@@ -2,8 +2,8 @@ package com.stock.invest.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stock.invest.entity.StockDailyBar;
-import com.stock.invest.enums.dto.StockDailyBarCandleDto;
-import com.stock.invest.enums.dto.StockDailyBarDto;
+import com.stock.invest.dto.StockDailyBarCandleDto;
+import com.stock.invest.dto.StockDailyBarDto;
 import com.stock.invest.repository.StockDailyBarRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

@@ -1,8 +1,8 @@
 package com.stock.invest.controller;
 
-import com.stock.invest.enums.dto.ApiResponse;
-import com.stock.invest.enums.dto.TigerWatchlistIngestRequestDto;
-import com.stock.invest.enums.dto.TigerWatchlistIngestResponseDto;
+import com.stock.invest.dto.ApiResponse;
+import com.stock.invest.dto.TigerWatchlistIngestRequestDto;
+import com.stock.invest.dto.TigerWatchlistIngestResponseDto;
 import com.stock.invest.security.IngestApiGuard;
 import com.stock.invest.service.TigerWatchlistIngestService;
 import org.slf4j.Logger;

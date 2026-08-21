@@ -30,6 +30,7 @@ import com.stock.invest.entity.DataFillTask;
 import com.stock.invest.repository.DataFillTaskRepository;
 import com.stock.invest.repository.StockDailyBarRepository;
 import com.stock.invest.service.impl.DataGapFillerServiceImpl;
+import com.stock.invest.service.impl.DataGapFillerTestSupport;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("DataGapFillerService - data fill task retry logic")
@@ -86,7 +87,7 @@ class DataGapFillerServiceTest {
                 .thenReturn(new RetryProgressService.RetryProgress());
 
         List<DataSourceStrategy> dataSources = List.of(tigerDataSource, yfinanceDataSource, twelvedataDataSource, tiingoDataSource);
-        service = new DataGapFillerServiceImpl(
+        service = DataGapFillerTestSupport.buildService(
                 stockDailyBarRepository,
                 dataFillTaskRepository,
                 dataSources,
@@ -106,7 +107,7 @@ class DataGapFillerServiceTest {
         com.stock.invest.model.KLineData nonNullKd = new com.stock.invest.model.KLineData();
         nonNullKd.setSymbol("TEST");
         nonNullKd.setItems(java.util.List.of(
-            new com.stock.invest.model.KLineIterator("TEST", 0L,
+            new com.stock.invest.model.KLineItem("TEST", 0L,
                     java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
                     java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
                     0, 0,
@@ -168,7 +169,7 @@ class DataGapFillerServiceTest {
         // yfinance 返回包含 item 的数据（日期不匹配），避免两个数据源都 null 导致 blacklist
         com.stock.invest.model.KLineData yfKd = new com.stock.invest.model.KLineData();
         yfKd.setSymbol("AAPL");
-        yfKd.setItems(java.util.List.of(new com.stock.invest.model.KLineIterator("AAPL", 0L,
+        yfKd.setItems(java.util.List.of(new com.stock.invest.model.KLineItem("AAPL", 0L,
                 java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
                 java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
                 0, 0,
@@ -177,7 +178,7 @@ class DataGapFillerServiceTest {
         com.stock.invest.model.KLineData tgKd = new com.stock.invest.model.KLineData();
         tgKd.setSymbol("AAPL");
         tgKd.setItems(java.util.List.of(
-            new com.stock.invest.model.KLineIterator("AAPL", 0L,
+            new com.stock.invest.model.KLineItem("AAPL", 0L,
                     java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
                     java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
                     0, 0,
@@ -243,7 +244,7 @@ class DataGapFillerServiceTest {
         // yfinance 返回包含 item 的数据（日期不匹配），避免 blacklist
         com.stock.invest.model.KLineData yfKd = new com.stock.invest.model.KLineData();
         yfKd.setSymbol("AAPL");
-        yfKd.setItems(java.util.List.of(new com.stock.invest.model.KLineIterator("AAPL", 0L,
+        yfKd.setItems(java.util.List.of(new com.stock.invest.model.KLineItem("AAPL", 0L,
                 java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
                 java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
                 0, 0,
@@ -252,7 +253,7 @@ class DataGapFillerServiceTest {
         com.stock.invest.model.KLineData tgKd2 = new com.stock.invest.model.KLineData();
         tgKd2.setSymbol("AAPL");
         tgKd2.setItems(java.util.List.of(
-            new com.stock.invest.model.KLineIterator("AAPL", 0L,
+            new com.stock.invest.model.KLineItem("AAPL", 0L,
                     java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
                     java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
                     0, 0,

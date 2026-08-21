@@ -24,7 +24,12 @@ import java.util.concurrent.Executor;
 public class OrchestrationService {
 
     private static final Logger log = LoggerFactory.getLogger(OrchestrationService.class);
-    private static final long[] RETRY_DELAYS_MS = {3_000L, 9_000L, 27_000L};
+    /** 重试退避间隔（评审 F-14：测试类可在 @BeforeEach 替换为短值加速验证，生产默认 3s/9s/27s） */
+    static long[] RETRY_DELAYS_MS = {3_000L, 9_000L, 27_000L};
+    /** 评审 D-5：runWebhookUrls 条目 TTL（24h）—— Hermes 中断接力后条目不再永久滞留 */
+    private static final long WEBHOOK_URL_TTL_MILLIS = 24 * 60 * 60 * 1000L;
+    /** 评审 D-5：runWebhookUrls 容量上限（TTL 之外的兜底，防缓慢内存泄漏） */
+    private static final int MAX_WEBHOOK_URL_ENTRIES = 200;
 
     private final DataGapFillerService dataGapFillerService;
     private final ScreeningService screeningService;
@@ -32,8 +37,11 @@ public class OrchestrationService {
     private final WebhookUrlValidator webhookUrlValidator;
     private final Executor scanExecutor;
     private final Map<String, Boolean> runningRuns = new ConcurrentHashMap<>();
-    /** run_id → 回调端点（首次触发记录，接力沿用；链路结束清理） */
-    private final Map<String, String> runWebhookUrls = new ConcurrentHashMap<>();
+    /** run_id → 回调端点（首次触发记录，接力沿用；链路结束/超时/超容清理） */
+    private final Map<String, WebhookUrlEntry> runWebhookUrls = new ConcurrentHashMap<>();
+
+    /** 回调端点条目：url + 记录时间（用于 TTL 与容量淘汰） */
+    private record WebhookUrlEntry(String url, long createdAt) {}
 
     public OrchestrationService(DataGapFillerService dataGapFillerService,
                                 ScreeningService screeningService,
@@ -62,9 +70,9 @@ public class OrchestrationService {
 
         // 记录本 run 的回调端点（首次触发记录，后续接力沿用）
         if (webhookUrl != null && !webhookUrl.isBlank()) {
-            runWebhookUrls.put(runId, webhookUrl);
+            rememberWebhookUrl(runId, webhookUrl);
         }
-        String effUrl = runWebhookUrls.getOrDefault(runId, webhookUrl);
+        String effUrl = resolveWebhookUrl(runId, webhookUrl);
 
         if (runningRuns.putIfAbsent(runId, Boolean.TRUE) != null) {
             log.warn("[Orchestration] run {} already in progress, ignore step {}", runId, step);
@@ -77,6 +85,53 @@ public class OrchestrationService {
             log.error("[Orchestration] submit step {} failed for run {}", step, runId, e);
             webhookNotifier.notify(step, "failed", runId, tradeDate,
                     "提交失败: " + e.getMessage(), "none", effUrl);
+        }
+    }
+
+    /**
+     * 记录 run 的回调端点：先做惰性 TTL 清理，超容量时淘汰最旧条目（评审 D-5）。
+     */
+    private void rememberWebhookUrl(String runId, String webhookUrl) {
+        sweepExpiredWebhookUrls();
+        if (runWebhookUrls.size() >= MAX_WEBHOOK_URL_ENTRIES) {
+            evictOldestWebhookUrl();
+        }
+        runWebhookUrls.put(runId, new WebhookUrlEntry(webhookUrl, System.currentTimeMillis()));
+    }
+
+    /**
+     * 解析 run 的有效回调端点：TTL 过期条目视为不存在，回退到入参/全局配置。
+     */
+    private String resolveWebhookUrl(String runId, String fallback) {
+        WebhookUrlEntry entry = runWebhookUrls.get(runId);
+        if (entry == null) {
+            return fallback;
+        }
+        if (System.currentTimeMillis() - entry.createdAt() >= WEBHOOK_URL_TTL_MILLIS) {
+            runWebhookUrls.remove(runId, entry);
+            return fallback;
+        }
+        return entry.url();
+    }
+
+    /** 惰性 TTL 清理：移除超过 24h 的回调端点条目 */
+    private void sweepExpiredWebhookUrls() {
+        long cutoff = System.currentTimeMillis() - WEBHOOK_URL_TTL_MILLIS;
+        runWebhookUrls.entrySet().removeIf(e -> e.getValue().createdAt() < cutoff);
+    }
+
+    /** 容量上限兜底：淘汰最旧一条（ConcurrentHashMap 弱一致迭代，单次 O(n) 可接受） */
+    private void evictOldestWebhookUrl() {
+        String oldestKey = null;
+        long oldestCreated = Long.MAX_VALUE;
+        for (Map.Entry<String, WebhookUrlEntry> e : runWebhookUrls.entrySet()) {
+            if (e.getValue().createdAt() < oldestCreated) {
+                oldestCreated = e.getValue().createdAt();
+                oldestKey = e.getKey();
+            }
+        }
+        if (oldestKey != null) {
+            runWebhookUrls.remove(oldestKey);
         }
     }
 

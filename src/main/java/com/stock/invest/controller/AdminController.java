@@ -1,6 +1,7 @@
 package com.stock.invest.controller;
 
-import com.stock.invest.enums.dto.ApiResponse;
+import com.stock.invest.dto.ApiResponse;
+import com.stock.invest.dto.ScreenerAsyncRequestDto;
 import com.stock.invest.entity.DataFillTask;
 import com.stock.invest.entity.StockDataSourcePriority;
 import com.stock.invest.service.DataFillProgressService;
@@ -86,8 +87,8 @@ public class AdminController {
     public ResponseEntity<ApiResponse<?>> triggerScreeningAsync() {
         log.info("[Admin] triggerScreeningAsync: starting full async screening");
         List<Integer> windows = Arrays.asList(2, 3, 4, 5, 6, 7);
-        int limit = Integer.MAX_VALUE;
-        final String taskId = screeningProgressService.startScreening(windows, limit);
+        // 评审 A-8：全量筛选不限量（startScreening 不消费该参数，内联哨兵值即可）
+        final String taskId = screeningProgressService.startScreening(windows, Integer.MAX_VALUE);
         final ScreeningProgress progress = screeningProgressService.getProgress(taskId);
 
         if (!submitOrBusy(() -> {
@@ -125,8 +126,9 @@ public class AdminController {
                 log.error("[Admin] async screening failed", e);
             } finally {
                 progress.setRunning(false);
-                // P2-12：任务结束移除进度条目，防 progressMap 只增不删
-                screeningProgressService.removeProgress(taskId);
+                // 评审 D-6：完成后不立即删除进度条目（否则最后一轮轮询拿到 windows=[]
+                // 前端瞬间抹掉 DONE 状态）；条目保留至 TTL（24h），由
+                // ScreeningProgressService 惰性 + 每小时定时清理收敛。
             }
         })) {
             // R2 P2-2：队列满拒绝 → 清理已创建的进度条目，503 呈现
@@ -143,11 +145,13 @@ public class AdminController {
 
     /**
      * POST /api/admin/run-screening-async — 异步高级筛选，入参 {limit, windowDays}
+     * 评审 A-4：入参改用 {@link ScreenerAsyncRequestDto} record（compact 构造器校验），
+     * 不再手工解析 Map。
      */
     @PostMapping("/run-screening-async")
-    public ResponseEntity<ApiResponse<?>> runScreeningAsync(@RequestBody Map<String, Object> params) {
-        int limit = parsePositiveInt(params, "limit", 60);
-        int windowDays = parsePositiveInt(params, "windowDays", 7);
+    public ResponseEntity<ApiResponse<?>> runScreeningAsync(@RequestBody ScreenerAsyncRequestDto request) {
+        int limit = request.limit();
+        int windowDays = request.windowDays();
         log.info("[Admin] runScreeningAsync: window={}, limit={}", windowDays, limit);
 
         List<Integer> windows = Arrays.asList(windowDays);
@@ -180,8 +184,8 @@ public class AdminController {
                 log.error("[Admin] async advanced screening failed", e);
             } finally {
                 progress.setRunning(false);
-                // P2-12：任务结束移除进度条目，防 progressMap 只增不删
-                screeningProgressService.removeProgress(taskId);
+                // 评审 D-6：完成后不立即删除进度条目（保留 DONE/SKIPPED 状态供前端轮询），
+                // 由 ScreeningProgressService TTL（24h）+ 定时清理收敛。
             }
         })) {
             // R2 P2-2：队列满拒绝 → 清理已创建的进度条目，503 呈现
@@ -327,7 +331,7 @@ public class AdminController {
             List<StockDataSourcePriority> records = stockDataSourcePriorityService
                     .getPriorityRecords(symbol);
             return ResponseEntity.ok(ApiResponse.ok(records.stream()
-                    .map(r -> new com.stock.invest.enums.dto.StockDataSourcePriorityDto(
+                    .map(r -> new com.stock.invest.dto.StockDataSourcePriorityDto(
                             r.getSymbol(), r.getDataSource(), r.getLastSuccessTime()))
                     .toList()));
         }
@@ -340,7 +344,7 @@ public class AdminController {
         data.put("page", safePage);
         data.put("size", safeSize);
         data.put("records", pageResult.getContent().stream()
-                .map(r -> new com.stock.invest.enums.dto.StockDataSourcePriorityDto(
+                .map(r -> new com.stock.invest.dto.StockDataSourcePriorityDto(
                         r.getSymbol(), r.getDataSource(), r.getLastSuccessTime()))
                 .toList());
         return ResponseEntity.ok(ApiResponse.ok(data));
@@ -456,31 +460,6 @@ public class AdminController {
         result.put("completed", completed);
         result.put("stopped", stopped);
         return ResponseEntity.ok(ApiResponse.ok(result));
-    }
-
-    /**
-     * 从 JSON body 中安全解析正整数参数，兼容 Number 与数字字符串。
-     */
-    private static int parsePositiveInt(Map<String, Object> params, String key, int defaultValue) {
-        Object value = params.get(key);
-        int parsed;
-        if (value == null) {
-            parsed = defaultValue;
-        } else if (value instanceof Number number) {
-            parsed = number.intValue();
-        } else if (value instanceof String str) {
-            try {
-                parsed = Integer.parseInt(str.trim());
-            } catch (NumberFormatException e) {
-                throw new IllegalArgumentException(key + " must be a valid integer");
-            }
-        } else {
-            throw new IllegalArgumentException(key + " must be a valid integer");
-        }
-        if (parsed <= 0) {
-            throw new IllegalArgumentException(key + " must be a positive integer");
-        }
-        return parsed;
     }
 
 }

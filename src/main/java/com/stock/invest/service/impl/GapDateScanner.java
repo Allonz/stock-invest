@@ -1,5 +1,6 @@
 package com.stock.invest.service.impl;
 
+import com.stock.invest.constant.GapFillConstants;
 import com.stock.invest.entity.StockDailyBar;
 import com.stock.invest.service.TradingCalendarDbService;
 
@@ -23,7 +24,6 @@ import java.util.stream.Collectors;
 final class GapDateScanner {
 
     private static final ZoneId AMERICA_NY = ZoneId.of("America/New_York");
-    private static final int MAX_LOOKBACK_DAYS = 7;
     private static final int MAX_MISSING_DATES_PER_SYMBOL = 5;
 
     private GapDateScanner() {
@@ -49,8 +49,8 @@ final class GapDateScanner {
         // 以纽约时间为基准的"今天"
         LocalDate today = ZonedDateTime.now(AMERICA_NY).toLocalDate();
 
-        // 只考察最近 MAX_LOOKBACK_DAYS 天
-        LocalDate lookbackLimit = today.minusDays(MAX_LOOKBACK_DAYS);
+        // 只考察最近 MAX_LOOKBACK_DAYS 天（常量统一见 GapFillConstants，评审 E-3）
+        LocalDate lookbackLimit = today.minusDays(GapFillConstants.MAX_LOOKBACK_DAYS);
         LocalDate rangeStart = oldestInBars.isAfter(lookbackLimit) ? oldestInBars : lookbackLimit;
 
         // 范围上界：00:00~16:00 ET 排除当天，16:00~23:59 ET 包含当天

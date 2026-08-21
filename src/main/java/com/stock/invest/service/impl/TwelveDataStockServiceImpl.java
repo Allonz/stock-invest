@@ -1,10 +1,12 @@
 package com.stock.invest.service.impl;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,7 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stock.invest.config.TwelveDataProperties;
 import com.stock.invest.exception.StockDataException;
 import com.stock.invest.model.KLineData;
-import com.stock.invest.model.KLineIterator;
+import com.stock.invest.model.KLineItem;
 import com.stock.invest.service.DataSourceStrategy;
 import com.stock.invest.util.PythonScriptExecutor;
 import org.springframework.core.annotation.Order;
@@ -28,6 +30,8 @@ public class TwelveDataStockServiceImpl implements DataSourceStrategy {
     private final PythonScriptExecutor pythonScriptExecutor;
     private final TwelveDataProperties twelveDataProperties;
     private final ObjectMapper objectMapper;
+    /** 评审 F-2：多 API Key 轮换游标 —— 429/限流时换下一个 key 重试（进程内跨调用轮换） */
+    private final AtomicInteger keyRotationIndex = new AtomicInteger(0);
 
     @Override
     public String getSourceName() {
@@ -58,11 +62,10 @@ public class TwelveDataStockServiceImpl implements DataSourceStrategy {
 
     private KLineData getDailyKLine(String symbol) {
         try {
-            String result = pythonScriptExecutor.executeScriptWithEnvironment(
-                    apiKeyEnv(), getScriptName(), "get_daily_kline", symbol);
+            String result = executeScriptWithKeyRotation(getScriptName(), "get_daily_kline", symbol);
             KLineData klineData = objectMapper.readValue(result, KLineData.class);
             if (klineData != null && klineData.getItems() != null) {
-                for (KLineIterator item : klineData.getItems()) {
+                for (KLineItem item : klineData.getItems()) {
                     item.setSymbol(symbol);
                 }
             }
@@ -84,8 +87,8 @@ public class TwelveDataStockServiceImpl implements DataSourceStrategy {
             // 两日窗口：目标日 + 其前一日（d-3 覆盖周末），脚本层相邻 close 算 changePercent
             LocalDate startDate = tradeDate.minusDays(3);
             log.info("[TwelveDataStockServiceImpl] dateRange symbol={}, range=[{},{}]", symbol, startDate, tradeDate);
-            String result = pythonScriptExecutor.executeScriptWithEnvironment(
-                    apiKeyEnv(), getScriptName(), "get_daily_kline_range", symbol, startDate.toString(), tradeDate.toString());
+            String result = executeScriptWithKeyRotation(getScriptName(),
+                    "get_daily_kline_range", symbol, startDate.toString(), tradeDate.toString());
             if (result != null && result.contains("\"error\"")) {
                 // P1-3：Python 侧失败输出 {"error": ...} —— 带分类抛出，not-found 才计入黑名单
                 log.warn("[TwelveData] getDailyKLineDataByDateRange error for {}: {}", symbol,
@@ -95,7 +98,7 @@ public class TwelveDataStockServiceImpl implements DataSourceStrategy {
             // 目标日响应日志：只打印脚本返回中 tradeDate 那一条的完整参数（便于日志分析字段正确性/空值）
             KLineData parsed = objectMapper.readValue(result, KLineData.class);
             if (parsed != null && parsed.getItems() != null && !parsed.getItems().isEmpty()) {
-                KLineIterator target = parsed.getItems().stream()
+                KLineItem target = parsed.getItems().stream()
                         .filter(it -> it.getTimeString() != null && it.getTimeString().equals(tradeDate.toString()))
                         .findFirst().orElse(null);
                 if (target != null) {
@@ -109,12 +112,12 @@ public class TwelveDataStockServiceImpl implements DataSourceStrategy {
             KLineData klineData = parsed;
             // 填充每个 item 的 symbol 字段（Python 脚本返回的 JSON 中 item 不含 symbol）
             if (klineData != null && klineData.getItems() != null) {
-                for (KLineIterator item : klineData.getItems()) {
+                for (KLineItem item : klineData.getItems()) {
                     item.setSymbol(symbol);
                 }
             }
             if (klineData != null && klineData.getItems() != null && !klineData.getItems().isEmpty()) {
-                KLineIterator first = klineData.getItems().get(0);
+                KLineItem first = klineData.getItems().get(0);
                 log.info("[TwelveDataStockServiceImpl] dateRange response: symbol={}, date={}, open={}, high={}, low={}, close={}, source=twelvedata",
                         symbol, first.getTimeString(), first.getOpen(), first.getHigh(), first.getLow(), first.getClose());
             }
@@ -167,12 +170,52 @@ public class TwelveDataStockServiceImpl implements DataSourceStrategy {
         return null;
     }
 
-private Map<String, String> apiKeyEnv() {
+    private Map<String, String> apiKeyEnv(int index) {
         List<String> keys = twelveDataProperties.resolvedKeys();
         if (keys.isEmpty()) {
             return java.util.Collections.emptyMap();
         }
-        return Map.of("TWELVEDATA_API_KEY", keys.get(0));
+        return Map.of("TWELVEDATA_API_KEY", keys.get(Math.floorMod(index, keys.size())));
     }
 
-} 
+    /**
+     * 评审 F-2：执行脚本并在 429/限流时自动轮换 API Key 重试（最多 keys.size() 次）。
+     * <p>配置注释"用于在限流时轮换"与 README"支持多 API Key 轮换"此前均不成立
+     * （apiKeyEnv 只取 keys.get(0)）；这里实现真实的跨 key 轮换：脚本返回限流错误时
+     * 换下一个 key 重试，非限流错误不重试（与 key 无关）。</p>
+     */
+    private String executeScriptWithKeyRotation(String scriptName, String... args)
+            throws IOException, InterruptedException {
+        List<String> keys = twelveDataProperties.resolvedKeys();
+        if (keys.isEmpty() || keys.size() == 1) {
+            return pythonScriptExecutor.executeScriptWithEnvironment(apiKeyEnv(0), scriptName, args);
+        }
+        String last = null;
+        for (int i = 0; i < keys.size(); i++) {
+            int idx = keyRotationIndex.getAndIncrement();
+            String result = pythonScriptExecutor.executeScriptWithEnvironment(apiKeyEnv(idx), scriptName, args);
+            last = result;
+            if (!isRateLimitError(result)) {
+                return result;
+            }
+            int current = Math.floorMod(idx, keys.size());
+            int next = Math.floorMod(idx + 1, keys.size());
+            log.warn("[TwelveData] 429/限流响应，轮换 API Key #{} -> #{}（重试 {}/{}）: script={}, args={}",
+                    current, next, i + 1, keys.size(), scriptName, java.util.Arrays.toString(args));
+        }
+        return last;
+    }
+
+    /** 判断脚本输出是否为限流错误（429 / rate limit / Too Many Requests）。 */
+    private static boolean isRateLimitError(String result) {
+        if (result == null) {
+            return false;
+        }
+        String lower = result.toLowerCase();
+        return lower.contains("429")
+                || lower.contains("too many requests")
+                || lower.contains("rate limit")
+                || lower.contains("限流");
+    }
+
+}

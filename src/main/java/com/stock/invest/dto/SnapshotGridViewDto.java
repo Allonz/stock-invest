@@ -1,4 +1,4 @@
-package com.stock.invest.enums.dto;
+package com.stock.invest.dto;
 
 import java.util.ArrayList;
 import java.util.Collections;

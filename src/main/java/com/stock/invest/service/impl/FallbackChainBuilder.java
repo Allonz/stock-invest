@@ -3,6 +3,7 @@ package com.stock.invest.service.impl;
 import com.stock.invest.model.KLineData;
 import com.stock.invest.service.DataSourceStrategy;
 import com.stock.invest.service.StockDataSourcePriorityService;
+import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.util.Comparator;
@@ -10,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -17,7 +19,12 @@ import java.util.stream.Collectors;
  *
  * <p>负责按默认优先级或个股历史成功记录排序可用数据源，
  * 并跳过处于账户级错误冷却期内的数据源。</p>
+ *
+ * <p>评审 A-1：Spring Bean（包内可见性不变），由容器构造注入；
+ * 账户级熔断冷却表为本单例内部持有的共享注册表
+ * （GapFetcher 经 builder 写入冷却，同一实例读判）。</p>
  */
+@Component
 class FallbackChainBuilder {
 
     @FunctionalInterface
@@ -29,14 +36,13 @@ class FallbackChainBuilder {
 
     private final List<DataSourceStrategy> dataSources;
     private final StockDataSourcePriorityService stockDataSourcePriorityService;
-    private final Map<String, Long> sourceCooldownUntil;
+    /** P1-5：数据源熔断冷却表，key=数据源名，value=冷却截止 epochMillis（单例内共享） */
+    private final Map<String, Long> sourceCooldownUntil = new ConcurrentHashMap<>();
 
     FallbackChainBuilder(List<DataSourceStrategy> dataSources,
-                         StockDataSourcePriorityService stockDataSourcePriorityService,
-                         Map<String, Long> sourceCooldownUntil) {
+                         StockDataSourcePriorityService stockDataSourcePriorityService) {
         this.dataSources = dataSources;
         this.stockDataSourcePriorityService = stockDataSourcePriorityService;
-        this.sourceCooldownUntil = sourceCooldownUntil;
     }
 
     /**

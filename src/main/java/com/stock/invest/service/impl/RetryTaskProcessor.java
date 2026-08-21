@@ -7,6 +7,7 @@ import com.stock.invest.service.SymbolBlacklistService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -25,7 +26,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * <p>负责处理历史补缺失败任务：过期停止、每日重试上限、冷却跳过、
  * 黑名单停止，以及失败后计数递增和成功完成状态流转。</p>
+ *
+ * <p>评审 A-1：Spring Bean（包内可见性不变），由容器构造注入。</p>
  */
+@Component
 class RetryTaskProcessor {
 
     private static final Logger log = LoggerFactory.getLogger(RetryTaskProcessor.class);

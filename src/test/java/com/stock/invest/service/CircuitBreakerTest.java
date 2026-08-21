@@ -4,10 +4,11 @@ import com.stock.invest.config.GapFillProperties;
 import com.stock.invest.entity.StockDailyBar;
 import com.stock.invest.exception.StockDataException;
 import com.stock.invest.model.KLineData;
-import com.stock.invest.model.KLineIterator;
+import com.stock.invest.model.KLineItem;
 import com.stock.invest.repository.DataFillTaskRepository;
 import com.stock.invest.repository.StockDailyBarRepository;
 import com.stock.invest.service.impl.DataGapFillerServiceImpl;
+import com.stock.invest.service.impl.DataGapFillerTestSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -73,7 +74,7 @@ class CircuitBreakerTest {
                 .thenReturn(List.of("tiger", "yfinance", "twelvedata", "tiingo"));
 
         KLineData mismatch = new KLineData();
-        mismatch.setItems(List.of(new KLineIterator("X", 0L,
+        mismatch.setItems(List.of(new KLineItem("X", 0L,
                 java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
                 java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
                 0, 0,
@@ -82,7 +83,7 @@ class CircuitBreakerTest {
         lenient().when(twelvedataSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(mismatch);
         lenient().when(tiingoSource.getDailyKLineDataByDateRange(anyString(), any())).thenReturn(mismatch);
 
-        service = new DataGapFillerServiceImpl(
+        service = DataGapFillerTestSupport.buildService(
                 stockDailyBarRepository, dataFillTaskRepository,
                 List.of(tigerSource, yfinanceSource, twelvedataSource, tiingoSource),
                 gapFillProperties, dataFillProgressService, retryProgressService, tradingCalendarDbService,
@@ -125,9 +126,14 @@ class CircuitBreakerTest {
 
     @SuppressWarnings("unchecked")
     private Map<String, Long> cooldownMap() throws Exception {
-        Field f = DataGapFillerServiceImpl.class.getDeclaredField("sourceCooldownUntil");
+        // 评审 A-1：冷却表已随 FallbackChainBuilder 改为 Spring Bean（单例内部持有），
+        // 反射路径改为 service -> fallbackChainBuilder -> sourceCooldownUntil
+        Field builderField = DataGapFillerServiceImpl.class.getDeclaredField("fallbackChainBuilder");
+        builderField.setAccessible(true);
+        Object builder = builderField.get(service);
+        Field f = builder.getClass().getDeclaredField("sourceCooldownUntil");
         f.setAccessible(true);
-        return (Map<String, Long>) f.get(service);
+        return (Map<String, Long>) f.get(builder);
     }
 
     // ---- 1. 错误分类 ----

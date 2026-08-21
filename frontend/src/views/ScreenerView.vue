@@ -546,7 +546,7 @@ const detailColumns = [
         }, '复制')
         ]
       } },
-  { title: '收盘价', key: 'lastClose', width: 110, align: 'center' as const, sorter: (a: ScreeningMatch, b: ScreeningMatch) => a.lastClose - b.lastClose, render: (row: ScreeningMatch) => `${row.lastClose.toFixed(4)}` },
+  { title: '收盘价', key: 'lastClose', width: 110, align: 'center' as const, sorter: (a: ScreeningMatch, b: ScreeningMatch) => (a.lastClose ?? 0) - (b.lastClose ?? 0), render: (row: ScreeningMatch) => `${(row.lastClose ?? 0).toFixed(4)}` },
   { title: '涨跌', key: 'rise', width: 80, align: 'center' as const, sorter: (a: ScreeningMatch, b: ScreeningMatch) => Number(a.rise) - Number(b.rise), render: (row: ScreeningMatch) => h(NTag, {
     type: row.rise ? 'error' : 'success',
     size: 'small',

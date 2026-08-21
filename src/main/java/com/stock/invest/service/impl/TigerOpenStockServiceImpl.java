@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stock.invest.client.TigerOpenPythonBridge;
 import com.stock.invest.exception.StockDataException;
 import com.stock.invest.model.KLineData;
-import com.stock.invest.model.KLineIterator;
+import com.stock.invest.model.KLineItem;
 import com.stock.invest.service.DataSourceStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,9 +73,9 @@ public class TigerOpenStockServiceImpl implements DataSourceStrategy {
             }
             // 目标日响应日志：只打印脚本返回中 tradeDate 那一条的完整参数（便于日志分析字段正确性/空值）
             // tigeropen item.timeString 为空 → 用 epoch 毫秒按美东时区匹配目标日
-            KLineIterator target = null;
+            KLineItem target = null;
             if (data != null && data.getItems() != null) {
-                for (KLineIterator it : data.getItems()) {
+                for (KLineItem it : data.getItems()) {
                     LocalDate itemDate = it.getTimeString() != null && !it.getTimeString().isEmpty()
                             ? LocalDate.parse(it.getTimeString())
                             : java.time.Instant.ofEpochMilli(it.getTime())

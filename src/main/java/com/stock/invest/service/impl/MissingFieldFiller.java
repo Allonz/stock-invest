@@ -1,14 +1,16 @@
 package com.stock.invest.service.impl;
 
+import com.stock.invest.constant.GapFillConstants;
 import com.stock.invest.entity.StockDailyBar;
 import com.stock.invest.model.KLineData;
-import com.stock.invest.model.KLineIterator;
+import com.stock.invest.model.KLineItem;
 import com.stock.invest.repository.StockDailyBarRepository;
 import com.stock.invest.service.DataSourceStrategy;
 import com.stock.invest.service.FieldCapabilityService;
 import com.stock.invest.exception.StockDataException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -28,13 +30,15 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * <p>负责对已有日 K 记录做缺失字段发现、标记和增补：
  * 日线 OHLCV、change_percent、盘后价等由能力表驱动。</p>
+ *
+ * <p>评审 A-1：Spring Bean（包内可见性不变），由容器构造注入。</p>
  */
+@Component
 class MissingFieldFiller {
 
     private static final Logger log = LoggerFactory.getLogger(MissingFieldFiller.class);
 
     private static final ZoneId AMERICA_NY = ZoneId.of("America/New_York");
-    private static final int FILL_WINDOW_CALENDAR_DAYS = 45;
     /** 发现阶段单批最大记录数，避免一次性把存量未检查记录全部载入内存 */
     private static final int DISCOVER_BATCH_SIZE = 1000;
 
@@ -175,12 +179,12 @@ class MissingFieldFiller {
                         && !DataGapFillerServiceImpl.F_AFTER_HOURS_CHANGE_PERCENT.equals(f))
                 .toList();
         if (!klineFields.isEmpty()) {
-            KLineIterator matchedItem = null;
+            KLineItem matchedItem = null;
             DataSourceStrategy matchedDs = null;
             for (DataSourceStrategy ds : querySequence) {
                 try {
                     KLineData data = ds.getDailyKLineDataByDateRange(bar.getSymbol(), bar.getTradeDate());
-                    KLineIterator item = findItemByDate(data, bar.getTradeDate());
+                    KLineItem item = findItemByDate(data, bar.getTradeDate());
                     if (item != null) {
                         matchedItem = item;
                         matchedDs = ds;
@@ -232,7 +236,7 @@ class MissingFieldFiller {
                     if (isKLineDataEmpty(ahData)) {
                         continue;
                     }
-                    KLineIterator ahItem = findItemByDate(ahData, bar.getTradeDate());
+                    KLineItem ahItem = findItemByDate(ahData, bar.getTradeDate());
                     if (ahItem != null && ahItem.getClose() != null) {
                         bar.setAfterHours(ahItem.getClose());
                         if (ahItem.getAfterHoursChangePercent() != null) {
@@ -294,7 +298,7 @@ class MissingFieldFiller {
             if (isKLineDataEmpty(ahData)) {
                     return;
             }
-            for (KLineIterator item : ahData.getItems()) {
+            for (KLineItem item : ahData.getItems()) {
                 LocalDate itemDate = item.getTimeString() != null && !item.getTimeString().isEmpty()
                         ? LocalDate.parse(item.getTimeString())
                         : epochMillisToLocalDate(item.getTime());
@@ -326,10 +330,11 @@ class MissingFieldFiller {
     }
 
     private LocalDate fillWindowStart() {
-        return ZonedDateTime.now(AMERICA_NY).toLocalDate().minusDays(FILL_WINDOW_CALENDAR_DAYS);
+        return ZonedDateTime.now(AMERICA_NY).toLocalDate()
+                .minusDays(GapFillConstants.FILL_WINDOW_CALENDAR_DAYS);
     }
 
-    private boolean applyKlineItemToBar(StockDailyBar bar, KLineIterator item, List<String> missing) {
+    private boolean applyKlineItemToBar(StockDailyBar bar, KLineItem item, List<String> missing) {
         boolean updated = false;
         if (missing.contains(DataGapFillerServiceImpl.F_OPEN) && item.getOpen() != null) {
             bar.setOpenPrice(item.getOpen());
@@ -402,11 +407,11 @@ class MissingFieldFiller {
         return true;
     }
 
-    private KLineIterator findItemByDate(KLineData data, LocalDate tradeDate) {
+    private KLineItem findItemByDate(KLineData data, LocalDate tradeDate) {
         if (data == null || data.getItems() == null) {
             return null;
         }
-        for (KLineIterator item : data.getItems()) {
+        for (KLineItem item : data.getItems()) {
             LocalDate itemDate = item.getTimeString() != null && !item.getTimeString().isEmpty()
                     ? LocalDate.parse(item.getTimeString())
                     : epochMillisToLocalDate(item.getTime());

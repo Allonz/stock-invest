@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.stock.invest.enums.dto.ApiResponse;
+import com.stock.invest.dto.ApiResponse;
 import com.stock.invest.service.ScreeningService;
 
 /**

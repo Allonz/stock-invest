@@ -23,9 +23,9 @@ public class KLineData {
     @Setter private double amount;
 
     // 存储K线数据对象的列表
-    private List<KLineIterator> items = new ArrayList<>();
+    private List<KLineItem> items = new ArrayList<>();
 
-    public List<KLineIterator> getItems() {
+    public List<KLineItem> getItems() {
         return items != null ? Collections.unmodifiableList(items) : Collections.emptyList();
     }
 
@@ -47,8 +47,8 @@ public class KLineData {
         this.time = time;
     }
 
-    public void setItems(List<KLineIterator> items) {
-        this.items = items != null ? items : new ArrayList<KLineIterator>();
+    public void setItems(List<KLineItem> items) {
+        this.items = items != null ? items : new ArrayList<KLineItem>();
     }
 
 

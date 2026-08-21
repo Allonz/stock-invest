@@ -51,7 +51,7 @@ public class TigerApiConfig {
             String account = firstNonBlank(System.getenv("TIGER_OPENAPI_ACCOUNT"), "");
             String license = firstNonBlank(System.getenv("TIGER_OPENAPI_LICENSE"), "");
             String env = firstNonBlank(System.getenv("TIGER_OPENAPI_ENV"), "PROD");
-            logger.info("Tiger credentials loaded from environment variables (tiger_id={})", envTigerId.trim());
+            logger.info("Tiger credentials loaded from environment variables (tiger_id={})", maskTigerId(envTigerId.trim()));
             return credentialsFromEnv(envTigerId, envPrivateKey, account, license, env);
         }
 
@@ -103,6 +103,17 @@ public class TigerApiConfig {
 
     private static boolean isNotBlank(String value) {
         return value != null && !value.trim().isEmpty();
+    }
+
+    /**
+     * 账户标识符打码：仅保留前 4 位，其余以 * 掩盖。
+     * 避免半敏感的 tiger_id 完整写入日志（评审 E-7）。
+     */
+    private static String maskTigerId(String tigerId) {
+        if (tigerId == null || tigerId.isEmpty()) {
+            return "(empty)";
+        }
+        return tigerId.length() <= 4 ? "****" : tigerId.substring(0, 4) + "****";
     }
 
     private static String firstNonBlank(String value, String defaultValue) {

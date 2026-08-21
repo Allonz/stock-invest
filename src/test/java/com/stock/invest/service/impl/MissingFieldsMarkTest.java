@@ -47,7 +47,7 @@ class MissingFieldsMarkTest {
 
     @BeforeEach
     void setUp() {
-        service = new DataGapFillerServiceImpl(
+        service = DataGapFillerTestSupport.buildService(
                 stockDailyBarRepository, dataFillTaskRepository, java.util.List.of(),
                 gapFillProperties, dataFillProgressService, retryProgressService, tradingCalendarDbService,
                 stockDataSourcePriorityService, symbolBlacklistService,

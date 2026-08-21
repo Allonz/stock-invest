@@ -29,22 +29,15 @@ public interface TradingCalendarRepository extends JpaRepository<TradingCalendar
     /**
      * Upsert：存在则更新，不存在则创建（P2-2）。
      * <p>原 MySQL 专有 {@code INSERT ... ON DUPLICATE KEY UPDATE ... VALUES()} 语法
-     * 在 MySQL 8.0.20+ 已弃用且 H2 测试环境不兼容，改为跨库的"查-改-插"：
-     * 并发冲突由 (market, trade_date) 唯一约束兜底，捕获
-     * {@link org.springframework.dao.DataIntegrityViolationException} 后重读重试一次。</p>
+     * 在 MySQL 8.0.20+ 已弃用且 H2 测试环境不兼容，改为跨库的"查-改-插"。</p>
+     * <p>并发唯一键冲突（{@link org.springframework.dao.DataIntegrityViolationException}）
+     * 不在本方法内捕获重试：插入冲突会把当前事务标记为 rollback-only，同一事务内重试
+     * 看似成功但提交时抛 UnexpectedRollbackException（评审 D-2）。冲突重试由
+     * {@code TradingCalendarDbService} 放到 REQUIRES_NEW 全新事务中完成（不继承
+     * 外层事务的 rollback-only 标记）。</p>
      */
     default int upsert(String market, LocalDate tradeDate, Boolean isOpen,
                        String source, String type, String detail) {
-        try {
-            return upsertOnce(market, tradeDate, isOpen, source, type, detail);
-        } catch (org.springframework.dao.DataIntegrityViolationException e) {
-            // 并发插入冲突：唯一键 (market, trade_date) 已存在，重读后按更新处理
-            return upsertOnce(market, tradeDate, isOpen, source, type, detail);
-        }
-    }
-
-    private int upsertOnce(String market, LocalDate tradeDate, Boolean isOpen,
-                           String source, String type, String detail) {
         Optional<TradingCalendarEntity> existing = findByMarketAndTradeDate(market, tradeDate);
         if (existing.isPresent()) {
             TradingCalendarEntity entity = existing.get();

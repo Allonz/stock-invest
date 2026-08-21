@@ -3,13 +3,14 @@ package com.stock.invest.service.impl;
 import com.stock.invest.entity.StockDailyBar;
 import com.stock.invest.exception.StockDataException;
 import com.stock.invest.model.KLineData;
-import com.stock.invest.model.KLineIterator;
+import com.stock.invest.model.KLineItem;
 import com.stock.invest.repository.DataFillTaskRepository;
 import com.stock.invest.repository.StockDailyBarRepository;
 import com.stock.invest.service.StockDataSourcePriorityService;
 import com.stock.invest.service.SymbolBlacklistService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -26,7 +27,10 @@ import java.util.Optional;
  *
  * <p>负责按 fallback 链逐源拉取指定交易日的 K 线，
  * 并在成功后持久化、合并盘后价、更新数据源优先级和黑名单状态。</p>
+ *
+ * <p>评审 A-1：Spring Bean（包内可见性不变），由容器构造注入。</p>
  */
+@Component
 class GapFetcher {
 
     private static final Logger log = LoggerFactory.getLogger(GapFetcher.class);
@@ -73,11 +77,9 @@ class GapFetcher {
     }
 
     FetchResult fetchAndPersist(String symbol, LocalDate tradeDate) {
-        log.info("");
         log.info("[GapFetcher] ================================================");
         log.info("[GapFetcher] === 补缺 {}，日期 {} ===", symbol, tradeDate);
         log.info("[GapFetcher] ================================================");
-        log.info("");
 
         List<FallbackChainBuilder.FallbackSource> fallbacks = fallbackChainBuilder.buildForSymbol(symbol);
 
@@ -85,7 +87,6 @@ class GapFetcher {
         boolean accountLevelAbort = false;
 
         for (FallbackChainBuilder.FallbackSource source : fallbacks) {
-            log.info("");
             log.info("[GapFetcher] {} source start", source.name());
             log.info("[GapFetcher] {} source now send request: dateRange symbol={}, TradeDate={}", source.name(), symbol, tradeDate);
 
@@ -97,11 +98,10 @@ class GapFetcher {
                     log.warn("[GapFetcher] {} source then received response: returned empty result for symbol={} (counted as not-found)",
                             source.name(), symbol);
                     log.info("[GapFetcher] {} source end", source.name());
-                    log.info("");
                     continue;
                 }
                 log.info("[GapFetcher] {} source then received response: itemsCount={}", source.name(), klineData.getItems().size());
-                for (KLineIterator item : klineData.getItems()) {
+                for (KLineItem item : klineData.getItems()) {
                     LocalDate itemDate;
                     try {
                         itemDate = item.getTimeString() != null && !item.getTimeString().isEmpty()
@@ -112,7 +112,7 @@ class GapFetcher {
                                 source.name(), item.getTimeString(), item.getSymbol());
                         continue;
                     }
-                    log.info("[GapFetcher] {} source item: symbol={}, epochTime={}, timeString='{}', parsedDate={}, open={}, close={}",
+                    log.debug("[GapFetcher] {} source item: symbol={}, epochTime={}, timeString='{}', parsedDate={}, open={}, close={}",
                             source.name(), item.getSymbol(), item.getTime(), item.getTimeString(), itemDate,
                             item.getOpen(), item.getClose());
                     if ((item.getOpen() == null || item.getOpen().compareTo(java.math.BigDecimal.ZERO) == 0)
@@ -130,7 +130,6 @@ class GapFetcher {
                                 symbol, sourceName, java.time.LocalDateTime.now());
                         log.info("[GapFetcher] fillWithFallback: success symbol={}, source={}", symbol, source.name());
                         log.info("[GapFetcher] {} source end", source.name());
-                        log.info("");
                         symbolBlacklistService.resetCount(symbol);
                         return FetchResult.ok();
                     }
@@ -138,7 +137,6 @@ class GapFetcher {
                 log.warn("[GapFetcher] fillWithFallback: date mismatch symbol={}, source={}, targetDate={}",
                         symbol, source.name(), tradeDate);
                 log.info("[GapFetcher] {} source end", source.name());
-                log.info("");
             } catch (StockDataException e) {
                 switch (e.getCategory()) {
                     case CONFIRMED_NOT_FOUND -> {
@@ -148,8 +146,7 @@ class GapFetcher {
                     }
                     case ACCOUNT_LEVEL -> {
                         long until = System.currentTimeMillis() + SOURCE_COOLDOWN_MILLIS;
-                        fallbackChainBuilder.isSourceCooledDown(source.name());
-                        // 冷却写入仍由调用方持有的 map 完成；这里通过 builder 的包级访问能力写入。
+                        // 评审 F-9：删除 isSourceCooledDown 死调用（返回值被丢弃，紧接 putCooldown 写入冷却）
                         fallbackChainBuilder.putCooldown(source.name(), until);
                         accountLevelAbort = true;
                         log.error("[GapFetcher] fillWithFallback: account-level error symbol={}, source={}, " +
@@ -161,7 +158,6 @@ class GapFetcher {
                             symbol, source.name(), e.getMessage());
                 }
                 log.info("[GapFetcher] {} source end", source.name());
-                log.info("");
             } catch (Exception e) {
                 String errorMsg = e.getMessage();
                 boolean isNotFound = isNotFoundError(errorMsg);
@@ -171,7 +167,6 @@ class GapFetcher {
                 log.error("[GapFetcher] fillWithFallback: error symbol={}, source={}, notFound={}, error={}",
                         symbol, source.name(), isNotFound, errorMsg);
                 log.info("[GapFetcher] {} source end", source.name());
-                log.info("");
             }
 
             if (accountLevelAbort) {
@@ -213,7 +208,7 @@ class GapFetcher {
         return FetchResult.retryableFailure();
     }
 
-    private StockDailyBar persist(String symbol, LocalDate tradeDate, KLineIterator item, String source) {
+    private StockDailyBar persist(String symbol, LocalDate tradeDate, KLineItem item, String source) {
         Optional<StockDailyBar> existing = stockDailyBarRepository.findBySymbolAndTradeDate(symbol, tradeDate);
         StockDailyBar bar;
         if (existing.isPresent()) {

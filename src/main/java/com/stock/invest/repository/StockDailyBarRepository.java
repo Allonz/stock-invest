@@ -34,7 +34,14 @@ public interface StockDailyBarRepository extends JpaRepository<StockDailyBar, Lo
             @Param("symbols") Collection<String> symbols,
             @Param("src") String source,
             @Param("td") LocalDate tradeDate);
-    @Query("SELECT DISTINCT b.symbol FROM StockDailyBar b ORDER BY b.symbol ASC")
+    /**
+     * 全部 symbol，按最近更新时间升序（评审 D-4）：补缺每批只处理前
+     * {@code MAX_SYMBOLS_PER_RUN} 个 symbol，成功补缺的 symbol 其 updated_at 被刷新
+     * 排到队尾，下次批次自然轮转到久未更新的 symbol —— 避免 symbol 超过单批上限后
+     * 部分股票因 DB 返回顺序无业务语义而长期得不到补缺。
+     */
+    @Query("SELECT b.symbol FROM StockDailyBar b GROUP BY b.symbol " +
+           "ORDER BY MAX(b.updatedAt) ASC, b.symbol ASC")
     List<String> findAllSymbols();
 
     @Query("SELECT COUNT(DISTINCT b.symbol) FROM StockDailyBar b")

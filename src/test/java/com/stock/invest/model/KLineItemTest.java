@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class KLineIteratorTest {
+class KLineItemTest {
 
     private static BigDecimal bd(String v) {
         return new BigDecimal(v);
@@ -14,23 +14,23 @@ class KLineIteratorTest {
 
     @Test
     void setTimeStringWithValidNumericTimestampShouldSetTime() {
-        KLineIterator it = new KLineIterator();
+        KLineItem it = new KLineItem();
         it.setTime("1700000000000");
         assertEquals(1700000000000L, it.getTime());
         assertEquals("1700000000000", it.getTimeString());
     }
 
     @Test
-    void setTimeStringWithInvalidInputShouldSetTimeToZero() {
-        KLineIterator it = new KLineIterator();
-        it.setTime("invalid");
-        assertEquals(0L, it.getTime(), "Invalid time string should result in time=0");
-        assertEquals("invalid", it.getTimeString());
+    void setTimeStringWithInvalidInputShouldThrow() {
+        KLineItem it = new KLineItem();
+        // 评审 E-4：解析失败不再静默置 0，直接抛异常暴露坏数据
+        assertThrows(NumberFormatException.class, () -> it.setTime("invalid"));
+        assertNull(it.getTimeString(), "timeString should not be set when parsing failed");
     }
 
     @Test
     void setTimeStringWithNullShouldSetTimeToZero() {
-        KLineIterator it = new KLineIterator();
+        KLineItem it = new KLineItem();
         it.setTime((String) null);
         assertEquals(0L, it.getTime(), "Null time string should result in time=0");
         assertNull(it.getTimeString());
@@ -38,7 +38,7 @@ class KLineIteratorTest {
 
     @Test
     void setTimeStringWithEmptyShouldSetTimeToZero() {
-        KLineIterator it = new KLineIterator();
+        KLineItem it = new KLineItem();
         it.setTime("");
         assertEquals(0L, it.getTime(), "Empty time string should result in time=0");
         assertEquals("", it.getTimeString());
@@ -46,7 +46,7 @@ class KLineIteratorTest {
 
     @Test
     void setTimeWithLongShouldWorkNormally() {
-        KLineIterator it = new KLineIterator();
+        KLineItem it = new KLineItem();
         it.setTime(123456789L);
         assertEquals(123456789L, it.getTime());
         assertNull(it.getTimeString());
@@ -54,7 +54,7 @@ class KLineIteratorTest {
 
     @Test
     void setTimeWithLongAndThenStringShouldOverride() {
-        KLineIterator it = new KLineIterator();
+        KLineItem it = new KLineItem();
         it.setTime(999L);
         assertEquals(999L, it.getTime());
 
@@ -65,7 +65,7 @@ class KLineIteratorTest {
 
     @Test
     void gettersAndSettersShouldWork() {
-        KLineIterator it = new KLineIterator();
+        KLineItem it = new KLineItem();
         
         it.setSymbol("AAPL");
         assertEquals("AAPL", it.getSymbol());
@@ -94,7 +94,7 @@ class KLineIteratorTest {
 
     @Test
     void constructorWithAllFieldsShouldWork() {
-        KLineIterator it = new KLineIterator("AAPL", 1700000000000L,
+        KLineItem it = new KLineItem("AAPL", 1700000000000L,
                 bd("150.0"), bd("155.0"), bd("148.0"), bd("152.0"),
                 1000000L, 5000000.0, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
         
@@ -110,7 +110,7 @@ class KLineIteratorTest {
 
     @Test
     void toStringShouldContainFields() {
-        KLineIterator it = new KLineIterator("AAPL", 123L,
+        KLineItem it = new KLineItem("AAPL", 123L,
                 bd("1.0"), bd("2.0"), bd("0.5"), bd("1.5"), 100L, 200.0);
         String str = it.toString();
         assertTrue(str.contains("AAPL"));
@@ -120,14 +120,14 @@ class KLineIteratorTest {
 
     @Test
     void setTimeStringShouldSetTimeZeroForNull() {
-        KLineIterator it = new KLineIterator();
+        KLineItem it = new KLineItem();
         it.setTimeString(null);
         assertNull(it.getTimeString());
     }
 
     @Test
     void defaultValues() {
-        KLineIterator it = new KLineIterator();
+        KLineItem it = new KLineItem();
         assertEquals(0L, it.getTime());
         assertNull(it.getOpen());
         assertNull(it.getHigh());

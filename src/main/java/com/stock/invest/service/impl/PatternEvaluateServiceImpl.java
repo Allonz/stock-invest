@@ -2,7 +2,7 @@ package com.stock.invest.service.impl;
 
 import com.stock.invest.constant.WindowConstants;
 import com.stock.invest.entity.StockDailyBar;
-import com.stock.invest.model.KLineIterator;
+import com.stock.invest.model.KLineItem;
 import com.stock.invest.service.PatternEvaluateService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +14,15 @@ import java.util.List;
 public class PatternEvaluateServiceImpl implements PatternEvaluateService {
 
     private static final Logger log = LoggerFactory.getLogger(PatternEvaluateServiceImpl.class);
+
+    /**
+     * 放量突增判定倍数：末根成交量需超过前 windowDays-1 根均量的该倍数，才判定为"放量突增"。
+     * <p>业务依据：筛选"放量"信号时以 5 倍于此前均量为显著放量阈值（显著高于日常成交的
+     * 异常放量，用于捕捉放量突破/异动形态）；与
+     * {@code PatternEvaluateServiceImplTest#test_multiWindow_5days_spike}
+     * （前 4 日均量 10000、末根 60000 = 6x，恰好越过 5x 阈值）对齐。</p>
+     */
+    private static final double VOLUME_SPIKE_MULTIPLIER = 5.0;
 
     @Override
     public boolean matchesIncreasingVolumePattern(List<StockDailyBar> sevenBarsOldestFirst) {
@@ -58,7 +67,7 @@ public class PatternEvaluateServiceImpl implements PatternEvaluateService {
     }
 
     @Override
-    public boolean matchesIncreasingVolumePatternFromKLine(List<KLineIterator> barsOldestFirst, int windowDays) {
+    public boolean matchesIncreasingVolumePatternFromKLine(List<KLineItem> barsOldestFirst, int windowDays) {
         log.debug("[PatternEval] matchesIncreasingVolumePatternFromKLine: begin — barCount={}, windowDays={}",
                 barsOldestFirst != null ? barsOldestFirst.size() : 0, windowDays);
 
@@ -74,7 +83,7 @@ public class PatternEvaluateServiceImpl implements PatternEvaluateService {
         int start = barsOldestFirst.size() - windowDays;
         long[] vol = new long[windowDays];
         for (int i = 0; i < windowDays; i++) {
-            KLineIterator bar = barsOldestFirst.get(start + i);
+            KLineItem bar = barsOldestFirst.get(start + i);
             if (bar == null || bar.getVolume() == 0L) {
                 log.debug("[PatternEval] matchesIncreasingVolumePatternFromKLine: null bar at index={}", i);
                 return false;
@@ -151,7 +160,7 @@ public class PatternEvaluateServiceImpl implements PatternEvaluateService {
         }
         double avgBeforeLast = (double) sum / (windowDays - 1);
         double lastVol = vol[windowDays - 1];
-        boolean result = avgBeforeLast * 5.0 < lastVol;
+        boolean result = avgBeforeLast * VOLUME_SPIKE_MULTIPLIER < lastVol;
 
         log.debug("[PatternEval] matchesVolumeSpikePattern: result={}, avgBeforeLast={}, lastVol={}, windowDays={}",
                 result, String.format("%.2f", avgBeforeLast), lastVol, windowDays);

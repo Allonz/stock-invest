@@ -84,9 +84,10 @@ def get_stock_info(symbol: str) -> str:
             "volume": int(hist["Volume"].iloc[-1]),
             "change": float(hist["Close"].iloc[-1] - hist["Open"].iloc[-1]),
             # 涨跌幅（%）取自 yfinance info 的 regularMarketChangePercent；
-            # 缺失时置 0，保证输出恒含该键（Java StockInfo.changePercent 反序列化依赖）
+            # 评审 F-11：缺失时置 null（键保留）——"无数据"与"零涨跌"不再混为一谈，
+            # 下游可区分（Java StockInfo.changePercent 反序列化为 null 而非 0.0）
             "changePercent": float(info["regularMarketChangePercent"])
-            if info.get("regularMarketChangePercent") is not None else 0.0,
+            if info.get("regularMarketChangePercent") is not None else None,
         }
         # 盘后交易数据（部分股票无盘后交易）
         if info.get("postMarketPrice") is not None:
@@ -98,36 +99,6 @@ def get_stock_info(symbol: str) -> str:
     except Exception as e:
         return json.dumps({"error": str(e)})
 
-def get_stock_list() -> str:
-    """获取股票列表"""
-    try:
-        # 添加随机延迟
-        time.sleep(random.uniform(2, 4))
-        
-        # 获取主要指数的成分股
-        indices = {
-            "SPY": "S&P 500",
-            "QQQ": "NASDAQ 100",
-            "DIA": "Dow Jones"
-        }
-        
-        all_symbols = set()
-        for symbol, name in indices.items():
-            try:
-                # 获取ETF持仓
-                etf = yf.Ticker(symbol)
-                holdings = safe_yfinance_request(etf.holdings)
-                if holdings is not None:
-                    for holding in holdings:
-                        all_symbols.add(holding['symbol'])
-                time.sleep(random.uniform(2, 4))  # 添加随机延迟
-            except Exception as e:
-                print(f"Error getting holdings for {symbol}: {str(e)}")
-                continue
-        
-        return json.dumps(list(all_symbols))
-    except Exception as e:
-        return json.dumps({"error": str(e)})
 
 def get_daily_kline(symbol: str, days: int = 7) -> str:
     """获取日K线数据"""
@@ -297,59 +268,6 @@ def get_batch_kline(symbols: str, period: str, count: int) -> str:
     except Exception as e:
         return json.dumps({"error": str(e)})
 
-def scan_stocks(market: str, limit: int, min_price: str = "", max_price: str = "") -> str:
-    """扫描股票"""
-    try:
-        # 添加随机延迟
-        time.sleep(random.uniform(2, 4))
-        
-        # 获取主要指数的成分股
-        indices = {
-            "US": ["SPY", "QQQ", "DIA"],  # S&P 500, NASDAQ 100, Dow Jones
-            "HK": ["2800.HK"],  # Hang Seng Index
-            "CN": ["000001.SS", "399001.SZ"]  # Shanghai Composite, Shenzhen Component
-        }
-        
-        if market not in indices:
-            return json.dumps({"error": f"Unsupported market: {market}"})
-        
-        all_symbols = set()
-        for index in indices[market]:
-            try:
-                # 获取ETF持仓
-                etf = yf.Ticker(index)
-                holdings = safe_yfinance_request(etf.holdings)
-                if holdings is not None:
-                    for holding in holdings:
-                        all_symbols.add(holding['symbol'])
-                time.sleep(random.uniform(2, 4))  # 添加随机延迟
-            except Exception as e:
-                print(f"Error getting holdings for {index}: {str(e)}")
-                continue
-        
-        # 获取股票价格
-        stock_prices = {}
-        for symbol in all_symbols:
-            try:
-                stock = yf.Ticker(symbol)
-                hist = safe_yfinance_request(stock.history, period="1d")
-                if not hist.empty:
-                    price = float(hist["Close"].iloc[-1])
-                    if (not min_price or price >= float(min_price)) and \
-                       (not max_price or price <= float(max_price)):
-                        stock_prices[symbol] = price
-                time.sleep(random.uniform(2, 4))  # 添加随机延迟
-            except Exception as e:
-                print(f"Error getting price for {symbol}: {str(e)}")
-                continue
-        
-        # 按价格排序并限制数量
-        sorted_symbols = sorted(stock_prices.items(), key=lambda x: x[1], reverse=True)
-        result = [symbol for symbol, _ in sorted_symbols[:limit]]
-        
-        return json.dumps(result)
-    except Exception as e:
-        return json.dumps({"error": str(e)})
 
 def main():
     if len(sys.argv) < 2:
@@ -363,9 +281,6 @@ def main():
             print(json.dumps({"error": "Symbol not specified"}))
             sys.exit(1)
         print(get_stock_info(sys.argv[2]))
-    
-    elif command == "get_stock_list":
-        print(get_stock_list())
     
     elif command == "get_daily_kline":
         if len(sys.argv) < 3:
@@ -391,16 +306,6 @@ def main():
             print(json.dumps({"error": "Missing parameters"}))
             sys.exit(1)
         print(get_batch_kline(sys.argv[2], sys.argv[3], int(sys.argv[4])))
-    
-    elif command == "scan_stocks":
-        if len(sys.argv) < 3:
-            print(json.dumps({"error": "Market not specified"}))
-            sys.exit(1)
-        market = sys.argv[2]
-        limit = int(sys.argv[3]) if len(sys.argv) > 3 else 20
-        min_price = sys.argv[4] if len(sys.argv) > 4 else ""
-        max_price = sys.argv[5] if len(sys.argv) > 5 else ""
-        print(scan_stocks(market, limit, min_price, max_price))
     
     else:
         print(json.dumps({"error": f"Unknown command: {command}"}))

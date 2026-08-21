@@ -177,7 +177,8 @@ def test_py_yf_004_no_change_percent(
     data = json.loads(result)
 
     assert "error" not in data
-    assert data["changePercent"] == 0  # default
+    # 评审 F-11：缺失时置 null —— "无数据"与"零涨跌"语义分离
+    assert data["changePercent"] is None
     assert data["afterHours"] == 99.0
 
 

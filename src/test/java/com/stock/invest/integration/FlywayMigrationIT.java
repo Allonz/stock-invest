@@ -133,6 +133,17 @@ class FlywayMigrationIT {
         }
     }
 
+    private String columnType(String table, String column) throws SQLException {
+        try (Connection c = conn();
+             ResultSet rs = c.createStatement().executeQuery(
+                     "SELECT COLUMN_TYPE FROM information_schema.COLUMNS "
+                             + "WHERE TABLE_SCHEMA = '" + schemaName + "' AND TABLE_NAME = '" + table
+                             + "' AND COLUMN_NAME = '" + column + "'")) {
+            rs.next();
+            return rs.getString(1);
+        }
+    }
+
     private boolean tableExists(String table) throws SQLException {
         try (Connection c = conn();
              ResultSet rs = c.createStatement().executeQuery(
@@ -158,20 +169,20 @@ class FlywayMigrationIT {
     // ---- 用例 ----
 
     @Test
-    @DisplayName("R2 P1-4: fresh 空库全版本迁移 → V1~V4 全部 success、版本唯一、约束/索引/价格列就位")
+    @DisplayName("R2 P1-4: fresh 空库全版本迁移 → V1~V6 全部 success、版本唯一、约束/索引/价格列就位")
     void freshMigrate_allVersionsApplied() throws Exception {
         Flyway flyway = flyway();
         org.flywaydb.core.api.output.MigrateResult result = flyway.migrate();
-        assertEquals(5, result.migrationsExecuted, "V1..V5 must all execute on a fresh schema");
+        assertEquals(6, result.migrationsExecuted, "V1..V6 must all execute on a fresh schema");
 
-        // flyway_schema_history 版本唯一（无复用）：1:baseline? no — baseline-version=0 不入库；1..5
+        // flyway_schema_history 版本唯一（无复用）：1:baseline? no — baseline-version=0 不入库；1..6
         List<String> applied = appliedDescriptions();
-        assertEquals(5, applied.size(), "exactly 5 migration rows: " + applied);
+        assertEquals(6, applied.size(), "exactly 6 migration rows: " + applied);
         Set<String> versions = new HashSet<>();
         for (String row : applied) {
             versions.add(row.split(":")[0]);
         }
-        assertEquals(Set.of("1", "2", "3", "4", "5"), versions, "versions must be unique, no reuse: " + applied);
+        assertEquals(Set.of("1", "2", "3", "4", "5", "6"), versions, "versions must be unique, no reuse: " + applied);
         assertEquals("create symbol blacklist", applied.get(1).split(":", 2)[1],
                 "V2 must be the restored old create_symbol_blacklist script");
 
@@ -201,6 +212,14 @@ class FlywayMigrationIT {
             assertTrue(rs.next(), "close_price column must exist");
             assertEquals("decimal(12,4)", rs.getString(1), "close_price must be DECIMAL(12,4)");
         }
+
+        // 评审 F-3：V6 统一 symbol 列宽为 VARCHAR(32)（与 stock_daily_bar.symbol 一致）
+        assertEquals("varchar(32)", columnType("symbol_blacklist", "symbol"),
+                "V6 must widen symbol_blacklist.symbol to VARCHAR(32)");
+        assertEquals("varchar(32)", columnType("stock_data_source_priority", "symbol"),
+                "V6 must widen stock_data_source_priority.symbol to VARCHAR(32)");
+        assertEquals("varchar(32)", columnType("stock_daily_bar", "symbol"),
+                "stock_daily_bar.symbol must remain VARCHAR(32)");
 
         // 幂等：二次 migrate 为 no-op，validate 通过
         org.flywaydb.core.api.output.MigrateResult again = flyway.migrate();
@@ -330,13 +349,13 @@ class FlywayMigrationIT {
                 .load();
         assertEquals(2, partial.migrate().migrationsExecuted, "V1+V2 applied (simulating old V2 in history)");
 
-        // 继续完整迁移：validate 必须通过（旧 V2 checksum/描述与历史一致），V3/V4 应用
+        // 继续完整迁移：validate 必须通过（旧 V2 checksum/描述与历史一致），V3~V6 应用
         Flyway full = flyway();
         org.flywaydb.core.api.output.MigrateResult result = full.migrate();
-        assertEquals(3, result.migrationsExecuted, "V3+V4+V5 must apply on top of old-V2 schema");
+        assertEquals(4, result.migrationsExecuted, "V3+V4+V5+V6 must apply on top of old-V2 schema");
 
         List<String> applied = appliedDescriptions();
-        assertEquals(5, applied.size(), "full history after old-V2 upgrade: " + applied);
+        assertEquals(6, applied.size(), "full history after old-V2 upgrade: " + applied);
         assertEquals("create symbol blacklist", applied.get(1).split(":", 2)[1],
                 "V2 description must match the old create_symbol_blacklist script");
 

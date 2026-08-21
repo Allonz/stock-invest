@@ -53,7 +53,10 @@ def _fetch_after_hours_close(client, symbol: str, limit: int):
             limit=int(limit),
             trade_session=_after_hours_trade_session(),
         )
-    except Exception:
+    except Exception as e:
+        # 评审 F-12：不再静默吞异常 —— 盘后查询失败（含账户级错误）向 stderr 输出摘要，
+        # Java 侧 PythonScriptExecutor 会读取 stderr 并记日志，便于排查盘后合并无声失败
+        print(f"[tigeropen_channel] after-hours bars failed for {symbol}: {e}", file=sys.stderr)
         return {}
     if ah_df is None or ah_df.empty:
         return {}
@@ -71,13 +74,17 @@ def _fetch_after_hours_close(client, symbol: str, limit: int):
 
 def _fetch_after_hours_close_range(client, symbol: str, begin: str, end: str):
     """按日期范围获取盘后收盘价（两日窗口，ONE_MINUTE 聚合，按美东日期取当日最后一分钟）。"""
-    from datetime import datetime
+    from datetime import datetime, timedelta
 
     from tigeropen.common.consts import BarPeriod
 
     try:
+        # 评审 F-1：end 取"end+1 天 00:00 ET"而非 end 当日 00:00 —— 目标交易日的日线/盘后
+        # 分钟 bar 时间戳均落在盘中（09:30-20:00 ET），全部 > end 当日 00:00，会被范围查询
+        # 结构性排除；end+1 天 00:00 使 [begin 00:00, end+1 00:00) 完整覆盖目标日。
         begin_ms = int(datetime.strptime(begin, "%Y-%m-%d").replace(tzinfo=NY_TZ).timestamp() * 1000)
-        end_ms = int(datetime.strptime(end, "%Y-%m-%d").replace(tzinfo=NY_TZ).timestamp() * 1000)
+        end_exclusive = datetime.strptime(end, "%Y-%m-%d") + timedelta(days=1)
+        end_ms = int(end_exclusive.replace(tzinfo=NY_TZ).timestamp() * 1000)
         ah_df = client.get_bars(
             symbol,
             period=BarPeriod.ONE_MINUTE,
@@ -86,7 +93,10 @@ def _fetch_after_hours_close_range(client, symbol: str, begin: str, end: str):
             limit=5000,
             trade_session=_after_hours_trade_session(),
         )
-    except Exception:
+    except Exception as e:
+        # 评审 F-12：向 stderr 输出异常摘要（含账户级错误），不再静默返回空
+        print(f"[tigeropen_channel] after-hours bars range failed for {symbol} [{begin},{end}]: {e}",
+              file=sys.stderr)
         return {}
     if ah_df is None or ah_df.empty:
         return {}
@@ -155,14 +165,17 @@ def _cmd_bars_range(client, symbol: str, begin: str, end: str):
     """按日期范围拉日K线（两日窗口：前一交易日 + 目标交易日）。
 
     用 get_bars 的 begin_time/end_time 精确限定范围，避免一次性拉 12 天。
+    评审 F-1：end_ms 取 end+1 天 00:00 ET（与 _fetch_after_hours_close_range 同界），
+    否则目标交易日的日线 bar（时间戳在盘中）被范围查询结构性排除。
     """
     import math
-    from datetime import datetime
+    from datetime import datetime, timedelta
 
     from tigeropen.common.consts import BarPeriod
 
     begin_ms = int(datetime.strptime(begin, "%Y-%m-%d").replace(tzinfo=NY_TZ).timestamp() * 1000)
-    end_ms = int(datetime.strptime(end, "%Y-%m-%d").replace(tzinfo=NY_TZ).timestamp() * 1000)
+    end_exclusive = datetime.strptime(end, "%Y-%m-%d") + timedelta(days=1)
+    end_ms = int(end_exclusive.replace(tzinfo=NY_TZ).timestamp() * 1000)
     df = client.get_bars(
         symbol,
         period=BarPeriod.DAY,

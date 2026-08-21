@@ -4,7 +4,7 @@ import com.stock.invest.entity.DataFillTask;
 import com.stock.invest.entity.ScreeningMatch;
 import com.stock.invest.entity.StockDailyBar;
 import com.stock.invest.model.KLineData;
-import com.stock.invest.model.KLineIterator;
+import com.stock.invest.model.KLineItem;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -102,7 +102,7 @@ public class TestDataFactory {
         return task;
     }
 
-    // ========== KLineData / KLineIterator ==========
+    // ========== KLineData / KLineItem ==========
 
     public static KLineData createKLineData(String symbol, LocalDate tradeDate,
                                              double open, double close, long volume) {
@@ -110,29 +110,29 @@ public class TestDataFactory {
                 .toInstant().toEpochMilli();
         KLineData kd = new KLineData();
         kd.setSymbol(symbol);
-        KLineIterator item = new KLineIterator(symbol, epochMillis,
+        KLineItem item = new KLineItem(symbol, epochMillis,
                 java.math.BigDecimal.valueOf(open), java.math.BigDecimal.valueOf(close + 1),
                 java.math.BigDecimal.valueOf(close - 1), java.math.BigDecimal.valueOf(close),
                 volume, 0, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO);
-        List<KLineIterator> itemsList = new ArrayList<>();
+        List<KLineItem> itemsList = new ArrayList<>();
         itemsList.add(item);
         kd.setItems(itemsList);
         return kd;
     }
 
     /**
-     * 创建包含指定日期列表的 KLineData（每个日期一个 KLineIterator）。
+     * 创建包含指定日期列表的 KLineData（每个日期一个 KLineItem）。
      */
     public static KLineData createKLineDataWithDates(String symbol, List<LocalDate> dates,
                                                       double basePrice, long baseVolume) {
         KLineData kd = new KLineData();
         kd.setSymbol(symbol);
-        List<KLineIterator> itemsList = new ArrayList<>();
+        List<KLineItem> itemsList = new ArrayList<>();
         for (int i = 0; i < dates.size(); i++) {
             LocalDate d = dates.get(i);
             long epochMillis = d.atStartOfDay(java.time.ZoneId.systemDefault())
                     .toInstant().toEpochMilli();
-            KLineIterator item = new KLineIterator(symbol, epochMillis,
+            KLineItem item = new KLineItem(symbol, epochMillis,
                     java.math.BigDecimal.valueOf(basePrice + i), java.math.BigDecimal.valueOf(basePrice + i + 1),
                     java.math.BigDecimal.valueOf(basePrice + i - 1), java.math.BigDecimal.valueOf(basePrice + i),
                     baseVolume + i * 1000L, 0, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,

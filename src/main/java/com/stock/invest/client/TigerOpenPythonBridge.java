@@ -1,6 +1,5 @@
 package com.stock.invest.client;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stock.invest.config.TigerApiConfig;
 import com.stock.invest.config.TigerApiConfig.TigerCredentials;
@@ -9,9 +8,7 @@ import com.stock.invest.util.KLineDataUtils;
 import com.stock.invest.util.PythonScriptExecutor;
 import org.springframework.stereotype.Component;
 
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -81,17 +78,6 @@ public class TigerOpenPythonBridge {
                 buildEnv(),
                 PYTHON_SCRIPT,
                 allArgs);
-    }
-
-    public List<String> listCandidates(int limit, double minPrice, double maxPrice) throws Exception {
-        if (!hasCredentials()) {
-            return Collections.emptyList();
-        }
-        String json = executePythonScript("scan",
-                String.valueOf(Math.max(1, limit)),
-                String.valueOf(minPrice),
-                String.valueOf(maxPrice));
-        return objectMapper.readValue(json.trim(), new TypeReference<List<String>>() {});
     }
 
     public KLineData fetchDailyBars(String symbol, int barLimit) throws Exception {

@@ -43,12 +43,6 @@ public class TradingCalendarResult {
         return new TradingCalendarResult(market, date, false, source, type, detail);
     }
 
-    /** 全部数据源不可用时返回默认 true（宁可重复，不要漏数据） */
-    public static TradingCalendarResult defaultTradingDay(String market, LocalDate date) {
-        return new TradingCalendarResult(market, date, true, "none", "DEFAULT",
-                "所有数据源均不可用，默认交易日");
-    }
-
     // --- getters ---
 
     public String getMarket() { return market; }

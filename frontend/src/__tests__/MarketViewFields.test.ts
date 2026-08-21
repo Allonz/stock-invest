@@ -138,14 +138,14 @@ describe('MarketView.vue — 字段列展示', () => {
     expect(table.exists()).toBe(true)
 
     // Name row cells (first row)
-    const nameRow = table.findAll('tbody tr').at(0)!
+    const nameRow = table.findAll('tbody tr')[0]!
     const nameCells = nameRow.findAll('td.stock-col')
     expect(nameCells.length).toBe(2)
     expect(nameCells[0].text()).toBe('Apple Inc.')
     expect(nameCells[1].text()).toBe('—') // AMZN name is undefined
 
     // Symbol row cells (second row) - symbol text is inside a div
-    const symbolRow = table.findAll('tbody tr').at(1)!
+    const symbolRow = table.findAll('tbody tr')[1]!
     const symbolCells = symbolRow.findAll('td.stock-col')
     expect(symbolCells[0].text()).toContain('AAPL')
     expect(symbolCells[1].text()).toContain('AMZN')
@@ -177,7 +177,7 @@ describe('MarketView.vue — 字段列展示', () => {
     })
     await flushPromises()
 
-    const nameCells = wrapper.findAll('tbody tr').at(0)!.findAll('td.stock-col')
+    const nameCells = wrapper.findAll('tbody tr')[0]!.findAll('td.stock-col')
     // AAPL has name 'Apple Inc.', AMZN has undefined name → '—'
     expect(nameCells[1].text()).toBe('—')
   })

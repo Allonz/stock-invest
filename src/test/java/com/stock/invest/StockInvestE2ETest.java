@@ -1,8 +1,8 @@
 package com.stock.invest;
 
-import com.stock.invest.enums.dto.TigerWatchlistRowDto;
-import com.stock.invest.enums.dto.TigerWatchlistIngestRequestDto;
-import com.stock.invest.enums.dto.ApiResponse;
+import com.stock.invest.dto.TigerWatchlistRowDto;
+import com.stock.invest.dto.TigerWatchlistIngestRequestDto;
+import com.stock.invest.dto.ApiResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
