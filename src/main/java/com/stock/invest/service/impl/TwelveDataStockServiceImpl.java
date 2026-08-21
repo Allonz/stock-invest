@@ -19,6 +19,7 @@ import com.stock.invest.model.KLineData;
 import com.stock.invest.model.KLineItem;
 import com.stock.invest.service.DataSourceStrategy;
 import com.stock.invest.util.PythonScriptExecutor;
+import com.stock.invest.util.TwelveDataRateLimiter;
 import org.springframework.core.annotation.Order;
 
 @Service("twelveDataStockService")
@@ -32,6 +33,10 @@ public class TwelveDataStockServiceImpl implements DataSourceStrategy {
     private final ObjectMapper objectMapper;
     /** 评审 F-2：多 API Key 轮换游标 —— 429/限流时换下一个 key 重试（进程内跨调用轮换） */
     private final AtomicInteger keyRotationIndex = new AtomicInteger(0);
+    /** 评审 C-1：Java 侧跨进程最小间隔限速 —— Python 脚本进程内 rate_limit 对新起的子进程
+     *  完全失效（last_request_time 随进程销毁），这里按 key 在服务进程内统一限速，
+     *  逐 symbol 补缺循环不再打爆 Free tier 配额；与多 key 轮换互补（各 key 独立计时）。 */
+    private final TwelveDataRateLimiter rateLimiter = new TwelveDataRateLimiter();
 
     @Override
     public String getSourceName() {
@@ -183,16 +188,24 @@ public class TwelveDataStockServiceImpl implements DataSourceStrategy {
      * <p>配置注释"用于在限流时轮换"与 README"支持多 API Key 轮换"此前均不成立
      * （apiKeyEnv 只取 keys.get(0)）；这里实现真实的跨 key 轮换：脚本返回限流错误时
      * 换下一个 key 重试，非限流错误不重试（与 key 无关）。</p>
+     * <p>评审 C-1：每次实际调用前经 {@link #rateLimiter} 按 key 限速 —— 补缺循环
+     * 逐 symbol 调用时不会打爆单 key 配额（多 key 时各 key 独立计时，轮换扩容）。</p>
      */
     private String executeScriptWithKeyRotation(String scriptName, String... args)
             throws IOException, InterruptedException {
         List<String> keys = twelveDataProperties.resolvedKeys();
-        if (keys.isEmpty() || keys.size() == 1) {
+        if (keys.isEmpty()) {
+            return pythonScriptExecutor.executeScriptWithEnvironment(apiKeyEnv(0), scriptName, args);
+        }
+        if (keys.size() == 1) {
+            rateLimiter.acquire(keys.get(0));
             return pythonScriptExecutor.executeScriptWithEnvironment(apiKeyEnv(0), scriptName, args);
         }
         String last = null;
         for (int i = 0; i < keys.size(); i++) {
             int idx = keyRotationIndex.getAndIncrement();
+            String key = keys.get(Math.floorMod(idx, keys.size()));
+            rateLimiter.acquire(key);
             String result = pythonScriptExecutor.executeScriptWithEnvironment(apiKeyEnv(idx), scriptName, args);
             last = result;
             if (!isRateLimitError(result)) {

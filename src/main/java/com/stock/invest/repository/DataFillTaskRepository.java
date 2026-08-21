@@ -44,8 +44,10 @@ public interface DataFillTaskRepository extends JpaRepository<DataFillTask, Long
             @Param("status") String status,
             Pageable pageable);
 
+    /** 评审 C-8：加 Pageable 限量 —— retrying 任务积压时不再全部载入逐个外部 API 重试，
+     *  单次调度耗时可控（调用方传 PageRequest.of(0, 100)）。 */
     @Query("SELECT t FROM DataFillTask t WHERE t.status = 'retrying' ORDER BY t.createdAt ASC")
-    List<DataFillTask> findRetryableTasks();
+    List<DataFillTask> findRetryableTasks(Pageable pageable);
 
     @Modifying
     @Query("UPDATE DataFillTask t SET t.status = :newStatus, t.lastError = :error WHERE t.symbol = :symbol AND t.status IN :statuses")

@@ -55,6 +55,29 @@ public interface StockDailyBarRepository extends JpaRepository<StockDailyBar, Lo
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate);
 
+    /**
+     * 评审 C-3：区间内的 symbol 列表（轻量投影，供筛选按 symbol 分批载入 bar，
+     * 替代把区间内所有 symbol 的全部 bar 一次性载入内存的全量查询）。
+     */
+    @Query("SELECT DISTINCT b.symbol FROM StockDailyBar b "
+            + "WHERE b.tradeDate BETWEEN :startDate AND :endDate ORDER BY b.symbol ASC")
+    List<String> findSymbolsByTradeDateBetween(
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate);
+
+    /**
+     * 评审 C-3：区间内最新交易日（聚合查询，筛选基准日判断用，避免全量载入）。
+     */
+    @Query("SELECT MAX(b.tradeDate) FROM StockDailyBar b "
+            + "WHERE b.tradeDate BETWEEN :startDate AND :endDate")
+    LocalDate findLatestTradeDateBetween(
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate);
+
+    /** 评审 C-3：单个 symbol 的区间 bar（newest-first，筛选评估按 symbol 分批载入）。 */
+    List<StockDailyBar> findBySymbolAndTradeDateBetweenOrderByTradeDateDesc(
+            String symbol, LocalDate startDate, LocalDate endDate);
+
     @Query("SELECT b FROM StockDailyBar b WHERE b.source = :source AND b.tradeDate BETWEEN :startDate AND :endDate ORDER BY b.tradeDate DESC")
     List<StockDailyBar> findBySourceAndTradeDateBetween(
             @Param("source") String source,

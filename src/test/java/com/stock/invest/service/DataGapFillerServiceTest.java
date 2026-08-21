@@ -18,6 +18,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.springframework.data.domain.Pageable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -147,7 +148,7 @@ class DataGapFillerServiceTest {
                 5, today,
                 Instant.now(), Instant.now().minus(2, ChronoUnit.HOURS)
         );
-        when(dataFillTaskRepository.findRetryableTasks()).thenReturn(List.of(task));
+        when(dataFillTaskRepository.findRetryableTasks(any(Pageable.class))).thenReturn(List.of(task));
 
         service.processRetryingTasks();
 
@@ -165,7 +166,7 @@ class DataGapFillerServiceTest {
                 5, yesterday,
                 Instant.now(), Instant.now().minus(2, ChronoUnit.HOURS)
         );
-        when(dataFillTaskRepository.findRetryableTasks()).thenReturn(List.of(task));
+        when(dataFillTaskRepository.findRetryableTasks(any(Pageable.class))).thenReturn(List.of(task));
         // yfinance 返回包含 item 的数据（日期不匹配），避免两个数据源都 null 导致 blacklist
         com.stock.invest.model.KLineData yfKd = new com.stock.invest.model.KLineData();
         yfKd.setSymbol("AAPL");
@@ -204,7 +205,7 @@ class DataGapFillerServiceTest {
                 1, today,
                 weekAgo, Instant.now().minus(2, ChronoUnit.HOURS)
         );
-        when(dataFillTaskRepository.findRetryableTasks()).thenReturn(List.of(task));
+        when(dataFillTaskRepository.findRetryableTasks(any(Pageable.class))).thenReturn(List.of(task));
 
         service.processRetryingTasks();
 
@@ -240,7 +241,7 @@ class DataGapFillerServiceTest {
                 2, today,
                 recent, Instant.now().minus(40, ChronoUnit.MINUTES)
         );
-        when(dataFillTaskRepository.findRetryableTasks()).thenReturn(List.of(task));
+        when(dataFillTaskRepository.findRetryableTasks(any(Pageable.class))).thenReturn(List.of(task));
         // yfinance 返回包含 item 的数据（日期不匹配），避免 blacklist
         com.stock.invest.model.KLineData yfKd = new com.stock.invest.model.KLineData();
         yfKd.setSymbol("AAPL");

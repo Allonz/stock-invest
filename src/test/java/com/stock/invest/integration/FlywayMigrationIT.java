@@ -169,20 +169,20 @@ class FlywayMigrationIT {
     // ---- 用例 ----
 
     @Test
-    @DisplayName("R2 P1-4: fresh 空库全版本迁移 → V1~V6 全部 success、版本唯一、约束/索引/价格列就位")
+    @DisplayName("R2 P1-4: fresh 空库全版本迁移 → V1~V7 全部 success、版本唯一、约束/索引/价格列就位")
     void freshMigrate_allVersionsApplied() throws Exception {
         Flyway flyway = flyway();
         org.flywaydb.core.api.output.MigrateResult result = flyway.migrate();
-        assertEquals(6, result.migrationsExecuted, "V1..V6 must all execute on a fresh schema");
+        assertEquals(7, result.migrationsExecuted, "V1..V7 must all execute on a fresh schema");
 
-        // flyway_schema_history 版本唯一（无复用）：1:baseline? no — baseline-version=0 不入库；1..6
+        // flyway_schema_history 版本唯一（无复用）：1:baseline? no — baseline-version=0 不入库；1..7
         List<String> applied = appliedDescriptions();
-        assertEquals(6, applied.size(), "exactly 6 migration rows: " + applied);
+        assertEquals(7, applied.size(), "exactly 7 migration rows: " + applied);
         Set<String> versions = new HashSet<>();
         for (String row : applied) {
             versions.add(row.split(":")[0]);
         }
-        assertEquals(Set.of("1", "2", "3", "4", "5", "6"), versions, "versions must be unique, no reuse: " + applied);
+        assertEquals(Set.of("1", "2", "3", "4", "5", "6", "7"), versions, "versions must be unique, no reuse: " + applied);
         assertEquals("create symbol blacklist", applied.get(1).split(":", 2)[1],
                 "V2 must be the restored old create_symbol_blacklist script");
 
@@ -197,6 +197,10 @@ class FlywayMigrationIT {
         assertTrue(indexExists("screening_match", "idx_screening_match_window_days"), "P3-7 index missing");
         assertTrue(indexExists("screening_match", "idx_screening_match_batch_id_window_days"), "P3-7 index missing");
         assertTrue(indexExists("data_fill_task", "idx_dft_status"), "P3-12 idx_dft_status missing");
+
+        // 评审 C-9：stock_daily_bar.field_fill_status 查询索引（V7）
+        assertTrue(indexExists("stock_daily_bar", "idx_sdb_field_fill_status"),
+                "V7 idx_sdb_field_fill_status missing");
 
         // data_fill_task 全列（P2-4）就位
         for (String col : List.of("version", "status", "retry_count", "retry_date", "day_count", "last_error")) {
@@ -349,13 +353,13 @@ class FlywayMigrationIT {
                 .load();
         assertEquals(2, partial.migrate().migrationsExecuted, "V1+V2 applied (simulating old V2 in history)");
 
-        // 继续完整迁移：validate 必须通过（旧 V2 checksum/描述与历史一致），V3~V6 应用
+        // 继续完整迁移：validate 必须通过（旧 V2 checksum/描述与历史一致），V3~V7 应用
         Flyway full = flyway();
         org.flywaydb.core.api.output.MigrateResult result = full.migrate();
-        assertEquals(4, result.migrationsExecuted, "V3+V4+V5+V6 must apply on top of old-V2 schema");
+        assertEquals(5, result.migrationsExecuted, "V3+V4+V5+V6+V7 must apply on top of old-V2 schema");
 
         List<String> applied = appliedDescriptions();
-        assertEquals(6, applied.size(), "full history after old-V2 upgrade: " + applied);
+        assertEquals(7, applied.size(), "full history after old-V2 upgrade: " + applied);
         assertEquals("create symbol blacklist", applied.get(1).split(":", 2)[1],
                 "V2 description must match the old create_symbol_blacklist script");
 

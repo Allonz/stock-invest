@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
@@ -19,8 +20,10 @@ import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -70,6 +73,29 @@ class ScreeningServiceTest {
         return b;
     }
 
+    /**
+     * 评审 C-3：筛选改为按 symbol 分批载入 —— 依次 stub symbol 列表、最新交易日、
+     * 每 symbol 的区间 bar（按 symbol 参数分发，并按请求的日期区间过滤，忠实于
+     * findBySymbolAndTradeDateBetween 的生产语义）。
+     */
+    private void stubBarLoading(List<String> symbols, Map<String, List<StockDailyBar>> barsBySymbol,
+                                LocalDate tradeDate) {
+        when(stockDailyBarRepository.findSymbolsByTradeDateBetween(any(LocalDate.class), any(LocalDate.class)))
+                .thenReturn(symbols);
+        when(stockDailyBarRepository.findLatestTradeDateBetween(any(LocalDate.class), any(LocalDate.class)))
+                .thenReturn(tradeDate);
+        when(stockDailyBarRepository.findBySymbolAndTradeDateBetweenOrderByTradeDateDesc(
+                anyString(), any(LocalDate.class), any(LocalDate.class)))
+                .thenAnswer(inv -> {
+                    LocalDate start = inv.getArgument(1);
+                    LocalDate end = inv.getArgument(2);
+                    // 返回可变列表：服务内会对 bars 做升序 sort（不可变 List.toList() 会抛异常）
+                    return barsBySymbol.getOrDefault(inv.getArgument(0), List.of()).stream()
+                            .filter(b -> !b.getTradeDate().isBefore(start) && !b.getTradeDate().isAfter(end))
+                            .collect(Collectors.toList());
+                });
+    }
+
     @Nested
     @DisplayName("runScreening — 筛选流程")
     class RunScreeningTest {
@@ -98,7 +124,8 @@ class ScreeningServiceTest {
         @DisplayName("正常筛选流程，结果写入 screening_match")
         void test_screening_success() {
             String symbol = "TEST";
-            LocalDate tradeDate = LocalDate.of(2026, 5, 18);
+            // 2026-05-15 为周五：9 天回溯区间内含 ≥7 个工作日，全部窗口 2~7 天均可评估
+            LocalDate tradeDate = LocalDate.of(2026, 5, 15);
 
             // 生成过去14天的连续数据
             List<StockDailyBar> bars = new ArrayList<>();
@@ -113,8 +140,9 @@ class ScreeningServiceTest {
                     .thenReturn(true);
             // bars 是 oldest-first（循环从 i=13 到 i=0），但查询返回 newest-first
             java.util.Collections.reverse(bars);
-            when(stockDailyBarRepository.findByTradeDateBetweenOrderByTradeDateDesc(any(LocalDate.class), eq(tradeDate)))
-                    .thenReturn(bars);
+            Map<String, List<StockDailyBar>> bySymbol = new HashMap<>();
+            bySymbol.put(symbol, bars);
+            stubBarLoading(List.of(symbol), bySymbol, tradeDate);
             when(screeningMatchRepository.saveAll(anyList()))
                     .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -128,19 +156,19 @@ class ScreeningServiceTest {
         @DisplayName("数据不足7天跳过")
         void test_screening_insufficientData() {
             String symbol = "SHORT";
-            LocalDate tradeDate = LocalDate.of(2026, 5, 18);
+            LocalDate tradeDate = LocalDate.of(2026, 5, 15);
 
-            // 只有2天数据
+            // 只有2天数据（5-14/5-15 均为工作日，连续日校验通过，但模式评估不命中 → 不落库）
             List<StockDailyBar> bars = new ArrayList<>();
             bars.add(bar(symbol, tradeDate.minusDays(1), 0.10, 0.11, 5000L, "tiger"));
             bars.add(bar(symbol, tradeDate, 0.11, 0.12, 6000L, "tiger"));
 
-            when(stockDailyBarRepository.findByTradeDateBetweenOrderByTradeDateDesc(any(LocalDate.class), eq(tradeDate)))
-                    .thenReturn(bars);
+            Map<String, List<StockDailyBar>> bySymbol = new HashMap<>();
+            bySymbol.put(symbol, bars);
+            stubBarLoading(List.of(symbol), bySymbol, tradeDate);
 
             screeningService.runScreening(tradeDate);
 
-            // 数据不足7天，但内部取 windowDays = min(7, 2) = 2 < 3，所以被跳过
             verify(screeningMatchRepository, never()).saveAll(anyList());
         }
 
@@ -148,9 +176,10 @@ class ScreeningServiceTest {
         @Test
         @DisplayName("无数据时返回空 batchId")
         void test_noData() {
-            LocalDate tradeDate = LocalDate.of(2026, 5, 18);
+            LocalDate tradeDate = LocalDate.of(2026, 5, 15);
 
-            when(stockDailyBarRepository.findByTradeDateBetweenOrderByTradeDateDesc(any(LocalDate.class), eq(tradeDate)))
+            // 首个查询（symbol 列表）返回空 → 提前返回，后续查询不会被调用
+            when(stockDailyBarRepository.findSymbolsByTradeDateBetween(any(LocalDate.class), any(LocalDate.class)))
                     .thenReturn(List.of());
 
             String batchId = screeningService.runScreening(tradeDate);
@@ -162,7 +191,7 @@ class ScreeningServiceTest {
         @DisplayName("模式不匹配时跳过")
         void test_patternNotMatch() {
             String symbol = "NOPAT";
-            LocalDate tradeDate = LocalDate.of(2026, 5, 18);
+            LocalDate tradeDate = LocalDate.of(2026, 5, 15);
 
             List<StockDailyBar> bars = new ArrayList<>();
             for (int i = 13; i >= 0; i--) {
@@ -172,8 +201,9 @@ class ScreeningServiceTest {
                 }
             }
 
-            when(stockDailyBarRepository.findByTradeDateBetweenOrderByTradeDateDesc(any(LocalDate.class), eq(tradeDate)))
-                    .thenReturn(bars);
+            Map<String, List<StockDailyBar>> bySymbol = new HashMap<>();
+            bySymbol.put(symbol, bars);
+            stubBarLoading(List.of(symbol), bySymbol, tradeDate);
 
             screeningService.runScreening(tradeDate);
 
@@ -198,9 +228,10 @@ class ScreeningServiceTest {
         @Test
         @DisplayName("P1-7: windowDays=3 只评估 3 天窗口")
         void windowDays_limitsWindows() {
-            LocalDate tradeDate = LocalDate.of(2026, 5, 18);
-            when(stockDailyBarRepository.findByTradeDateBetweenOrderByTradeDateDesc(any(LocalDate.class), eq(tradeDate)))
-                    .thenReturn(barsFor("TEST", tradeDate));
+            LocalDate tradeDate = LocalDate.of(2026, 5, 15);
+            Map<String, List<StockDailyBar>> bySymbol = new HashMap<>();
+            bySymbol.put("TEST", barsFor("TEST", tradeDate));
+            stubBarLoading(List.of("TEST"), bySymbol, tradeDate);
 
             screeningService.runScreening(tradeDate, 3, null);
 
@@ -215,9 +246,10 @@ class ScreeningServiceTest {
         @Test
         @DisplayName("P1-7: windowDays=null 评估全部窗口 2~7 天（等于旧 runScreening(date)）")
         void nullParams_defaultAllWindows() {
-            LocalDate tradeDate = LocalDate.of(2026, 5, 18);
-            when(stockDailyBarRepository.findByTradeDateBetweenOrderByTradeDateDesc(any(LocalDate.class), eq(tradeDate)))
-                    .thenReturn(barsFor("TEST", tradeDate));
+            LocalDate tradeDate = LocalDate.of(2026, 5, 15);
+            Map<String, List<StockDailyBar>> bySymbol = new HashMap<>();
+            bySymbol.put("TEST", barsFor("TEST", tradeDate));
+            stubBarLoading(List.of("TEST"), bySymbol, tradeDate);
 
             screeningService.runScreening(tradeDate, null, null);
 
@@ -232,9 +264,10 @@ class ScreeningServiceTest {
         @Test
         @DisplayName("P1-7: windowDays=1（小于最小窗口）回退全部窗口")
         void invalidWindowOne_clampsToAllWindows() {
-            LocalDate tradeDate = LocalDate.of(2026, 5, 18);
-            when(stockDailyBarRepository.findByTradeDateBetweenOrderByTradeDateDesc(any(LocalDate.class), eq(tradeDate)))
-                    .thenReturn(barsFor("TEST", tradeDate));
+            LocalDate tradeDate = LocalDate.of(2026, 5, 15);
+            Map<String, List<StockDailyBar>> bySymbol = new HashMap<>();
+            bySymbol.put("TEST", barsFor("TEST", tradeDate));
+            stubBarLoading(List.of("TEST"), bySymbol, tradeDate);
 
             screeningService.runScreening(tradeDate, 1, null);
 
@@ -249,13 +282,14 @@ class ScreeningServiceTest {
         @Test
         @DisplayName("P1-7: limit 限制评估 symbol 数（10 个候选 + limit=5 → 恰好 5 个被评估）")
         void limit_capsSymbols() {
-            LocalDate tradeDate = LocalDate.of(2026, 5, 18);
-            List<StockDailyBar> allBars = new ArrayList<>();
+            LocalDate tradeDate = LocalDate.of(2026, 5, 15);
+            List<String> symbols = new ArrayList<>();
+            Map<String, List<StockDailyBar>> bySymbol = new HashMap<>();
             for (int s = 0; s < 10; s++) {
-                allBars.addAll(barsFor("SYM" + s, tradeDate));
+                symbols.add("SYM" + s);
+                bySymbol.put("SYM" + s, barsFor("SYM" + s, tradeDate));
             }
-            when(stockDailyBarRepository.findByTradeDateBetweenOrderByTradeDateDesc(any(LocalDate.class), eq(tradeDate)))
-                    .thenReturn(allBars);
+            stubBarLoading(symbols, bySymbol, tradeDate);
 
             screeningService.runScreening(tradeDate, null, 5);
 
@@ -274,13 +308,14 @@ class ScreeningServiceTest {
         @Test
         @DisplayName("P1-7: limit=1 时恰好评估 1 个 symbol")
         void limit_oneEvaluatesOneSymbol() {
-            LocalDate tradeDate = LocalDate.of(2026, 5, 18);
-            List<StockDailyBar> allBars = new ArrayList<>();
+            LocalDate tradeDate = LocalDate.of(2026, 5, 15);
+            List<String> symbols = new ArrayList<>();
+            Map<String, List<StockDailyBar>> bySymbol = new HashMap<>();
             for (int s = 0; s < 3; s++) {
-                allBars.addAll(barsFor("SYM" + s, tradeDate));
+                symbols.add("SYM" + s);
+                bySymbol.put("SYM" + s, barsFor("SYM" + s, tradeDate));
             }
-            when(stockDailyBarRepository.findByTradeDateBetweenOrderByTradeDateDesc(any(LocalDate.class), eq(tradeDate)))
-                    .thenReturn(allBars);
+            stubBarLoading(symbols, bySymbol, tradeDate);
 
             screeningService.runScreening(tradeDate, null, 1);
 
@@ -299,13 +334,14 @@ class ScreeningServiceTest {
         @Test
         @DisplayName("P1-7: 无 limit 时全部候选 symbol 被评估")
         void noLimit_evaluatesAllSymbols() {
-            LocalDate tradeDate = LocalDate.of(2026, 5, 18);
-            List<StockDailyBar> allBars = new ArrayList<>();
+            LocalDate tradeDate = LocalDate.of(2026, 5, 15);
+            List<String> symbols = new ArrayList<>();
+            Map<String, List<StockDailyBar>> bySymbol = new HashMap<>();
             for (int s = 0; s < 4; s++) {
-                allBars.addAll(barsFor("SYM" + s, tradeDate));
+                symbols.add("SYM" + s);
+                bySymbol.put("SYM" + s, barsFor("SYM" + s, tradeDate));
             }
-            when(stockDailyBarRepository.findByTradeDateBetweenOrderByTradeDateDesc(any(LocalDate.class), eq(tradeDate)))
-                    .thenReturn(allBars);
+            stubBarLoading(symbols, bySymbol, tradeDate);
 
             screeningService.runScreening(tradeDate, null, null);
 
@@ -324,9 +360,10 @@ class ScreeningServiceTest {
         @Test
         @DisplayName("R2 P1-3: windowDays=7 显式传参 → 只评估 7 天窗口（与默认全窗口可区分）")
         void windowDays7_defaultNoLongerApplied() {
-            LocalDate tradeDate = LocalDate.of(2026, 5, 18);
-            when(stockDailyBarRepository.findByTradeDateBetweenOrderByTradeDateDesc(any(LocalDate.class), eq(tradeDate)))
-                    .thenReturn(barsFor("TEST", tradeDate));
+            LocalDate tradeDate = LocalDate.of(2026, 5, 15);
+            Map<String, List<StockDailyBar>> bySymbol = new HashMap<>();
+            bySymbol.put("TEST", barsFor("TEST", tradeDate));
+            stubBarLoading(List.of("TEST"), bySymbol, tradeDate);
 
             screeningService.runScreening(tradeDate, 7, null);
 
@@ -344,9 +381,10 @@ class ScreeningServiceTest {
         @Test
         @DisplayName("R2 P1-5: 同日已存在的键在 saveAll 前被滤除（应用层查重纵深防御）")
         void duplicateSameDayRowsFiltered() {
-            LocalDate tradeDate = LocalDate.of(2026, 5, 18);
-            when(stockDailyBarRepository.findByTradeDateBetweenOrderByTradeDateDesc(any(LocalDate.class), eq(tradeDate)))
-                    .thenReturn(barsFor("AAPL", tradeDate));
+            LocalDate tradeDate = LocalDate.of(2026, 5, 15);
+            Map<String, List<StockDailyBar>> bySymbol = new HashMap<>();
+            bySymbol.put("AAPL", barsFor("AAPL", tradeDate));
+            stubBarLoading(List.of("AAPL"), bySymbol, tradeDate);
             // 两个算法都命中 → 每窗口 2 行（6 窗口 × 2 算法 = 12 行）
             when(patternEvaluateService.matchesIncreasingVolumePattern(anyList(), anyInt())).thenReturn(true);
             when(patternEvaluateService.matchesVolumeSpikePattern(anyList(), anyInt())).thenReturn(true);
@@ -381,15 +419,16 @@ class ScreeningServiceTest {
         @Test
         @DisplayName("P1-2/§4.1: 筛选互斥 —— 第二个并发调用立即返回 null")
         void screening_runningGuardSecondCallReturnsNull() throws Exception {
-            LocalDate tradeDate = LocalDate.of(2026, 5, 18);
+            LocalDate tradeDate = LocalDate.of(2026, 5, 15);
             CountDownLatch entered = new CountDownLatch(1);
             CountDownLatch release = new CountDownLatch(1);
+            // 评审 C-3：筛选第一查询改为 findSymbolsByTradeDateBetween（symbol 列表投影）
             doAnswer(inv -> {
                 entered.countDown();
                 release.await(5, TimeUnit.SECONDS);
                 return List.of();
             }).when(stockDailyBarRepository)
-                    .findByTradeDateBetweenOrderByTradeDateDesc(any(LocalDate.class), any(LocalDate.class));
+                    .findSymbolsByTradeDateBetween(any(LocalDate.class), any(LocalDate.class));
 
             AtomicReference<String> firstResult = new AtomicReference<>();
             Thread a = new Thread(() -> firstResult.set(screeningService.runScreening(tradeDate)), "screenA");
@@ -403,7 +442,7 @@ class ScreeningServiceTest {
             assertNull(second, "second concurrent call must be rejected with null");
             assertTrue(elapsedMs < 1000, "rejected call must return immediately, elapsed=" + elapsedMs);
             verify(stockDailyBarRepository, times(1))
-                    .findByTradeDateBetweenOrderByTradeDateDesc(any(LocalDate.class), any(LocalDate.class));
+                    .findSymbolsByTradeDateBetween(any(LocalDate.class), any(LocalDate.class));
 
             release.countDown();
             a.join(5000);

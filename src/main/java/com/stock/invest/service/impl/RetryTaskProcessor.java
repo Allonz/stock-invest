@@ -37,6 +37,8 @@ class RetryTaskProcessor {
     private static final ZoneId AMERICA_NY = ZoneId.of("America/New_York");
     private static final int DAILY_RETRY_LIMIT = 5;
     private static final long RETRY_COOLDOWN_MINUTES = 30;
+    /** 评审 C-8：单次调度最多重试的任务数（分批，避免任务积压时单次调度耗时不可控） */
+    private static final int RETRY_BATCH_SIZE = 100;
 
     private final DataFillTaskRepository dataFillTaskRepository;
     private final SymbolBlacklistService symbolBlacklistService;
@@ -65,7 +67,9 @@ class RetryTaskProcessor {
         progress.setStage("SCANNING");
 
         try {
-            List<DataFillTask> retryable = dataFillTaskRepository.findRetryableTasks();
+            // 评审 C-8：分批限量重试（每批 100），任务积压时单次调度耗时可控
+            List<DataFillTask> retryable = dataFillTaskRepository.findRetryableTasks(
+                    org.springframework.data.domain.PageRequest.of(0, RETRY_BATCH_SIZE));
             progress.setTotal(retryable.size());
             progress.setStage("RETRYING");
             log.info("[RetryTaskProcessor] processRetryingTasks: found retryingTasks={}", retryable.size());

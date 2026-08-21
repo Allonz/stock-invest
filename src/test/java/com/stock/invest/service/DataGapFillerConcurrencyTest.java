@@ -138,12 +138,13 @@ class DataGapFillerConcurrencyTest {
         java.time.LocalDate tradeDate = java.time.LocalDate.of(2026, 5, 18);
         CountDownLatch entered = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
+        // 评审 C-3：筛选首查询已改为 findSymbolsByTradeDateBetween（symbol 列表投影）
         doAnswer(inv -> {
             entered.countDown();
             release.await(5, TimeUnit.SECONDS);
             return List.of();
         }).when(stockDailyBarRepository)
-                .findByTradeDateBetweenOrderByTradeDateDesc(any(java.time.LocalDate.class), any(java.time.LocalDate.class));
+                .findSymbolsByTradeDateBetween(any(java.time.LocalDate.class), any(java.time.LocalDate.class));
 
         Thread a = new Thread(() -> screeningService.runScreening(tradeDate), "screenA");
         a.start();

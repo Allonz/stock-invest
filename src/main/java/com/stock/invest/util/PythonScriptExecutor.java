@@ -31,18 +31,32 @@ import java.util.concurrent.TimeUnit;
 public class PythonScriptExecutor {
 
     private static final Logger log = LoggerFactory.getLogger(PythonScriptExecutor.class);
-    /** R2 P2-6：默认超时 30s；构造可注入短值用于测试（生产默认不变） */
-    private static final int DEFAULT_TIMEOUT_SECONDS = 30;
+    /** 评审 C-7：排队超时 —— 等待并发信号量许可的最长时间（生产默认 ≤10s） */
+    private static final int DEFAULT_QUEUE_TIMEOUT_SECONDS = 10;
+    /** 评审 C-7：执行超时 —— 子进程最长运行时间（生产默认 60s，覆盖 yfinance
+     *  脚本 2-4s 随机 sleep + backoff max_time=30s 的最坏预算，避免合法请求被强杀） */
+    private static final int DEFAULT_EXECUTION_TIMEOUT_SECONDS = 60;
 
-    private final int timeoutSeconds;
+    private final int queueTimeoutSeconds;
+    private final int executionTimeoutSeconds;
 
     public PythonScriptExecutor() {
-        this(DEFAULT_TIMEOUT_SECONDS);
+        this(DEFAULT_QUEUE_TIMEOUT_SECONDS, DEFAULT_EXECUTION_TIMEOUT_SECONDS);
     }
 
-    /** R2 P2-6：超时注入化 —— 测试用短超时验证挂起进程杀灭，避免真实等待 30s 拖慢 CI */
+    /**
+     * R2 P2-6：超时注入化 —— 测试用短超时验证挂起进程杀灭，避免真实等待拖慢 CI。
+     * 单参构造同时覆盖排队与执行超时（保持既有测试语义）。
+     */
     public PythonScriptExecutor(int timeoutSeconds) {
-        this.timeoutSeconds = timeoutSeconds;
+        this(timeoutSeconds, timeoutSeconds);
+    }
+
+    /** 评审 C-7：排队超时与执行超时独立注入 —— 信号量 tryAcquire 用排队超时，
+     *  process.waitFor 用执行超时，避免最坏"排队 30s + 执行 30s"击穿上层 60s 预算。 */
+    public PythonScriptExecutor(int queueTimeoutSeconds, int executionTimeoutSeconds) {
+        this.queueTimeoutSeconds = queueTimeoutSeconds;
+        this.executionTimeoutSeconds = executionTimeoutSeconds;
     }
 
     /** stdout 读取上限（约 8 MB / 20 万行），防止异常输出撑爆内存 */
@@ -103,9 +117,11 @@ public class PythonScriptExecutor {
 
         boolean acquired = false;
         try {
-            acquired = SCRIPT_SEMAPHORE.tryAcquire(timeoutSeconds, TimeUnit.SECONDS);
+            // 评审 C-7：排队等待用独立的排队超时（不再与执行共享 30s 预算）
+            acquired = SCRIPT_SEMAPHORE.tryAcquire(queueTimeoutSeconds, TimeUnit.SECONDS);
             if (!acquired) {
-                log.error("Python脚本执行并发已满（上限 {}），拒绝执行: {}", MAX_CONCURRENT_SCRIPTS, scriptName);
+                log.error("Python脚本执行并发已满（上限 {}），排队 {}s 后拒绝执行: {}",
+                        MAX_CONCURRENT_SCRIPTS, queueTimeoutSeconds, scriptName);
                 throw new IOException("Python脚本执行并发已满，请稍后重试");
             }
         } catch (InterruptedException e) {
@@ -121,7 +137,11 @@ public class PythonScriptExecutor {
             throw e;
         }
         try {
-            Files.copy(resource.getInputStream(), tempFile, StandardCopyOption.REPLACE_EXISTING);
+            // 评审 C-5：ClassPathResource 输入流用 try-with-resources 关闭，
+            // 避免每次脚本执行泄漏一个文件句柄（依赖 GC 兜底的隐性泄漏）
+            try (InputStream in = resource.getInputStream()) {
+                Files.copy(in, tempFile, StandardCopyOption.REPLACE_EXISTING);
+            }
             File scriptFile = tempFile.toFile();
             // 评审 F-5：不再调用 deleteOnExit() —— 每次执行都会向 JVM 关闭钩子注册列表永久
             // 追加 File 对象（finally 已删除文件但注册不撤销），长期运行的服务进程缓慢内存泄漏；
@@ -155,12 +175,13 @@ public class PythonScriptExecutor {
                         () -> drainTail(process.getErrorStream(), MAX_STDERR_CHARS), DRAIN_POOL);
 
                 // 超时判定前置：子进程挂起时不再被 readLine() 永久阻塞
-                boolean completed = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
+                // 评审 C-7：进程等待用独立的执行超时
+                boolean completed = process.waitFor(executionTimeoutSeconds, TimeUnit.SECONDS);
                 if (!completed) {
-                    log.warn("Python脚本执行超时 ({}秒)，强制终止进程: {}", timeoutSeconds, scriptName);
+                    log.warn("Python脚本执行超时 ({}秒)，强制终止进程: {}", executionTimeoutSeconds, scriptName);
                     process.destroy();
                     process.destroyForcibly();
-                    throw new IOException("Python脚本执行超时 (" + timeoutSeconds + "秒)，已强制终止进程");
+                    throw new IOException("Python脚本执行超时 (" + executionTimeoutSeconds + "秒)，已强制终止进程");
                 }
 
                 // 进程已退出，读流必然 EOF，get 仅为保险

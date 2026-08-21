@@ -12,7 +12,6 @@ import com.stock.invest.entity.TradingCalendarEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -66,13 +65,15 @@ public class ScreeningServiceImpl implements ScreeningService {
     }
 
     @Override
-    @Transactional
+    // 评审 C-3：评估阶段去事务化 —— 只读阶段（查 bar/日历/模式评估）不需要事务，
+    // 不再让全部 symbol×窗口评估 + 日历查询 + saveAll 挤在一个长事务里占用一个 DB 连接；
+    // saveAll 由 JPA（SimpleJpaRepository.saveAll 自带 @Transactional）各自开短事务写入。
     public String runScreening(LocalDate tradeDate) {
         return runScreening(tradeDate, null, null);
     }
 
     @Override
-    @Transactional
+    // 评审 C-3：同上，评估阶段无事务；只有收尾 saveAll 走短事务。
     public String runScreening(LocalDate tradeDate, Integer windowDays, Integer limit) {
         // P1-2：互斥 —— 已有一份筛选在跑则跳过，避免重复触发插入重复行、双倍计算
         if (!running.compareAndSet(false, true)) {
@@ -98,31 +99,45 @@ public class ScreeningServiceImpl implements ScreeningService {
         log.info("ScreeningServiceImpl: start batchId={}, date={}, windowDays={}, limit={}",
                 batchId, targetDate, windows, limit);
 
-        // 获取最近 MAX_SEARCH_DAYS 天的数据
+        // 获取最近 MAX_SEARCH_DAYS 天的数据（评审 C-3：按 symbol 分批载入 ——
+        // 不再把区间内所有 symbol 的全部 bar 一次性载入内存；先取轻量的 symbol 列表
+        // 与最新交易日，再逐 symbol 查各自区间数据）
         LocalDate startDate = targetDate.minusDays(WindowConstants.MAX_WINDOW_DAYS + 2);
-        List<StockDailyBar> allBars = stockDailyBarRepository
-                .findByTradeDateBetweenOrderByTradeDateDesc(startDate, targetDate);
+        List<String> symbols = stockDailyBarRepository
+                .findSymbolsByTradeDateBetween(startDate, targetDate);
 
-        if (allBars == null || allBars.isEmpty()) {
+        if (symbols == null || symbols.isEmpty()) {
             log.warn("ScreeningServiceImpl: no bars found for date={}", targetDate);
             return batchId;
         }
 
-        // 按 symbol 分组
-        Map<String, List<StockDailyBar>> barsBySymbol = new LinkedHashMap<>();
-        LocalDate latestTradeDate = allBars.get(0).getTradeDate();
-        for (StockDailyBar bar : allBars) {
-            barsBySymbol.computeIfAbsent(bar.getSymbol(), k -> new ArrayList<>()).add(bar);
+        LocalDate latestTradeDate = stockDailyBarRepository
+                .findLatestTradeDateBetween(startDate, targetDate);
+        if (latestTradeDate == null) {
+            log.warn("ScreeningServiceImpl: no bars found for date={}", targetDate);
+            return batchId;
         }
+
+        // 评审 C-4：日历一次性载入内存 —— 评估期不再每 symbol 每窗口各查一次
+        // trading_calendar 范围（约 200 symbol × 6 窗口 ≈ 1200 次查询），
+        // 这里取整个筛选区间一次，后续 isWindowConsecutiveTradingDays 纯内存判断
+        Set<LocalDate> openDates = tradingCalendarDbService
+                .getRange("US", startDate, targetDate).stream()
+                .filter(TradingCalendarEntity::getIsOpen)
+                .map(TradingCalendarEntity::getTradeDate)
+                .collect(Collectors.toSet());
 
         // 对每个 symbol 并行评估 6 个窗口 (2d~7d)
         List<ScreeningMatch> allRows = new ArrayList<>();
         int processed = 0;
         int totalMatchedRows = 0;
 
-        for (Map.Entry<String, List<StockDailyBar>> entry : barsBySymbol.entrySet()) {
-            String symbol = entry.getKey();
-            List<StockDailyBar> bars = entry.getValue();
+        for (String symbol : symbols) {
+            List<StockDailyBar> bars = stockDailyBarRepository
+                    .findBySymbolAndTradeDateBetweenOrderByTradeDateDesc(symbol, startDate, targetDate);
+            if (bars == null || bars.isEmpty()) {
+                continue;
+            }
 
             // 升序排列（PatternEvaluateService 要求 oldest-first）
             bars.sort(Comparator.comparing(StockDailyBar::getTradeDate));
@@ -147,8 +162,8 @@ public class ScreeningServiceImpl implements ScreeningService {
                 // 取对应窗口长度的数据
                 List<StockDailyBar> windowSlice = bars.subList(bars.size() - w, bars.size());
 
-                // 连续开盘日校验
-                if (!isWindowConsecutiveTradingDays(windowSlice, w)) {
+                // 连续开盘日校验（评审 C-4：内存日历判断，无 DB 查询）
+                if (!isWindowConsecutiveTradingDays(windowSlice, w, openDates)) {
                     log.debug("[Screening] skip symbol={} window={}d: data not on consecutive trading days",
                             symbol, w);
                     continue;
@@ -197,7 +212,7 @@ public class ScreeningServiceImpl implements ScreeningService {
         }
 
         log.info("ScreeningServiceImpl: done batchId={}, tradeDate={}, symbols={}, processed={}, matchedRows={}",
-                batchId, targetDate, barsBySymbol.size(), processed, totalMatchedRows);
+                batchId, targetDate, symbols.size(), processed, totalMatchedRows);
         return batchId;
     }
 
@@ -431,12 +446,13 @@ public class ScreeningServiceImpl implements ScreeningService {
     /**
      * 判断窗口数据是否覆盖连续开盘日（无缺失）。
      * <p>
-     * 取窗口首尾日期范围，查 trading_calendar，统计该范围内
-     * 实际开盘日列表，与窗口数据的日期列表做 equals 比较。
-     * 完全一致 = 无缺口，放行。
+     * 评审 C-4：日历在筛选开始前一次性载入内存（{@code openDates}），
+     * 这里纯内存过滤窗口首尾日期范围内的开盘日，与窗口数据的日期列表做 equals 比较。
+     * 完全一致 = 无缺口，放行。不再每 symbol 每窗口查一次 trading_calendar。
      * </p>
      */
-    private boolean isWindowConsecutiveTradingDays(List<StockDailyBar> windowSlice, int windowDays) {
+    private boolean isWindowConsecutiveTradingDays(List<StockDailyBar> windowSlice, int windowDays,
+                                                   Set<LocalDate> openDates) {
         if (windowSlice == null || windowSlice.isEmpty()) {
             return false;
         }
@@ -444,11 +460,9 @@ public class ScreeningServiceImpl implements ScreeningService {
         LocalDate firstDate = windowSlice.get(0).getTradeDate();
         LocalDate lastDate = windowSlice.get(windowSlice.size() - 1).getTradeDate();
 
-        // 从日历获取 range 内的开盘日（已升序）
-        List<TradingCalendarEntity> calEntries = tradingCalendarDbService.getRange("US", firstDate, lastDate);
-        List<LocalDate> openDaysInRange = calEntries.stream()
-                .filter(TradingCalendarEntity::getIsOpen)
-                .map(TradingCalendarEntity::getTradeDate)
+        // 内存过滤窗口范围内的开盘日（已升序）
+        List<LocalDate> openDaysInRange = openDates.stream()
+                .filter(d -> !d.isBefore(firstDate) && !d.isAfter(lastDate))
                 .sorted()
                 .toList();
 

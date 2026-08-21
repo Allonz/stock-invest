@@ -16,6 +16,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.TransactionStatus;
 
 import java.time.*;
@@ -244,7 +245,7 @@ class DataGapFillerServiceImplTest {
         task.setCreatedAt(recent);
         task.setUpdatedAt(recent);
 
-        when(dataFillTaskRepository.findRetryableTasks()).thenReturn(List.of(task));
+        when(dataFillTaskRepository.findRetryableTasks(any(Pageable.class))).thenReturn(List.of(task));
         com.stock.invest.model.KLineData nonNullKd = new com.stock.invest.model.KLineData();
         nonNullKd.setSymbol("AAPL");
         nonNullKd.setItems(java.util.List.of(
@@ -293,7 +294,7 @@ class DataGapFillerServiceImplTest {
         latestOnDb.setRetryDate(today);
         latestOnDb.setVersion(3);
 
-        when(dataFillTaskRepository.findRetryableTasks()).thenReturn(List.of(task));
+        when(dataFillTaskRepository.findRetryableTasks(any(Pageable.class))).thenReturn(List.of(task));
         when(dataFillTaskRepository.findById(1L)).thenReturn(java.util.Optional.of(latestOnDb));
         // 首次保存冲突、重放保存成功
         when(dataFillTaskRepository.save(any(DataFillTask.class)))
@@ -347,7 +348,7 @@ class DataGapFillerServiceImplTest {
         latestOnDb.setRetryDate(today);
         latestOnDb.setVersion(3);
 
-        when(dataFillTaskRepository.findRetryableTasks()).thenReturn(List.of(task));
+        when(dataFillTaskRepository.findRetryableTasks(any(Pageable.class))).thenReturn(List.of(task));
         when(dataFillTaskRepository.findById(1L)).thenReturn(java.util.Optional.of(latestOnDb));
         // 首次保存与重放保存均冲突 → 不再第三次重试
         when(dataFillTaskRepository.save(any(DataFillTask.class)))
@@ -405,11 +406,11 @@ class DataGapFillerServiceImplTest {
         task.setCreatedAt(recent);
         task.setUpdatedAt(recent);
 
-        when(dataFillTaskRepository.findRetryableTasks()).thenReturn(List.of(task));
+        when(dataFillTaskRepository.findRetryableTasks(any(Pageable.class))).thenReturn(List.of(task));
 
         service.processRetryingTasks();
 
-        verify(dataFillTaskRepository, times(1)).findRetryableTasks();
+        verify(dataFillTaskRepository, times(1)).findRetryableTasks(any(Pageable.class));
     }
 
     // ========== P1-4: findMissingTradeDates 顺序无关 ==========
@@ -840,7 +841,7 @@ class DataGapFillerServiceImplTest {
 
         // fillGaps 运行中 → processRetryingTasks 被拒
         service.processRetryingTasks();
-        verify(dataFillTaskRepository, never()).findRetryableTasks();
+        verify(dataFillTaskRepository, never()).findRetryableTasks(any(Pageable.class));
 
         release.countDown();
         a.join(5000);
@@ -852,7 +853,7 @@ class DataGapFillerServiceImplTest {
             entered2.countDown();
             release2.await(5, TimeUnit.SECONDS);
             return List.of();
-        }).when(dataFillTaskRepository).findRetryableTasks();
+        }).when(dataFillTaskRepository).findRetryableTasks(any(Pageable.class));
 
         Thread b = new Thread(() -> service.processRetryingTasks(), "retryB");
         b.start();

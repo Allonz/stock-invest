@@ -63,10 +63,12 @@ public class AlpacaCalendarService implements TradingCalendarService {
             try {
                 return future.get(TIMEOUT.getSeconds(), TimeUnit.SECONDS);
             } catch (TimeoutException e) {
-                // 评审 D-1：日历查询使用独立 calendarExecutor，避免与编排/筛选/补缺
-                // 长任务争抢 scanExecutor 线程（自饥饿）；超时后放弃等待并取消 future
-                future.cancel(true);
-                log.warn("[alpaca] 日历查询超时 ({}s)，触发 fallback", TIMEOUT.getSeconds());
+                // 评审 C-1：CompletableFuture.cancel(true) 不会中断已在执行的 supplyAsync 任务，
+                // 调用它只会制造"已取消"的假象，底层任务照常运行 —— 因此这里只放弃等待结果，
+                // 不调用 cancel。僵尸任务的终结由真正的可取消层兜底：AlpacaRestClient 请求本身
+                // 带 15s 总超时（含读），且日历查询走独立 calendarExecutor（评审 D-1），
+                // 不再占用与编排/筛选/补缺共用的 scanExecutor 线程。
+                log.warn("[alpaca] 日历查询超时 ({}s)，放弃等待，触发 fallback", TIMEOUT.getSeconds());
                 return null;
             }
         } catch (Exception e) {

@@ -164,13 +164,17 @@ class PythonScriptExecutorTest {
     }
 
     @Test
-    @DisplayName("R2 P2-6: 无参构造生产默认超时仍为 30s（注入化不改变默认值）")
-    void defaultTimeout_still30s() throws Exception {
+    @DisplayName("R2 P2-6/评审 C-7: 无参构造生产默认排队超时 10s、执行超时 60s（注入化不改变默认值）")
+    void defaultTimeouts_queue10s_execution60s() throws Exception {
         PythonScriptExecutor defaultExecutor = new PythonScriptExecutor();
-        java.lang.reflect.Field f = PythonScriptExecutor.class.getDeclaredField("timeoutSeconds");
-        f.setAccessible(true);
-        assertEquals(30, f.getInt(defaultExecutor),
-                "production default timeout must stay 30s");
+        java.lang.reflect.Field queueField = PythonScriptExecutor.class.getDeclaredField("queueTimeoutSeconds");
+        java.lang.reflect.Field execField = PythonScriptExecutor.class.getDeclaredField("executionTimeoutSeconds");
+        queueField.setAccessible(true);
+        execField.setAccessible(true);
+        assertEquals(10, queueField.getInt(defaultExecutor),
+                "production default queue timeout must be 10s");
+        assertEquals(60, execField.getInt(defaultExecutor),
+                "production default execution timeout must be 60s (covers yfinance backoff budget)");
     }
 
     // ── R2 P2-5: 排空线程池扩容 —— 并发脚本完整性 ─────────────────────
