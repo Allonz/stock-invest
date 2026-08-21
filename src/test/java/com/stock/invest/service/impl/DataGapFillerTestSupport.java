@@ -64,7 +64,6 @@ public final class DataGapFillerTestSupport {
                 dataFillProgressService,
                 tradingCalendarDbService,
                 symbolBlacklistService,
-                fallbackChainBuilder,
                 missingFieldFiller,
                 gapFetcher,
                 retryTaskProcessor,

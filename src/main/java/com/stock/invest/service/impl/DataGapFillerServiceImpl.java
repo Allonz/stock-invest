@@ -71,7 +71,6 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
     private final TradingCalendarDbService tradingCalendarDbService;
     private final SymbolBlacklistService symbolBlacklistService;
 
-    private final FallbackChainBuilder fallbackChainBuilder;
     private final MissingFieldFiller missingFieldFiller;
     private final GapFetcher gapFetcher;
     private final RetryTaskProcessor retryTaskProcessor;
@@ -83,9 +82,11 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
     private final TransactionTemplate transactionTemplate;
 
     /**
-     * 评审 A-1：四个核心协作类（FallbackChainBuilder / MissingFieldFiller / GapFetcher /
+     * 评审 A-1：核心协作类（FallbackChainBuilder / MissingFieldFiller / GapFetcher /
      * RetryTaskProcessor）已改为 {@code @Component} Spring Bean，此处由容器构造注入，
      * 可被 AOP/事务代理覆盖；不再在构造器内手工 new。
+     * <p>FallbackChainBuilder 由 {@link GapFetcher} 持有并使用（构建补缺 fallback 链），
+     * 本类不再直接依赖它。</p>
      */
     public DataGapFillerServiceImpl(
             StockDailyBarRepository stockDailyBarRepository,
@@ -94,7 +95,6 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
             DataFillProgressService dataFillProgressService,
             TradingCalendarDbService tradingCalendarDbService,
             SymbolBlacklistService symbolBlacklistService,
-            FallbackChainBuilder fallbackChainBuilder,
             MissingFieldFiller missingFieldFiller,
             GapFetcher gapFetcher,
             RetryTaskProcessor retryTaskProcessor,
@@ -106,7 +106,6 @@ public class DataGapFillerServiceImpl implements DataGapFillerService {
         this.tradingCalendarDbService = tradingCalendarDbService;
         this.symbolBlacklistService = symbolBlacklistService;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
-        this.fallbackChainBuilder = fallbackChainBuilder;
         this.missingFieldFiller = missingFieldFiller;
         this.gapFetcher = gapFetcher;
         this.retryTaskProcessor = retryTaskProcessor;

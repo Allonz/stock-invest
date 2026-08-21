@@ -15,11 +15,11 @@ vi.mock('naive-ui', () => ({
   NDatePicker: { template: '<div class="n-date-picker" />' },
 }))
 
-// Mock API
+// Mock API（响应结构与后端一致：axios 未解包 → { data: ApiResponse }，ApiResponse.data 含 rows/total）
 vi.mock('../api/bars', () => ({
   fetchCandles: vi.fn().mockResolvedValue({ success: true, data: [] }),
   fetchSources: vi.fn().mockResolvedValue({ success: true, data: { sources: ['yfinance'] } }),
-  fetchAllBars: vi.fn().mockResolvedValue({ data: { rows: [], total: 0 } }),
+  fetchAllBars: vi.fn().mockResolvedValue({ data: { data: { rows: [], total: 0 } } }),
   fetchBarSources: vi.fn().mockResolvedValue({ data: { sources: ['yfinance'] } }),
 }))
 
@@ -48,7 +48,7 @@ describe('BarsView', () => {
     const { fetchAllBars } = await import('../api/bars')
     const mockFetch = fetchAllBars as ReturnType<typeof vi.fn>
     mockFetch.mockClear()
-    mockFetch.mockResolvedValue({ data: { rows: [], total: 0 } })
+    mockFetch.mockResolvedValue({ data: { data: { rows: [], total: 0 } } })
     const wrapper = mount(BarsView)
     await flushPromises()
 

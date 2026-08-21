@@ -126,11 +126,15 @@ class CircuitBreakerTest {
 
     @SuppressWarnings("unchecked")
     private Map<String, Long> cooldownMap() throws Exception {
-        // 评审 A-1：冷却表已随 FallbackChainBuilder 改为 Spring Bean（单例内部持有），
-        // 反射路径改为 service -> fallbackChainBuilder -> sourceCooldownUntil
-        Field builderField = DataGapFillerServiceImpl.class.getDeclaredField("fallbackChainBuilder");
+        // 评审 A-1：冷却表由 FallbackChainBuilder（Spring Bean 单例内部持有）维护；
+        // DataGapFillerServiceImpl 不再持有 fallbackChainBuilder（已清理该字段），
+        // 反射路径改为 service -> gapFetcher -> fallbackChainBuilder -> sourceCooldownUntil
+        Field gfField = DataGapFillerServiceImpl.class.getDeclaredField("gapFetcher");
+        gfField.setAccessible(true);
+        Object gapFetcher = gfField.get(service);
+        Field builderField = gapFetcher.getClass().getDeclaredField("fallbackChainBuilder");
         builderField.setAccessible(true);
-        Object builder = builderField.get(service);
+        Object builder = builderField.get(gapFetcher);
         Field f = builder.getClass().getDeclaredField("sourceCooldownUntil");
         f.setAccessible(true);
         return (Map<String, Long>) f.get(builder);

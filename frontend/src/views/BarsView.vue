@@ -224,8 +224,9 @@ async function loadAllBars() {
     const date = tradeDateStr()
     const src = filterSource.value || undefined
     const res = await fetchAllBars(currentPage.value, pagination.pageSize, sortBy.value, sortDir.value, sym, date, src)
-    barData.value = res.data.rows || []
-    totalRecords.value = res.data.total || 0
+    // 后端响应为 { success, data: { total, rows, ... } }（axios 未解包，需双层取 data）
+    barData.value = res.data.data?.rows || []
+    totalRecords.value = res.data.data?.total || 0
     pagination.itemCount = totalRecords.value
   } catch (err: any) {
     barData.value = []
