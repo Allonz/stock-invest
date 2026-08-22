@@ -6,7 +6,6 @@ import com.stock.invest.dto.TigerWatchlistIngestResponseDto;
 import com.stock.invest.dto.TigerWatchlistRowDto;
 import com.stock.invest.repository.StockDailyBarRepository;
 import com.stock.invest.service.TigerWatchlistIngestService;
-import com.stock.invest.service.TradingCalendarDbService;
 import com.stock.invest.util.WatchlistVolumeParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,18 +28,13 @@ public class TigerWatchlistIngestServiceImpl implements TigerWatchlistIngestServ
     private static final Logger log = LoggerFactory.getLogger(TigerWatchlistIngestServiceImpl.class);
     private static final Pattern SYMBOL_PATTERN = Pattern.compile("^[A-Z0-9\\-]{1,32}$");
     private static final int SAVE_BATCH_SIZE = 100;
-    /** 评审 F-10：向前搜索上一交易日的最大天数（覆盖长周末/节假日） */
-    private static final int PREV_TRADING_DAY_MAX_LOOKBACK = 14;
 
     private final StockDailyBarRepository stockDailyBarRepository;
-    private final TradingCalendarDbService tradingCalendarDbService;
     private final TransactionTemplate transactionTemplate;
 
     public TigerWatchlistIngestServiceImpl(StockDailyBarRepository stockDailyBarRepository,
-                                           TradingCalendarDbService tradingCalendarDbService,
                                            PlatformTransactionManager transactionManager) {
         this.stockDailyBarRepository = stockDailyBarRepository;
-        this.tradingCalendarDbService = tradingCalendarDbService;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
@@ -102,24 +96,6 @@ public class TigerWatchlistIngestServiceImpl implements TigerWatchlistIngestServ
             }
             java.math.BigDecimal px = row.lastPrice();
             StockDailyBar bar = stockDailyBarRepository.findBySymbolAndTradeDate(sym, tradeDate).orElseGet(StockDailyBar::new);
-            // if existing record, check vol vs previous day
-            if (bar.getId() != null && bar.getVolume() != null && bar.getVolume() > 0) {
-                // 评审 F-10：上一交易日经交易日历查找（tradeDate.minusDays(1) 是自然日：
-                // 周一比对周日必空、周二遇周一休市也漏）—— 取不到日历记录时跳过该启发式
-                LocalDate prevDate = tradingCalendarDbService
-                        .findPreviousTradingDay("US", tradeDate, PREV_TRADING_DAY_MAX_LOOKBACK)
-                        .orElse(null);
-                if (prevDate != null) {
-                    StockDailyBar prevBar = stockDailyBarRepository.findBySymbolAndTradeDate(sym, prevDate).orElse(null);
-                    if (prevBar != null && prevBar.getVolume() != null && prevBar.getVolume() > 0 && prevBar.getVolume().equals(vol)) {
-                        log.warn("[TigerIngest] SUSPICIOUS: symbol={}, tradeDate={}, volume={} identical to prev trading day ({}). Skip", sym, tradeDate, vol, prevDate);
-                        skipped++;
-                        reasons.add(sym + ": vol unchanged from " + prevDate);
-                        continue;
-                    }
-                }
-            }
-
             bar.setSymbol(sym);
             bar.setTradeDate(tradeDate);
             // closePrice = lastPrice (or explicit closePrice via @JsonAlias)
