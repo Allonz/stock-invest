@@ -54,12 +54,13 @@ export function fetchAllBars(
   if (symbol) params.symbol = symbol
   if (tradeDate) params.tradeDate = tradeDate
   if (source) params.source = source
-  return request.get<BarsPageResponse>('/api/bars/pages/query', { params })
+  // 后端返回 ApiResponse 包裹（BarsView 需双层取 data）
+  return request.get<ApiResponse<BarsPageResponse>>('/api/bars/pages/query', { params })
 }
 
-/** 获取所有数据源列表 */
+/** 获取所有数据源列表（后端 ApiResponse 包裹，BarsView 取 data.data.sources） */
 export function fetchBarSources() {
-  return request.get<{ sources: string[] }>('/api/bars/sources')
+  return request.get<ApiResponse<{ sources: string[] }>>('/api/bars/sources')
 }
 
 /** K线蜡烛图数据 */

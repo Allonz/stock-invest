@@ -258,10 +258,10 @@ function resetFilters() {
 
 // ============ 初始化 ============
 onMounted(async () => {
-  // 加载数据源选项
+  // 加载数据源选项（后端 ApiResponse 包裹，取双层 data）
   try {
     const res = await fetchBarSources()
-    sourceOptions.value = (res.data.sources || []).map((s: string) => ({ label: s, value: s }))
+    sourceOptions.value = (res.data.data?.sources || []).map((s: string) => ({ label: s, value: s }))
   } catch (_) {
     sourceOptions.value = []
   }

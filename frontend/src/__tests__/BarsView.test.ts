@@ -20,7 +20,7 @@ vi.mock('../api/bars', () => ({
   fetchCandles: vi.fn().mockResolvedValue({ success: true, data: [] }),
   fetchSources: vi.fn().mockResolvedValue({ success: true, data: { sources: ['yfinance'] } }),
   fetchAllBars: vi.fn().mockResolvedValue({ data: { data: { rows: [], total: 0 } } }),
-  fetchBarSources: vi.fn().mockResolvedValue({ data: { sources: ['yfinance'] } }),
+  fetchBarSources: vi.fn().mockResolvedValue({ data: { success: true, data: { sources: ['yfinance'] } } }),
 }))
 
 describe('BarsView', () => {
