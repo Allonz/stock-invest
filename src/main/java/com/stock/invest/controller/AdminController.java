@@ -1,6 +1,8 @@
 package com.stock.invest.controller;
 
 import com.stock.invest.dto.ApiResponse;
+import com.stock.invest.dto.FillTaskItemDto;
+import com.stock.invest.dto.FillTaskPageDto;
 import com.stock.invest.dto.ScreenerAsyncRequestDto;
 import com.stock.invest.entity.DataFillTask;
 import com.stock.invest.entity.StockDataSourcePriority;
@@ -422,25 +424,19 @@ public class AdminController {
                 status,
                 pageRequest);
 
-        var data = taskPage.getContent().stream().map(t -> {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("id", t.getId());
-            m.put("symbol", t.getSymbol());
-            m.put("tradeDate", t.getTradeDate().toString());
-            m.put("status", t.getStatus());
-            m.put("retryCount", t.getRetryCount());
-            m.put("maxRetries", t.getMaxRetries());
-            m.put("lastError", t.getLastError());
-            m.put("createdAt", t.getCreatedAt() != null ? t.getCreatedAt().toString() : null);
-            return m;
-        }).collect(Collectors.toList());
-
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("total", taskPage.getTotalElements());
-        result.put("page", page);
-        result.put("size", safeSize);
-        result.put("data", data);
-        return ResponseEntity.ok(ApiResponse.ok(result));
+        List<FillTaskItemDto> items = taskPage.getContent().stream()
+                .map(t -> new FillTaskItemDto(
+                        t.getId(),
+                        t.getSymbol(),
+                        t.getTradeDate().toString(),
+                        t.getStatus(),
+                        t.getRetryCount(),
+                        t.getMaxRetries(),
+                        t.getLastError(),
+                        t.getCreatedAt() != null ? t.getCreatedAt().toString() : null))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(ApiResponse.ok(
+                new FillTaskPageDto(taskPage.getTotalElements(), page, safeSize, items)));
     }
 
     /**

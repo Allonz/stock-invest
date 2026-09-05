@@ -110,6 +110,43 @@ public class StockDataException extends RuntimeException {
                 || lower.contains("not_found");
     }
 
+    private static final com.fasterxml.jackson.databind.ObjectMapper PYTHON_ERROR_MAPPER =
+            new com.fasterxml.jackson.databind.ObjectMapper();
+
+    /**
+     * 评审 F-1：解析 Python 脚本统一错误输出并构建带分类的异常；输出不是错误负载时返回 null。
+     * <p>统一协议（P2-15，tigeropen 首先采用，其余三脚本已对齐）：
+     * {@code {"error": {"code": "...", "message": "..."}}}；兼容旧版字符串形式 {@code {"error": "..."}}。</p>
+     * <p>code 优先于消息关键词：NOT_FOUND → {@link ErrorCategory#CONFIRMED_NOT_FOUND}、
+     * ACCOUNT_LEVEL → {@link ErrorCategory#ACCOUNT_LEVEL}，其余交给 {@link #classify}。</p>
+     */
+    public static StockDataException fromPythonError(String symbol, String dataSource, String output) {
+        if (output == null || output.isBlank()) {
+            return null;
+        }
+        try {
+            com.fasterxml.jackson.databind.JsonNode err =
+                    PYTHON_ERROR_MAPPER.readTree(output.trim()).path("error");
+            if (err.isMissingNode()) {
+                return null;
+            }
+            if (err.isTextual()) {
+                return classify(symbol, dataSource, err.asText(), null);
+            }
+            String code = err.path("code").asText("");
+            String message = err.path("message").asText(err.toString());
+            return switch (code) {
+                case "NOT_FOUND" -> new StockDataException(symbol, dataSource, "股票不存在: " + message,
+                        null, ErrorCategory.CONFIRMED_NOT_FOUND);
+                case "ACCOUNT_LEVEL" -> new StockDataException(symbol, dataSource, "账户级错误: " + message,
+                        null, ErrorCategory.ACCOUNT_LEVEL);
+                default -> classify(symbol, dataSource, message, null);
+            };
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     /**
      * 数据源不可用异常
      */

@@ -17,6 +17,24 @@ logging.getLogger("urllib3").setLevel(logging.WARNING)
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("yfinance").setLevel(logging.WARNING)
 
+
+def error_json(message, code=None):
+    """统一错误协议（评审 F-1，对齐 tigeropen_channel P2-15）：
+    {"error": {"code": ..., "message": ...}}，code ∈ NOT_FOUND / PARSE_ERROR / ACCOUNT_LEVEL /
+    USAGE_ERROR / PYTHON_ERROR。未显式给 code 时按消息关键词分类，
+    关键词与 Java 侧 StockDataException.isNotFoundMessage 白名单对齐。"""
+    if code is None:
+        lower = message.lower()
+        if "404" in lower or "not found" in lower or "no data" in lower or "no historical data" in lower:
+            code = "NOT_FOUND"
+        elif "quota" in lower or "permission" in lower:
+            code = "ACCOUNT_LEVEL"
+        elif "nan" in lower or "non-standard token" in lower:
+            code = "PARSE_ERROR"
+        else:
+            code = "PYTHON_ERROR"
+    return json.dumps({"error": {"code": code, "message": message}})
+
 # 全局变量用于请求限制
 last_request_time = 0
 min_request_interval = 2  # 最小请求间隔（秒）
@@ -71,7 +89,7 @@ def get_stock_info(symbol: str) -> str:
         # 获取历史数据
         hist = safe_yfinance_request(stock.history, period="1d")
         if hist.empty:
-            return json.dumps({"error": f"No historical data found for {symbol}"})
+            return error_json(f"No historical data found for {symbol}", code="NOT_FOUND")
 
         # 构建返回数据
         result = {
@@ -97,7 +115,7 @@ def get_stock_info(symbol: str) -> str:
 
         return json.dumps(result)
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return error_json(str(e))
 
 
 def get_daily_kline(symbol: str, days: int = 7) -> str:
@@ -107,7 +125,7 @@ def get_daily_kline(symbol: str, days: int = 7) -> str:
         stock = yf.Ticker(symbol)
         hist = safe_yfinance_request(stock.history, period=str(days) + "d")
         if hist.empty:
-            return json.dumps({"error": f"No historical data found for {symbol}"})
+            return error_json(f"No historical data found for {symbol}", code="NOT_FOUND")
         kline_data = {"symbol": symbol, "items": []}
         prev_close = None
         for index, row in hist.iterrows():
@@ -133,7 +151,7 @@ def get_daily_kline(symbol: str, days: int = 7) -> str:
             kline_data["items"].append(item)
         return json.dumps(kline_data)
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return error_json(str(e))
 
 
 def get_after_hours_price(symbol: str, trade_date: str) -> str:
@@ -193,7 +211,7 @@ def get_after_hours_price(symbol: str, trade_date: str) -> str:
                 return json.dumps(result)
         return json.dumps({"afterHours": None})
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return error_json(str(e))
 
 
 def get_daily_kline_range(symbol: str, start_date: str, end_date: str) -> str:
@@ -206,12 +224,7 @@ def get_daily_kline_range(symbol: str, start_date: str, end_date: str) -> str:
         end_plus = (datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
         hist = safe_yfinance_request(stock.history, start=start_date, end=end_plus)
         if hist.empty:
-            return json.dumps({
-                "code": "NOT_FOUND",
-                "symbol": symbol,
-                "message": f"No data for {symbol} in range {start_date}~{end_date}",
-                "source": "yfinance"
-            })
+            return error_json(f"No data for {symbol} in range {start_date}~{end_date}", code="NOT_FOUND")
         kline_data = {"symbol": symbol, "items": []}
         prev_close = None
         for index, row in hist.iterrows():
@@ -237,19 +250,8 @@ def get_daily_kline_range(symbol: str, start_date: str, end_date: str) -> str:
             kline_data["items"].append(item)
         return json.dumps(kline_data)
     except Exception as e:
-        err_str = str(e)
-        if "404" in err_str or "not found" in err_str.lower():
-            code = "NOT_FOUND"
-        elif "NaN" in err_str or "Non-standard token" in err_str:
-            code = "PARSE_ERROR"
-        else:
-            code = "UNKNOWN_ERROR"
-        return json.dumps({
-            "code": code,
-            "symbol": symbol,
-            "message": err_str,
-            "source": "yfinance"
-        })
+        # 统一错误协议（F-1）：404/not-found、NaN、配额等关键词由 error_json 统一分类
+        return error_json(str(e))
 
 
 def get_batch_kline(symbols: str, period: str, count: int) -> str:
@@ -266,49 +268,49 @@ def get_batch_kline(symbols: str, period: str, count: int) -> str:
         
         return json.dumps(result)
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return error_json(str(e))
 
 
 def main():
     if len(sys.argv) < 2:
-        print(json.dumps({"error": "No command specified"}))
+        print(error_json("No command specified", code="USAGE_ERROR"))
         sys.exit(1)
     
     command = sys.argv[1]
     
     if command == "get_stock_info":
         if len(sys.argv) < 3:
-            print(json.dumps({"error": "Symbol not specified"}))
+            print(error_json("Symbol not specified", code="USAGE_ERROR"))
             sys.exit(1)
         print(get_stock_info(sys.argv[2]))
     
     elif command == "get_daily_kline":
         if len(sys.argv) < 3:
-            print(json.dumps({"error": "Symbol not specified"}))
+            print(error_json("Symbol not specified", code="USAGE_ERROR"))
             sys.exit(1)
         days = int(sys.argv[3]) if len(sys.argv) > 3 else 7
         print(get_daily_kline(sys.argv[2], days))
 
     elif command == "get_daily_kline_range":
         if len(sys.argv) < 5:
-            print(json.dumps({"error": "Missing parameters: symbol start_date end_date"}))
+            print(error_json("Missing parameters: symbol start_date end_date", code="USAGE_ERROR"))
             sys.exit(1)
         print(get_daily_kline_range(sys.argv[2], sys.argv[3], sys.argv[4]))
 
     elif command == "get_after_hours_price":
         if len(sys.argv) < 4:
-            print(json.dumps({"error": "Missing parameters: symbol trade_date"}))
+            print(error_json("Missing parameters: symbol trade_date", code="USAGE_ERROR"))
             sys.exit(1)
         print(get_after_hours_price(sys.argv[2], sys.argv[3]))
     
     elif command == "get_batch_kline":
         if len(sys.argv) < 5:
-            print(json.dumps({"error": "Missing parameters"}))
+            print(error_json("Missing parameters", code="USAGE_ERROR"))
             sys.exit(1)
         print(get_batch_kline(sys.argv[2], sys.argv[3], int(sys.argv[4])))
     
     else:
-        print(json.dumps({"error": f"Unknown command: {command}"}))
+        print(error_json(f"Unknown command: {command}", code="USAGE_ERROR"))
 
 if __name__ == "__main__":
     main() 

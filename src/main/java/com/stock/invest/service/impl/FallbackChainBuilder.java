@@ -74,17 +74,12 @@ class FallbackChainBuilder {
 
     /**
      * 数据源是否处于熔断冷却期。
+     * <p>单次原子操作：过期则移除条目并返回 false，未过期保留条目返回 true，
+     * 消除 check-then-remove 竞态。</p>
      */
     boolean isSourceCooledDown(String sourceName) {
-        Long until = sourceCooldownUntil.get(sourceName);
-        if (until == null) {
-            return false;
-        }
-        if (System.currentTimeMillis() >= until) {
-            sourceCooldownUntil.remove(sourceName, until);
-            return false;
-        }
-        return true;
+        return sourceCooldownUntil.computeIfPresent(sourceName,
+                (k, until) -> System.currentTimeMillis() < until ? until : null) != null;
     }
 
     /**

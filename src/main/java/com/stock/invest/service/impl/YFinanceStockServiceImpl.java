@@ -118,10 +118,11 @@ public class YFinanceStockServiceImpl implements DataSourceStrategy {
             log.info("[YFinanceStockServiceImpl] dateRange symbol={}, range=[{},{}]", symbol, yfStart, tradeDate);
             String result = pythonScriptExecutor.executeScript(getScriptName(),
                     "get_daily_kline_range", symbol, yfStart.toString(), tradeDate.toString());
-            // P1-3：Python 侧失败输出 {"error": ...} —— 解析消息并带分类抛出，
+            // P1-3/F-1：Python 侧失败输出统一错误 JSON —— 解析 code/message 并带分类抛出，
             // 避免"确认不存在"（No data found）与瞬态失败混为一谈
-            if (result != null && result.contains("\"error\"")) {
-                throw StockDataException.classify(symbol, "yfinance", extractErrorFromJson(result), null);
+            StockDataException pythonError = StockDataException.fromPythonError(symbol, getSourceName(), result);
+            if (pythonError != null) {
+                throw pythonError;
             }
             KLineData klineData = objectMapper.readValue(result, KLineData.class);
             // 填充每个 item 的 symbol 字段（Python 脚本返回的 JSON 中 item 不含 symbol）
@@ -172,28 +173,6 @@ public class YFinanceStockServiceImpl implements DataSourceStrategy {
     }
 
     /**
-     * 从 Python 脚本输出的 error JSON 中提取可读错误消息（兼容 {"error": "..."} 与 {"error": {"message": "..."}}）。
-     */
-    private String extractErrorFromJson(String result) {
-        try {
-            com.fasterxml.jackson.databind.JsonNode node = objectMapper.readTree(result);
-            com.fasterxml.jackson.databind.JsonNode err = node.get("error");
-            if (err == null) {
-                return result;
-            }
-            if (err.isTextual()) {
-                return err.asText();
-            }
-            if (err.has("message")) {
-                return err.path("message").asText();
-            }
-            return err.toString();
-        } catch (Exception ignored) {
-            return result;
-        }
-    }
-
-    /**
      * 按指定交易日获取盘后价。
      * <p>调用 Python get_after_hours_price（1m 分钟数据 prepost=True，取 16:00-20:00 ET
      * 最后一条 close），按交易日精确查询——修复 2026-08-13 前用 get_stock_info 实时
@@ -206,10 +185,11 @@ public class YFinanceStockServiceImpl implements DataSourceStrategy {
         try {
             String result = pythonScriptExecutor.executeScript(getScriptName(),
                     "get_after_hours_price", symbol, tradeDate.toString());
-            // Python 侧失败输出 {"error": ...} → 返回空（盘后不可得，不影响日K主链路）
-            if (result != null && result.contains("\"error\"")) {
+            // Python 侧失败输出统一错误 JSON → 返回空（盘后不可得，不影响日K主链路）
+            StockDataException pythonError = StockDataException.fromPythonError(symbol, getSourceName(), result);
+            if (pythonError != null) {
                 log.warn("[YFinanceStockServiceImpl] afterHours fetch failed for {}, date={}: {}",
-                        symbol, tradeDate, extractErrorFromJson(result));
+                        symbol, tradeDate, pythonError.getMessage());
                 return new KLineData();
             }
             @SuppressWarnings("unchecked")

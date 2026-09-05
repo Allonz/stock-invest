@@ -28,6 +28,20 @@ import pytz
 API_KEY = os.environ.get("TIINGO_API_KEY", "")
 
 NEW_YORK = pytz.timezone("America/New_York")
+
+
+def error_json(message, code=None):
+    """统一错误协议（评审 F-1，对齐 tigeropen_channel P2-15）：
+    {"error": {"code": ..., "message": ...}}，关键词分类与 Java 侧 StockDataException 对齐。"""
+    if code is None:
+        lower = message.lower()
+        if "404" in lower or "not found" in lower or "no data" in lower:
+            code = "NOT_FOUND"
+        elif "api key" in lower or "permission" in lower:
+            code = "ACCOUNT_LEVEL"
+        else:
+            code = "PYTHON_ERROR"
+    return json.dumps({"error": {"code": code, "message": message}})
 # 评审 F-13：窗口端点统一用美东时区 —— datetime.now() 取服务器本地时区（Asia/Shanghai）
 # 会在跨时区边界错位 1 天；美股 bar 的日期归属是美东，端点必须与之一致
 NY_TZ = ZoneInfo("America/New_York")
@@ -96,7 +110,7 @@ def get_daily_kline_range(symbol: str, start_date: str, end_date: str) -> str:
         items.reverse()
         return json.dumps({"symbol": symbol, "items": items})
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return error_json(str(e))
 
 
 def get_daily_kline(symbol: str, days: str = "30") -> str:
@@ -120,7 +134,7 @@ def get_daily_kline(symbol: str, days: str = "30") -> str:
         items.reverse()
         return json.dumps({"symbol": symbol, "items": items})
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return error_json(str(e))
 
 
 def get_batch_kline(symbols: str, period: str = "daily", count: str = "30") -> str:
@@ -149,17 +163,17 @@ def get_batch_kline(symbols: str, period: str = "daily", count: str = "30") -> s
                 result.append({"symbol": sym, "items": [], "error": str(e)})
         return json.dumps(result)
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return error_json(str(e))
 
 
 def main():
     if len(sys.argv) < 2:
-        print(json.dumps({"error": "usage: stock_info_tiingo.py <command> ..."}))
+        print(error_json("usage: stock_info_tiingo.py <command> ...", code="USAGE_ERROR"))
         sys.exit(2)
     cmd = sys.argv[1]
     if cmd == "get_daily_kline_range":
         if len(sys.argv) < 5:
-            print(json.dumps({"error": "get_daily_kline_range needs symbol start_date end_date"}))
+            print(error_json("get_daily_kline_range needs symbol start_date end_date", code="USAGE_ERROR"))
             sys.exit(2)
         print(get_daily_kline_range(sys.argv[2], sys.argv[3], sys.argv[4]))
     elif cmd == "get_daily_kline":
@@ -172,7 +186,7 @@ def main():
         count = sys.argv[4] if len(sys.argv) > 4 else "30"
         print(get_batch_kline(symbols, period, count))
     else:
-        print(json.dumps({"error": f"unknown command: {cmd}"}))
+        print(error_json(f"unknown command: {cmd}", code="USAGE_ERROR"))
         sys.exit(2)
 
 
@@ -182,5 +196,5 @@ if __name__ == "__main__":
     except SystemExit:
         raise
     except Exception as e:
-        print(json.dumps({"error": str(e)}))
+        print(error_json(str(e)))
         sys.exit(1)

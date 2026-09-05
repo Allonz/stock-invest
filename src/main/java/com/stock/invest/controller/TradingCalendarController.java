@@ -2,6 +2,8 @@ package com.stock.invest.controller;
 
 import com.stock.invest.entity.TradingCalendarEntity;
 import com.stock.invest.dto.ApiResponse;
+import com.stock.invest.dto.FullYearSyncResultDto;
+import com.stock.invest.dto.TradingCalendarItemDto;
 import com.stock.invest.service.TradingCalendarDbService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -160,7 +162,7 @@ public class TradingCalendarController {
      * 在冷却窗口（30 分钟）内重复触发返回 429，防止高频调用打空外部数据源配额。</p>
      */
     @PostMapping("/fetch-full-year")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> fetchFullYear(
+    public ResponseEntity<ApiResponse<FullYearSyncResultDto>> fetchFullYear(
             @RequestParam(value = "year", required = false) Integer year,
             @RequestParam(value = "market", required = false, defaultValue = DEFAULT_MARKET) String market) {
         String normalizedMarket = normalizeMarket(market);
@@ -202,12 +204,7 @@ public class TradingCalendarController {
             // R2 P2-8：成功后冷却时间戳以完成时刻为准（失败路径不写冷却）
             lastFullYearSyncAt.put(cooldownKey, System.currentTimeMillis());
 
-            Map<String, Object> data = new LinkedHashMap<>();
-            data.put("fetched", fetched);
-            data.put("market", normalizedMarket);
-            data.put("year", targetYear);
-
-            return ResponseEntity.ok(ApiResponse.ok(data));
+            return ResponseEntity.ok(ApiResponse.ok(new FullYearSyncResultDto(fetched, normalizedMarket, targetYear)));
 
         } catch (Exception e) {
             // R2 P2-8：失败不写冷却（抢占的占位时间戳一并移除），可立即重试
@@ -223,7 +220,7 @@ public class TradingCalendarController {
      * 获取整年日历列表。
      */
     @GetMapping("/list")
-    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> list(
+    public ResponseEntity<ApiResponse<List<TradingCalendarItemDto>>> list(
             @RequestParam(value = "year", required = false) Integer year,
             @RequestParam(value = "market", required = false, defaultValue = DEFAULT_MARKET) String market) {
         String normalizedMarket = normalizeMarket(market);
@@ -231,17 +228,15 @@ public class TradingCalendarController {
             int targetYear = (year != null) ? year : Year.now(NY_ZONE).getValue();
             List<TradingCalendarEntity> entities = dbService.getYearCalendar(normalizedMarket, targetYear);
 
-            List<Map<String, Object>> result = new ArrayList<>();
-            for (TradingCalendarEntity entity : entities) {
-                Map<String, Object> item = new LinkedHashMap<>();
-                item.put("tradeDate", entity.getTradeDate().format(DATE_FMT));
-                item.put("isOpen", entity.getIsOpen());
-                item.put("market", entity.getMarket());
-                item.put("source", entity.getSource());
-                item.put("type", entity.getType());
-                item.put("detail", entity.getDetail());
-                result.add(item);
-            }
+            List<TradingCalendarItemDto> result = entities.stream()
+                    .map(entity -> new TradingCalendarItemDto(
+                            entity.getTradeDate().format(DATE_FMT),
+                            entity.getIsOpen(),
+                            entity.getMarket(),
+                            entity.getSource(),
+                            entity.getType(),
+                            entity.getDetail()))
+                    .toList();
 
             return ResponseEntity.ok(ApiResponse.ok(result));
 

@@ -361,18 +361,18 @@ def _cmd_calendar(client, market: str, date_str: str):
 
 def main():
     if len(sys.argv) < 2:
-        print(json.dumps({"error": "usage: tigeropen_channel.py scan|bars|calendar ..."}))
+        print(json.dumps({"error": {"code": "USAGE_ERROR", "message": "usage: tigeropen_channel.py scan|bars|calendar ..."}}))
         sys.exit(2)
     cmd = sys.argv[1]
     client = _client()
     if cmd == "scan":
         if len(sys.argv) < 5:
-            print(json.dumps({"error": "scan needs limit min_price max_price"}))
+            print(json.dumps({"error": {"code": "USAGE_ERROR", "message": "scan needs limit min_price max_price"}}))
             sys.exit(2)
         _cmd_scan(client, int(sys.argv[2]), float(sys.argv[3]), float(sys.argv[4]))
     elif cmd == "bars":
         if len(sys.argv) < 4:
-            print(json.dumps({"error": "bars needs symbol limit|begin end"}))
+            print(json.dumps({"error": {"code": "USAGE_ERROR", "message": "bars needs symbol limit|begin end"}}))
             sys.exit(2)
         if len(sys.argv) >= 5:
             # 日期范围模式：bars symbol begin end（两日窗口）
@@ -381,16 +381,16 @@ def main():
             _cmd_bars(client, sys.argv[2], int(sys.argv[3]))
     elif cmd == "afterhours_bars":
         if len(sys.argv) < 4:
-            print(json.dumps({"error": "afterhours_bars needs symbol limit"}))
+            print(json.dumps({"error": {"code": "USAGE_ERROR", "message": "afterhours_bars needs symbol limit"}}))
             sys.exit(2)
         _cmd_afterhours_bars(client, sys.argv[2], int(sys.argv[3]))
     elif cmd == "calendar":
         if len(sys.argv) < 4:
-            print(json.dumps({"error": "calendar needs market date (e.g. US 2026-06-01)"}))
+            print(json.dumps({"error": {"code": "USAGE_ERROR", "message": "calendar needs market date (e.g. US 2026-06-01)"}}))
             sys.exit(2)
         _cmd_calendar(client, sys.argv[2], sys.argv[3])
     else:
-        print(json.dumps({"error": "unknown command"}))
+        print(json.dumps({"error": {"code": "USAGE_ERROR", "message": "unknown command"}}))
         sys.exit(2)
 
 

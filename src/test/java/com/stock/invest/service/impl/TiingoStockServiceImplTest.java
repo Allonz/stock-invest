@@ -14,8 +14,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("TiingoDataSourceStrategy — 可用性判断")
-class TiingoDataSourceStrategyTest {
+@DisplayName("TiingoStockServiceImpl — 可用性判断")
+class TiingoStockServiceImplTest {
 
     @Mock
     private PythonScriptExecutor pythonScriptExecutor;
@@ -26,7 +26,7 @@ class TiingoDataSourceStrategyTest {
     @DisplayName("Token 为空时不可用")
     void unavailableWhenTokenBlank() {
         when(tiingoProperties.hasToken()).thenReturn(false);
-        TiingoDataSourceStrategy strategy = new TiingoDataSourceStrategy(
+        TiingoStockServiceImpl strategy = new TiingoStockServiceImpl(
                 pythonScriptExecutor, tiingoProperties, new ObjectMapper());
         assertFalse(strategy.isAvailable());
     }
@@ -35,7 +35,7 @@ class TiingoDataSourceStrategyTest {
     @DisplayName("Token 有效时可用")
     void availableWhenTokenPresent() {
         when(tiingoProperties.hasToken()).thenReturn(true);
-        TiingoDataSourceStrategy strategy = new TiingoDataSourceStrategy(
+        TiingoStockServiceImpl strategy = new TiingoStockServiceImpl(
                 pythonScriptExecutor, tiingoProperties, new ObjectMapper());
         assertTrue(strategy.isAvailable());
     }

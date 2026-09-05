@@ -17,6 +17,20 @@ import urllib.error
 TWELVEDATA_BASE_URL = "https://api.twelvedata.com"
 API_KEY = os.environ.get("TWELVEDATA_API_KEY", "")
 
+
+def error_json(message, code=None):
+    """统一错误协议（评审 F-1，对齐 tigeropen_channel P2-15）：
+    {"error": {"code": ..., "message": ...}}，关键词分类与 Java 侧 StockDataException 对齐。"""
+    if code is None:
+        lower = message.lower()
+        if "404" in lower or "not found" in lower or "no data" in lower:
+            code = "NOT_FOUND"
+        elif "quota" in lower or "permission" in lower or "run out of credits" in lower:
+            code = "ACCOUNT_LEVEL"
+        else:
+            code = "PYTHON_ERROR"
+    return json.dumps({"error": {"code": code, "message": message}})
+
 # Rate limiting
 last_request_time = 0
 min_request_interval = 8  # Free tier: 8 requests per minute
@@ -73,7 +87,7 @@ def get_stock_info(symbol: str) -> str:
         }
         return json.dumps(result)
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return error_json(str(e))
 
 
 def get_stock_list() -> str:
@@ -84,7 +98,7 @@ def get_stock_list() -> str:
         symbols = [s["symbol"] for s in stocks[:100]]
         return json.dumps(symbols)
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return error_json(str(e))
 
 
 def get_daily_kline(symbol: str) -> str:
@@ -113,7 +127,7 @@ def get_daily_kline(symbol: str) -> str:
             })
         return json.dumps({"symbol": symbol, "items": items})
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return error_json(str(e))
 
 
 def get_daily_kline_range(symbol: str, start_date: str, end_date: str) -> str:
@@ -164,14 +178,8 @@ def get_daily_kline_range(symbol: str, start_date: str, end_date: str) -> str:
             })
         return json.dumps({"symbol": symbol, "items": items})
     except Exception as e:
-        err_str = str(e)
-        code = "NOT_FOUND" if "404" in err_str else "UNKNOWN_ERROR"
-        return json.dumps({
-            "code": code,
-            "symbol": symbol,
-            "message": err_str,
-            "source": "twelvedata"
-        })
+        # 统一错误协议（F-1）：404 → NOT_FOUND 等分类由 error_json 统一处理
+        return error_json(str(e))
 
 
 def get_batch_kline(symbols: str, period: str, count: int) -> str:
@@ -185,7 +193,7 @@ def get_batch_kline(symbols: str, period: str, count: int) -> str:
                 result.append(kline_data)
         return json.dumps(result)
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return error_json(str(e))
 
 
 def scan_stocks(market: str, limit: int, min_price: str = "", max_price: str = "") -> str:
@@ -197,7 +205,7 @@ def scan_stocks(market: str, limit: int, min_price: str = "", max_price: str = "
             "CN": ["SSE", "SZSE"]
         }
         if market not in exchanges:
-            return json.dumps({"error": f"Unsupported market: {market}"})
+            return error_json(f"Unsupported market: {market}")
 
         # Get stocks from exchanges
         all_symbols = []
@@ -228,19 +236,19 @@ def scan_stocks(market: str, limit: int, min_price: str = "", max_price: str = "
         result = [symbol for symbol, _ in sorted_symbols[:limit]]
         return json.dumps(result)
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return error_json(str(e))
 
 
 def main():
     if len(sys.argv) < 2:
-        print(json.dumps({"error": "No command specified"}))
+        print(error_json("No command specified", code="USAGE_ERROR"))
         sys.exit(1)
 
     command = sys.argv[1]
 
     if command == "get_stock_info":
         if len(sys.argv) < 3:
-            print(json.dumps({"error": "Symbol not specified"}))
+            print(error_json("Symbol not specified", code="USAGE_ERROR"))
             sys.exit(1)
         print(get_stock_info(sys.argv[2]))
 
@@ -249,25 +257,25 @@ def main():
 
     elif command == "get_daily_kline":
         if len(sys.argv) < 3:
-            print(json.dumps({"error": "Symbol not specified"}))
+            print(error_json("Symbol not specified", code="USAGE_ERROR"))
             sys.exit(1)
         print(get_daily_kline(sys.argv[2]))
 
     elif command == "get_daily_kline_range":
         if len(sys.argv) < 5:
-            print(json.dumps({"error": "Symbol, start_date, end_date required"}))
+            print(error_json("Symbol, start_date, end_date required", code="USAGE_ERROR"))
             sys.exit(1)
         print(get_daily_kline_range(sys.argv[2], sys.argv[3], sys.argv[4]))
 
     elif command == "get_batch_kline":
         if len(sys.argv) < 5:
-            print(json.dumps({"error": "Missing parameters"}))
+            print(error_json("Missing parameters", code="USAGE_ERROR"))
             sys.exit(1)
         print(get_batch_kline(sys.argv[2], sys.argv[3], int(sys.argv[4])))
 
     elif command == "scan_stocks":
         if len(sys.argv) < 3:
-            print(json.dumps({"error": "Market not specified"}))
+            print(error_json("Market not specified", code="USAGE_ERROR"))
             sys.exit(1)
         market = sys.argv[2]
         limit = int(sys.argv[3]) if len(sys.argv) > 3 else 20

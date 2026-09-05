@@ -15,7 +15,7 @@
 <script setup lang="ts">
 import { ref, onMounted, h } from 'vue'
 import { NCard, NDataTable, NButton, useMessage, NSpin } from 'naive-ui'
-import request from '../api/request'
+import request, { type ApiResponse } from '../api/request'
 
 interface BlacklistRow {
   id: number
@@ -104,9 +104,10 @@ const columns = [
 async function loadData() {
   loading.value = true
   try {
-    const res = await request.get('/api/blacklist/list').then(res => res.data)
+    // 评审 A-1：后端统一 ApiResponse 包装，数据在 body.data 中
+    const body = await request.get('/api/blacklist/list').then(res => res.data as ApiResponse<BlacklistRow[]>)
     // 默认按「最近入黑日期」降序：最上面展示最近的日期（空值排最后）
-    blacklistData.value = (res as BlacklistRow[])
+    blacklistData.value = (body.data ?? [])
       .slice()
       .sort((a, b) => dateTs(b.last404Date) - dateTs(a.last404Date))
   } catch (e) {

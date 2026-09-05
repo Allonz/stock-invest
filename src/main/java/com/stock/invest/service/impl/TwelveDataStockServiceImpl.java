@@ -94,11 +94,12 @@ public class TwelveDataStockServiceImpl implements DataSourceStrategy {
             log.info("[TwelveDataStockServiceImpl] dateRange symbol={}, range=[{},{}]", symbol, startDate, tradeDate);
             String result = executeScriptWithKeyRotation(getScriptName(),
                     "get_daily_kline_range", symbol, startDate.toString(), tradeDate.toString());
-            if (result != null && result.contains("\"error\"")) {
-                // P1-3：Python 侧失败输出 {"error": ...} —— 带分类抛出，not-found 才计入黑名单
+            // P1-3/F-1：Python 侧失败输出统一错误 JSON —— code/message 带分类抛出，not-found 才计入黑名单
+            StockDataException pythonError = StockDataException.fromPythonError(symbol, getSourceName(), result);
+            if (pythonError != null) {
                 log.warn("[TwelveData] getDailyKLineDataByDateRange error for {}: {}", symbol,
-                        result.substring(0, Math.min(result.length(), 500)));
-                throw StockDataException.classify(symbol, "twelvedata", extractErrorFromJson(result), null);
+                        pythonError.getMessage());
+                throw pythonError;
             }
             // 目标日响应日志：只打印脚本返回中 tradeDate 那一条的完整参数（便于日志分析字段正确性/空值）
             KLineData parsed = objectMapper.readValue(result, KLineData.class);
@@ -134,28 +135,6 @@ public class TwelveDataStockServiceImpl implements DataSourceStrategy {
             log.error("Failed to get daily kline by date range for {}: {}", symbol, e.getMessage());
             throw new StockDataException(symbol, "twelvedata", "获取K线数据失败: " + e.getMessage(),
                     e, StockDataException.ErrorCategory.TRANSIENT_FAILURE);
-        }
-    }
-
-    /**
-     * 从 Python 脚本输出的 error JSON 中提取可读错误消息（兼容 {"error": "..."} 与 {"error": {"message": "..."}}）。
-     */
-    private String extractErrorFromJson(String result) {
-        try {
-            com.fasterxml.jackson.databind.JsonNode node = objectMapper.readTree(result);
-            com.fasterxml.jackson.databind.JsonNode err = node.get("error");
-            if (err == null) {
-                return result;
-            }
-            if (err.isTextual()) {
-                return err.asText();
-            }
-            if (err.has("message")) {
-                return err.path("message").asText();
-            }
-            return err.toString();
-        } catch (Exception ignored) {
-            return result;
         }
     }
 

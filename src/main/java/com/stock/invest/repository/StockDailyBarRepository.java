@@ -17,6 +17,9 @@ public interface StockDailyBarRepository extends JpaRepository<StockDailyBar, Lo
 
     Optional<StockDailyBar> findBySymbolAndTradeDate(String symbol, LocalDate tradeDate);
 
+    /** 评审 C-3：截图导入预取 —— 一次 IN 查询取回本批 symbol 的当日 bar，替代逐行查询（N+1）。 */
+    List<StockDailyBar> findBySymbolInAndTradeDate(Collection<String> symbols, LocalDate tradeDate);
+
     List<StockDailyBar> findBySymbolOrderByTradeDateDesc(String symbol, Pageable pageable);
 
     /**

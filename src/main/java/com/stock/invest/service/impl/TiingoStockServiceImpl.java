@@ -30,21 +30,21 @@ import java.util.Map;
  */
 @Component
 @Order(3)
-public class TiingoDataSourceStrategy implements DataSourceStrategy {
+public class TiingoStockServiceImpl implements DataSourceStrategy {
 
-    private static final Logger log = LoggerFactory.getLogger(TiingoDataSourceStrategy.class);
+    private static final Logger log = LoggerFactory.getLogger(TiingoStockServiceImpl.class);
 
     private final PythonScriptExecutor pythonScriptExecutor;
     private final TiingoProperties tiingoProperties;
     private final ObjectMapper objectMapper;
 
-    public TiingoDataSourceStrategy(PythonScriptExecutor pythonScriptExecutor,
+    public TiingoStockServiceImpl(PythonScriptExecutor pythonScriptExecutor,
                                     TiingoProperties tiingoProperties,
                                     ObjectMapper objectMapper) {
         this.pythonScriptExecutor = pythonScriptExecutor;
         this.tiingoProperties = tiingoProperties;
         this.objectMapper = objectMapper;
-        log.info("TiingoDataSourceStrategy: Service initialized (python SDK mode)");
+        log.info("TiingoStockServiceImpl: Service initialized (python SDK mode)");
     }
 
     @Override
@@ -74,9 +74,11 @@ public class TiingoDataSourceStrategy implements DataSourceStrategy {
         try {
             String result = pythonScriptExecutor.executeScriptWithEnvironment(
                     apiKeyEnv(), getScriptName(), "get_daily_kline", symbol, "30");
-            if (result != null && result.contains("\"error\"")) {
+            // P1-3/F-1：Python 侧失败输出统一错误 JSON —— 返回空（对象查询路径不进 fallback 链）
+            StockDataException pythonError = StockDataException.fromPythonError(symbol, getSourceName(), result);
+            if (pythonError != null) {
                 log.warn("[Tiingo] getDailyKLineDataAsObject error for {}: {}", symbol,
-                        result.substring(0, Math.min(result.length(), 500)));
+                        pythonError.getMessage());
                 return new KLineData();
             }
             return parseKLineData(symbol, result);
@@ -91,15 +93,16 @@ public class TiingoDataSourceStrategy implements DataSourceStrategy {
         try {
             // 两日窗口：目标日 + 其前一日（d-3 覆盖周末），脚本层相邻 close 算 changePercent
             LocalDate startDate = tradeDate.minusDays(3);
-            log.info("[TiingoDataSourceStrategy] dateRange symbol={}, range=[{},{}]", symbol, startDate, tradeDate);
+            log.info("[TiingoStockServiceImpl] dateRange symbol={}, range=[{},{}]", symbol, startDate, tradeDate);
             String result = pythonScriptExecutor.executeScriptWithEnvironment(
                     apiKeyEnv(), getScriptName(), "get_daily_kline_range",
                     symbol, startDate.toString(), tradeDate.toString());
-            if (result != null && result.contains("\"error\"")) {
-                String errMsg = extractErrorFromJson(result);
-                log.warn("[Tiingo] getDailyKLineDataByDateRange error for {}: {}", symbol, errMsg);
-                // P1-3：Python 侧失败 —— 带分类抛出，not-found 才计入黑名单
-                throw StockDataException.classify(symbol, "tiingo", errMsg, null);
+            // P1-3/F-1：Python 侧失败输出统一错误 JSON —— code/message 带分类抛出，not-found 才计入黑名单
+            StockDataException pythonError = StockDataException.fromPythonError(symbol, getSourceName(), result);
+            if (pythonError != null) {
+                log.warn("[Tiingo] getDailyKLineDataByDateRange error for {}: {}", symbol,
+                        pythonError.getMessage());
+                throw pythonError;
             }
             // 目标日响应日志：只打印脚本返回中 tradeDate 那一条的完整参数（便于日志分析字段正确性/空值）
             KLineData parsed = parseKLineData(symbol, result);
@@ -108,10 +111,10 @@ public class TiingoDataSourceStrategy implements DataSourceStrategy {
                         .filter(it -> it.getTimeString() != null && it.getTimeString().equals(tradeDate.toString()))
                         .findFirst().orElse(null);
                 if (target != null) {
-                    log.info("[TiingoDataSourceStrategy] dateRange response target: symbol={}, date={}, json={}",
+                    log.info("[TiingoStockServiceImpl] dateRange response target: symbol={}, date={}, json={}",
                             symbol, tradeDate, extractTargetItemJson(result, target.getTimeString()));
                 } else {
-                    log.info("[TiingoDataSourceStrategy] dateRange response target: symbol={}, date={} NOT FOUND in {} items",
+                    log.info("[TiingoStockServiceImpl] dateRange response target: symbol={}, date={} NOT FOUND in {} items",
                             symbol, tradeDate, parsed.getItems().size());
                 }
             }
@@ -153,27 +156,5 @@ public class TiingoDataSourceStrategy implements DataSourceStrategy {
         } catch (Exception ignored) {
         }
         return null;
-    }
-
-    /**
-     * 从 Python 脚本输出的 error JSON 中提取可读错误消息。
-     */
-    private String extractErrorFromJson(String result) {
-        try {
-            JsonNode node = objectMapper.readTree(result);
-            JsonNode err = node.get("error");
-            if (err == null) {
-                return result;
-            }
-            if (err.isTextual()) {
-                return err.asText();
-            }
-            if (err.has("message")) {
-                return err.path("message").asText();
-            }
-            return err.toString();
-        } catch (Exception ignored) {
-            return result;
-        }
     }
 }

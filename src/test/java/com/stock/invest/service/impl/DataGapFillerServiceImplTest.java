@@ -984,4 +984,92 @@ class DataGapFillerServiceImplTest {
         assertDoesNotThrow(() -> service.fillGaps());
         verify(stockDailyBarRepository, times(2)).findAllSymbols();
     }
+
+    // ========== G-3: min-price-threshold 边界（生产阈值 2.10：> 2.10 跳过，≤ 2.10 补缺） ==========
+
+    private StockDailyBar closeBar(String symbol, LocalDate tradeDate, String closePrice) {
+        StockDailyBar b = new StockDailyBar();
+        b.setSymbol(symbol);
+        b.setTradeDate(tradeDate);
+        b.setOpenPrice(new java.math.BigDecimal(closePrice));
+        b.setClosePrice(new java.math.BigDecimal(closePrice));
+        b.setVolume(10L);
+        b.setSource("yfinance");
+        return b;
+    }
+
+    /** 阈值 2.10 场景 stub：symbol 最新 bar 收盘价 = latestClose，唯一缺失日 = probeDate。
+     *  全部 lenient：跳过路径用不到日历 stub，严格模式下会报 UnnecessaryStubbing。 */
+    private void stubThresholdScenario(String symbol, LocalDate probeDate, String latestClose) {
+        lenient().when(gapFillProperties.getMinPriceThreshold()).thenReturn(new java.math.BigDecimal("2.10"));
+        lenient().when(stockDailyBarRepository.findAllSymbols()).thenReturn(List.of(symbol));
+        lenient().when(stockDailyBarRepository.findBySymbolOrderByTradeDateDesc(eq(symbol), any()))
+                .thenReturn(new ArrayList<>(List.of(closeBar(symbol, probeDate.minusDays(1), latestClose))));
+        lenient().when(tradingCalendarDbService.isTradingDay(anyString(), any(LocalDate.class)))
+                .thenAnswer(inv -> probeDate.equals(inv.getArgument(1, LocalDate.class)));
+    }
+
+    private LocalDate lastWeekdayBeforeToday() {
+        LocalDate probeDate = nyToday().minusDays(3);
+        while (probeDate.getDayOfWeek().getValue() > 5) {
+            probeDate = probeDate.minusDays(1);
+        }
+        return probeDate;
+    }
+
+    private void stubTigerReturnsMatchedItem(LocalDate probeDate) {
+        TransactionStatus status = mock(TransactionStatus.class);
+        lenient().when(transactionManager.getTransaction(any())).thenReturn(status);
+        lenient().when(tigerDataSource.getDailyKLineDataByDateRange(anyString(), any()))
+                .thenAnswer(inv -> {
+                    LocalDate date = inv.getArgument(1);
+                    String sym = inv.getArgument(0);
+                    com.stock.invest.model.KLineData kd = new com.stock.invest.model.KLineData();
+                    kd.setSymbol(sym);
+                    com.stock.invest.model.KLineItem item = new com.stock.invest.model.KLineItem(
+                            sym, date.atStartOfDay(AMERICA_NY).toInstant().toEpochMilli(),
+                            java.math.BigDecimal.valueOf(2.0), java.math.BigDecimal.valueOf(2.2),
+                            java.math.BigDecimal.valueOf(1.9), java.math.BigDecimal.valueOf(2.1),
+                            1_000L, 2_100.0,
+                            java.math.BigDecimal.valueOf(1.5), java.math.BigDecimal.valueOf(2.15),
+                            java.math.BigDecimal.valueOf(0.2));
+                    item.setTimeString(date.toString());
+                    kd.setItems(List.of(item));
+                    return kd;
+                });
+    }
+
+    @Test
+    @DisplayName("G-3: 最新收盘 2.11 > 阈值 2.10 → 跳过补缺（不抓源、不落库）")
+    void threshold_aboveSkipsFilling() {
+        stubThresholdScenario("AAPL", lastWeekdayBeforeToday(), "2.11");
+
+        service.fillGaps();
+
+        verify(yfinanceDataSource, never()).getDailyKLineDataByDateRange(anyString(), any());
+        verify(stockDailyBarRepository, never()).save(any(StockDailyBar.class));
+        verify(dataFillTaskRepository, never()).save(any(DataFillTask.class));
+    }
+
+    @Test
+    @DisplayName("G-3: 最新收盘 2.09 < 阈值 2.10 → 正常补缺落库")
+    void threshold_belowStillFills() {
+        stubThresholdScenario("AAPL", lastWeekdayBeforeToday(), "2.09");
+        stubTigerReturnsMatchedItem(lastWeekdayBeforeToday());
+
+        service.fillGaps();
+
+        verify(stockDailyBarRepository, atLeastOnce()).save(any(StockDailyBar.class));
+    }
+
+    @Test
+    @DisplayName("G-3: 最新收盘恰为阈值 2.10 → 不跳过（compareTo>0 边界含），照常补缺落库")
+    void threshold_atBoundaryStillFills() {
+        stubThresholdScenario("AAPL", lastWeekdayBeforeToday(), "2.10");
+        stubTigerReturnsMatchedItem(lastWeekdayBeforeToday());
+
+        service.fillGaps();
+
+        verify(stockDailyBarRepository, atLeastOnce()).save(any(StockDailyBar.class));
+    }
 }

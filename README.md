@@ -27,11 +27,13 @@ stock-invest/
 │   │   │   └── verifier/        # 数据库结构校验
 │   │   └── resources/
 │   │       ├── application.yml           # 主配置（多 profile）
-│   │       ├── application-test.yml      # 测试配置（H2）
 │   │       ├── python/                   # Python 桥接脚本（yfinance / twelvedata / tiingo / tigeropen）
-│   │       ├── db/migration/             # Flyway 迁移脚本（V1~V5）
+│   │       ├── db/migration/             # Flyway 迁移脚本（V1~V7，只追加不改历史）
 │   │       └── logback-spring.xml        # 日志配置
-│   └── test/java/             # 单元测试与集成测试
+│   └── test/                  # 单元测试、集成测试与测试配置
+│       └── resources/
+│           ├── application-test.yml      # 单测配置（H2 内存库）
+│           └── application-integration.yml # 集成测试配置（MySQL，空库重建）
 ├── pom.xml
 ├── README.md
 └── docs/api-docs.md           # API 接口文档
@@ -79,8 +81,23 @@ mvn spring-boot:run -Dspring.profiles.active=yfinance
 ### 测试
 
 ```bash
-mvn test
+# 默认全量：H2 单元测试 + MySQL 集成测试（从空库重建 stock_invest_it，需 MYSQL_PASSWORD）
+MYSQL_PASSWORD=... mvn test
+
+# 前端 / Python 桥接脚本
+cd frontend && npx vitest run
+.venv/bin/python -m pytest tests/
+
+# 手动集成回归：包含默认跳过的真实外部 API 用例（见 tests/conftest.py --run-integration）
+bash scripts/run-integration-tests.sh
 ```
+
+### 部署假设
+
+当前架构为**单实例部署**假设：数据源熔断冷却表（`FallbackChainBuilder.sourceCooldownUntil`）
+与 Python 探活缓存均为 JVM 进程内状态，多实例部署时各实例独立熔断（不会数据损坏，但熔断
+不共享）；黑名单/补缺任务/优先级等业务状态全部在 MySQL，天然共享。如需横向扩展，须先把
+熔断冷却表外置（DB/Redis）。
 
 ## API 概览
 

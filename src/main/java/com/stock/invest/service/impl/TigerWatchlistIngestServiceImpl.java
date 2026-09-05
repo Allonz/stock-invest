@@ -18,9 +18,13 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 public class TigerWatchlistIngestServiceImpl implements TigerWatchlistIngestService {
@@ -64,16 +68,37 @@ public class TigerWatchlistIngestServiceImpl implements TigerWatchlistIngestServ
         List<String> reasons = new ArrayList<>();
         List<StockDailyBar> pendingSaves = new ArrayList<>();
 
+        // 评审 C-3：先解析全部行的 symbol，一次 IN 查询预取当日已有 bar，
+        // 替代逐行 findBySymbolAndTradeDate（N+1）。同一请求内重复 symbol 复用同一
+        // bar 对象（后写覆盖），避免 saveAll 阶段唯一约束冲突。
+        List<String> rowSymbols = new ArrayList<>(request.rows().size());
+        Set<String> distinctSymbols = new HashSet<>();
         for (TigerWatchlistRowDto row : request.rows()) {
+            String sym = row == null ? null : resolveSymbol(row);
+            if (sym == null || !SYMBOL_PATTERN.matcher(sym).matches()) {
+                sym = null;
+            }
+            rowSymbols.add(sym);
+            if (sym != null) {
+                distinctSymbols.add(sym);
+            }
+        }
+        Map<String, StockDailyBar> existingBars = distinctSymbols.isEmpty()
+                ? Map.of()
+                : stockDailyBarRepository.findBySymbolInAndTradeDate(distinctSymbols, tradeDate).stream()
+                        .collect(Collectors.toMap(StockDailyBar::getSymbol, b -> b, (a, b) -> a));
+
+        for (int i = 0; i < request.rows().size(); i++) {
+            TigerWatchlistRowDto row = request.rows().get(i);
             if (row == null) {
                 skipped++;
                 reasons.add("null row");
                 continue;
             }
-            String sym = resolveSymbol(row);
-            if (sym == null || !SYMBOL_PATTERN.matcher(sym).matches()) {
+            String sym = rowSymbols.get(i);
+            if (sym == null) {
                 skipped++;
-                reasons.add("invalid symbol: " + sym);
+                reasons.add("invalid symbol: " + resolveSymbol(row));
                 continue;
             }
             if (row.lastPrice() == null || row.lastPrice().compareTo(java.math.BigDecimal.ZERO) <= 0) {
@@ -95,9 +120,12 @@ public class TigerWatchlistIngestServiceImpl implements TigerWatchlistIngestServ
                 continue;
             }
             java.math.BigDecimal px = row.lastPrice();
-            StockDailyBar bar = stockDailyBarRepository.findBySymbolAndTradeDate(sym, tradeDate).orElseGet(StockDailyBar::new);
-            bar.setSymbol(sym);
-            bar.setTradeDate(tradeDate);
+            StockDailyBar bar = existingBars.computeIfAbsent(sym, s -> {
+                StockDailyBar nb = new StockDailyBar();
+                nb.setSymbol(s);
+                nb.setTradeDate(tradeDate);
+                return nb;
+            });
             // closePrice = lastPrice (or explicit closePrice via @JsonAlias)
             bar.setClosePrice(px);
             // open/high/low: use real value if provided, fallback to lastPrice for backward compat

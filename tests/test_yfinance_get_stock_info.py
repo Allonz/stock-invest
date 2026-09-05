@@ -149,7 +149,8 @@ def test_py_yf_003_empty_history(
     data = json.loads(result)
 
     assert "error" in data
-    assert "No historical data" in data["error"]
+    assert data["error"]["code"] == "NOT_FOUND"
+    assert "No historical data" in data["error"]["message"]
 
 
 # ===================================================================
@@ -195,7 +196,7 @@ def test_py_yf_005_exception(mock_ticker_cls, mock_sleep):
     data = json.loads(result)
 
     assert "error" in data
-    assert "Network error" in data["error"]
+    assert "Network error" in data["error"]["message"]
 
 
 # ===================================================================

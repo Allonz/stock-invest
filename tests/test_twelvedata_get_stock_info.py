@@ -67,8 +67,9 @@ def test_py_td_002_no_api_key(mock_sleep):
     data = json.loads(result)
 
     assert "error" in data
-    assert "API_KEY" in data["error"] or "environment variable" in data["error"] \
-           or "not set" in data["error"]
+    td_msg = data["error"]["message"]
+    assert "API_KEY" in td_msg or "environment variable" in td_msg \
+           or "not set" in td_msg
 
 
 # ===================================================================
@@ -87,7 +88,8 @@ def test_py_td_003_http_429(mock_sleep):
         data = json.loads(result)
 
         assert "error" in data
-        assert "429" in data["error"] or "Too Many" in data["error"]
+        td_msg = data["error"]["message"]
+        assert "429" in td_msg or "Too Many" in td_msg
 
 
 # ===================================================================
@@ -104,7 +106,7 @@ def test_py_td_004_url_error(mock_sleep):
         data = json.loads(result)
 
         assert "error" in data
-        assert "Connection" in data["error"]
+        assert "Connection" in data["error"]["message"]
 
 
 # ===================================================================

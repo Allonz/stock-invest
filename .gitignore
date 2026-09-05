@@ -18,7 +18,7 @@ buildNumber.properties
 logs/
 frontend/node_modules/
 frontend/dist/
-analyze_dead.py
+scripts/analyze_dead.py
 .openclaw-debug/
 __pycache__/
 *.bak

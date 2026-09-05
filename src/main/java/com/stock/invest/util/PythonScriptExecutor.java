@@ -178,9 +178,12 @@ public class PythonScriptExecutor {
                 // 评审 C-7：进程等待用独立的执行超时
                 boolean completed = process.waitFor(executionTimeoutSeconds, TimeUnit.SECONDS);
                 if (!completed) {
-                    log.warn("Python脚本执行超时 ({}秒)，强制终止进程: {}", executionTimeoutSeconds, scriptName);
+                    log.warn("Python脚本执行超时 ({}秒)，终止进程: {}", executionTimeoutSeconds, scriptName);
+                    // 评审 F-2：先 SIGTERM 给 3s 优雅退出（清理临时状态/子线程），仍存活才强杀
                     process.destroy();
-                    process.destroyForcibly();
+                    if (!process.waitFor(3, TimeUnit.SECONDS)) {
+                        process.destroyForcibly();
+                    }
                     throw new IOException("Python脚本执行超时 (" + executionTimeoutSeconds + "秒)，已强制终止进程");
                 }
 
