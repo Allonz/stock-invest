@@ -114,7 +114,7 @@ stock-invest:
 
 # ── 串行编排（tiger 导入 → 补缺 → 筛选 → 汇报）──
 orchestration:
-  webhook-url: http://localhost:8644/webhooks/tiger-orch
+  webhook-url: http://localhost:8645/webhooks/tiger-orch
   webhook-secret: ${ORCHESTRATION_WEBHOOK_SECRET:}
 
 # 管理/MCP 接口鉴权（生产必须通过环境变量注入；测试环境在 application-test/integration.yml 中覆盖）

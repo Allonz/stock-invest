@@ -18,12 +18,14 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
  * Webhook 通知器：编排步骤完成后回调 Hermes。
- * 签名：X-Webhook-Signature = HMAC-SHA256(body)，hex 小写（Hermes V1 body-only 模式）。
+ * 签名：X-Webhook-Timestamp = epoch 秒，X-Webhook-Signature-V2 = HMAC-SHA256("<timestamp>.<body>")
+ * 的 hex 小写值（Hermes V2 时间戳绑定模式）。旧的 body-only V1 签名会被 Hermes 以“可重放”为由拒绝。
  * 失败重试 3 次（间隔 3s/9s/27s 退避），3 次仍失败记录错误日志。
  *
  * 支持按 run 动态指定回调端点（webhookUrl 参数），null 时回退全局配置
@@ -44,7 +46,7 @@ public class WebhookNotifier {
     @Autowired
     public WebhookNotifier(ObjectMapper objectMapper,
                            @Qualifier("webhookRestTemplate") RestTemplate restTemplate,
-                           @Value("${orchestration.webhook-url:http://localhost:8644/webhooks/tiger-orch}") String webhookUrl,
+                           @Value("${orchestration.webhook-url:http://localhost:8645/webhooks/tiger-orch}") String webhookUrl,
                            @Value("${orchestration.webhook-secret:}") String webhookSecret) {
         this(objectMapper, restTemplate, webhookUrl, webhookSecret, DEFAULT_RETRY_DELAYS_MS);
     }
@@ -110,7 +112,10 @@ public class WebhookNotifier {
                     HttpHeaders headers = new HttpHeaders();
                     headers.setContentType(MediaType.APPLICATION_JSON);
                     if (webhookSecret != null && !webhookSecret.isEmpty()) {
-                        headers.set("X-Webhook-Signature", hmacSha256(body, webhookSecret));
+                        // Hermes V2：签名绑定时间戳，避免 body-only 签名被判为可重放而拒绝
+                        String timestamp = String.valueOf(Instant.now().getEpochSecond());
+                        headers.set("X-Webhook-Timestamp", timestamp);
+                        headers.set("X-Webhook-Signature-V2", hmacSha256(timestamp + "." + body, webhookSecret));
                     }
                     HttpEntity<String> entity = new HttpEntity<>(body, headers);
                     ResponseEntity<String> response = restTemplate.postForEntity(targetUrl, entity, String.class);

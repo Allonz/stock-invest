@@ -13,10 +13,13 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.ExpectedCount.times;
@@ -38,21 +41,33 @@ class WebhookNotifierTest {
     }
 
     @Test
-    @DisplayName("通知成功：POST JSON 且携带 HMAC-SHA256 签名头")
+    @DisplayName("通知成功：POST JSON 且携带时间戳绑定的 V2 签名头")
     void notifySuccess_sendsSignatureAndPayload() throws Exception {
         RestTemplate rt = new RestTemplate();
         MockRestServiceServer server = MockRestServiceServer.bindTo(rt).build();
-        String url = "http://localhost:8644/webhooks/tiger-orch";
+        String url = "http://localhost:8645/webhooks/tiger-orch";
         String secret = "test-secret";
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("event_type", "step_done");
         payload.put("step", "screening");
         String body = objectMapper.writeValueAsString(payload);
-        String expectedSig = hmacSha256(body, secret);
 
         server.expect(once(), requestTo(url))
                 .andExpect(method(HttpMethod.POST))
-                .andExpect(header("X-Webhook-Signature", expectedSig))
+                .andExpect(request -> {
+                    String ts = request.getHeaders().getFirst("X-Webhook-Timestamp");
+                    String sig = request.getHeaders().getFirst("X-Webhook-Signature-V2");
+                    assertNotNull(ts, "X-Webhook-Timestamp 必须存在（Hermes V2）");
+                    assertNotNull(sig, "X-Webhook-Signature-V2 必须存在（Hermes V2）");
+                    assertTrue(Math.abs(Instant.now().getEpochSecond() - Long.parseLong(ts)) <= 60,
+                            "时间戳必须是当前 epoch 秒，否则 Hermes 会判为过期");
+                    try {
+                        assertEquals(hmacSha256(ts + "." + body, secret), sig,
+                                "签名必须是 HMAC-SHA256(\"<timestamp>.<body>\")");
+                    } catch (Exception e) {
+                        throw new AssertionError("计算期望签名失败", e);
+                    }
+                })
                 .andExpect(jsonPath("$.step").value("screening"))
                 .andRespond(withSuccess("ok", MediaType.TEXT_PLAIN));
 
