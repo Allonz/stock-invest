@@ -11,7 +11,7 @@ FRONTEND_DIR="${PROJECT_DIR}/frontend"
 export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
 if [ -s "$NVM_DIR/nvm.sh" ]; then
   . "$NVM_DIR/nvm.sh"
-  nvm use 24 --silent 2>/dev/null || nvm use 20 --silent 2>/dev/null || true
+  nvm use 26 --silent 2>/dev/null || nvm use 24 --silent 2>/dev/null || true
 fi
 
 # ── 进入前端目录 ───────────────────────────────────
